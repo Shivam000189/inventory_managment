@@ -20,7 +20,7 @@ export const industryConfig = {
     features: ['batchTracking', 'expiryTracking', 'prescriptions', 'lowStock'],
     dashboardWidgets: ['todaySales', 'expiringStock', 'expiredStock', 'lowStock', 'batchAlerts'],
     productLabel: 'Medicines',
-    productFields: [...coreProductFields, 'genericName', 'manufacturer', 'batchNumber', 'manufacturingDate', 'expiryDate', 'mrp', 'unit'],
+    productFields: [...coreProductFields, 'genericName', 'manufacturer', 'batchNumber', 'manufacturingDate', 'expiryDate', 'mrp', 'unit', 'brand', 'barcode'],
   },
   clothing: {
     modules: [...coreModules, 'pos', 'categories', 'sizes', 'colors', 'variants', 'variantGrid', 'replenishment', 'promotions', 'loyalty', 'coupons', 'giftCards', 'cashierShifts', 'clothingReports'],
@@ -88,7 +88,7 @@ export const businessTypeConfig = {
 }
 
 const moduleDefinitions = {
-  products: { section: 'Inventory', pages: ['Products', 'Bulk Import'], label: 'Products', permission: 'view_inventory' },
+  products: { section: 'Inventory', page: 'Products', label: 'Products', permission: 'view_inventory' },
   categories: { section: 'Inventory', page: 'Categories', label: 'Categories', permission: 'view_inventory' },
   inventory: { section: 'Inventory', pages: ['Stock', 'Stock In', 'Stock Out', 'Adjustments', 'Stock History'], permission: 'view_inventory' },
   purchases: { section: 'Purchases', pages: ['Purchase Orders', 'Receiving'], permission: 'view_inventory' },
@@ -128,7 +128,7 @@ const moduleDefinitions = {
 }
 
 const pagePermissions = {
-  'Bulk Import': ['create_product', 'stock_in'], 'Stock In': 'stock_in', 'Stock Out': 'stock_out',
+  'Stock In': 'stock_in', 'Stock Out': 'stock_out',
   Adjustments: 'edit_product', Receiving: 'stock_in', 'POS / Billing': 'process_pos_sale',
   'Bulk Pricing': 'edit_product', Production: 'stock_out',
 }

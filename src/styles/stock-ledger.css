@@ -1,25 +1,6 @@
 .stock-ledger-shell { --ledger-bg: var(--bg); --ledger-surface: var(--surface); --ledger-surface-2: var(--surface-soft); --ledger-line: var(--line); --ledger-muted: var(--text-soft); --ledger-text: var(--text); --ledger-orange: var(--orange); --ledger-green: var(--success); }
 .stock-ledger-shell .dashboard-main { min-width: 0; padding: 0 28px 44px; color: var(--ledger-text); background: var(--ledger-bg); }
-.stock-ledger-shell .dashboard-sidebar { color: #aebbd0; background: #0c1420; border-right: 1px solid #223147; }
-.stock-ledger-shell .dashboard-brand { color: #f6f8fb; text-transform: uppercase; letter-spacing: .5px; }
-.stock-ledger-shell .mark-icon { border-radius: 10px; border-color: var(--ledger-orange); background: var(--ledger-orange); box-shadow: 0 8px 22px rgba(255,106,26,.28); }
-.stock-ledger-shell .mark-icon span { background: #fff; }
-.stock-ledger-shell .workspace-switcher { border: 1px solid #283a52; border-radius: 9px; background: #121d2c; }
-.stock-ledger-shell .workspace-avatar { color: var(--orange); border-color: #42536a; background: #1d2b3e; }
-.stock-ledger-shell .workspace-copy small { color: #718198; }
-.stock-ledger-shell .module-nav { scrollbar-color: #43536a transparent; }
-.stock-ledger-shell .module-nav button { color: #a6b5c9; border-radius: 7px; }
-.stock-ledger-shell .module-nav button:hover { color: #fff; background: #142033; }
-.stock-ledger-shell .module-nav button.active { color: var(--orange); background: var(--orange-soft); box-shadow: inset 0 0 0 1px var(--orange); }
-.stock-ledger-shell .sidebar-bottom { border-top-color: #223147; }
-.stock-ledger-shell .business-context { display: flex; align-items: center; min-height: 70px; margin: 0 -28px 28px; padding: 0 280px 0 30px; border-bottom: 1px solid #223147; color: #a9b7ca; background: #0a111c; }
-.stock-ledger-shell .business-context-dot { background: var(--ledger-green); box-shadow: 0 0 12px rgba(49,221,176,.35); }
-.stock-ledger-shell .dashboard-header { position: absolute; top: 9px; right: 28px; z-index: 100; margin: 0; }
-.stock-ledger-shell .dashboard-header > div:first-child { display: none; }
-.stock-ledger-shell .header-actions { gap: 8px; }
-.stock-ledger-shell .icon-button, .stock-ledger-shell .user-chip { height: 50px; color: #d5deea; border-color: #293a51; border-radius: 8px; background: #111b2a; }
-.stock-ledger-shell .user-chip-copy strong { color: #f4f7fb; }
-.stock-ledger-shell .user-chip-copy small { color: var(--ledger-green); }
+/* Retain default modern chrome for stock-ledger-shell */
 .stock-ledger-page { width: min(100%, 1280px); margin: 0 auto; animation: ledger-rise .35s ease-out both; }
 .stock-ledger-heading { display: flex; align-items: center; justify-content: space-between; gap: 22px; margin-bottom: 28px; }
 .stock-ledger-title { display: flex; align-items: center; gap: 12px; }

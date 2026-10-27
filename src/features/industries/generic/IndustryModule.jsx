@@ -80,7 +80,7 @@ export default function IndustryModule({ section, business, onNavigate }) {
       if (category !== 'all' && product.category !== category) return false
       if (sizeF !== 'all' && product.size !== sizeF) return false
       if (colorF !== 'all' && product.color !== colorF) return false
-      return `${product.name} ${product.sku} ${product.category} ${product.size || ''} ${product.color || ''} ${product.barcode || ''}`.toLowerCase().includes(query)
+      return `${product.name} ${product.sku} ${product.category} ${product.genericName || ''} ${product.batchNumber || ''} ${product.size || ''} ${product.color || ''} ${product.barcode || ''}`.toLowerCase().includes(query)
     })
   }, [rows, search, category, sizeF, colorF])
 
@@ -120,8 +120,7 @@ export default function IndustryModule({ section, business, onNavigate }) {
       </div>
       <div className="var-heading-actions">
         <button type="button" onClick={exportCsv} disabled={loading || !!error || !rows.length}><VarIcon name="export" />Export CSV</button>
-        {onNavigate && <button type="button" onClick={() => onNavigate('Bulk Import')}><VarIcon name="tune" />Bulk edit</button>}
-        {onNavigate && <button type="button" className="primary" onClick={() => onNavigate(productLabel)}><VarIcon name="plus" />Add {isVariants ? 'variant' : 'product'}</button>}
+        {onNavigate && <button type="button" className="primary" onClick={() => onNavigate(productLabel)}><VarIcon name="plus" />Add {isVariants ? 'variant' : productLabel === 'Medicines' ? 'medicine' : 'product'}</button>}
       </div>
     </div>
 
@@ -142,14 +141,30 @@ export default function IndustryModule({ section, business, onNavigate }) {
         <p>At or below the reorder threshold</p>
       </article>
       <article className="var-kpi">
-        <span>Active attributes <i className="purple"><VarIcon name="swatch" /></i></span>
-        <strong>{loading || error ? '—' : `${stats.sizes} S / ${stats.colors} C`}</strong>
-        <p>{stats.sizes} size grades · {stats.colors} colourways</p>
+        {section === 'Batch Management' ? (
+          <>
+            <span>Distinct batches <i className="purple"><VarIcon name="box" /></i></span>
+            <strong>{loading || error ? '—' : new Set(rows.map((p) => p.batchNumber).filter(Boolean)).size}</strong>
+            <p>Tracked manufacturing lots</p>
+          </>
+        ) : section === 'Expiry Tracking' ? (
+          <>
+            <span>Expiring soon <i className="purple"><VarIcon name="alert" /></i></span>
+            <strong>{loading || error ? '—' : rows.filter((p) => p.expiryDate && new Date(p.expiryDate) < new Date(Date.now() + 60 * 86400000)).length}</strong>
+            <p>Within next 60 days</p>
+          </>
+        ) : (
+          <>
+            <span>Active attributes <i className="purple"><VarIcon name="swatch" /></i></span>
+            <strong>{loading || error ? '—' : `${stats.sizes} S / ${stats.colors} C`}</strong>
+            <p>{stats.sizes} size grades · {stats.colors} colourways</p>
+          </>
+        )}
       </article>
     </div>
 
     <div className="var-filters">
-      <label className="var-search"><VarIcon name="search" /><input aria-label={`Search ${section}`} value={search} onChange={(event) => withReset(setSearch)(event.target.value)} placeholder="Search variants, SKU, or barcode" /></label>
+      <label className="var-search"><VarIcon name="search" /><input aria-label={`Search ${section}`} value={search} onChange={(event) => withReset(setSearch)(event.target.value)} placeholder={`Search ${section.toLowerCase()}, SKU, or barcode`} /></label>
       <select value={category} onChange={(event) => withReset(setCategory)(event.target.value)} aria-label="Filter category"><option value="all">All categories</option>{categories.map((value) => <option key={value}>{value}</option>)}</select>
       {sizes.length > 0 && <select value={sizeF} onChange={(event) => withReset(setSizeF)(event.target.value)} aria-label="Filter size"><option value="all">All sizes</option>{sizes.map((value) => <option key={value}>{value}</option>)}</select>}
       {colors.length > 0 && <select value={colorF} onChange={(event) => withReset(setColorF)(event.target.value)} aria-label="Filter colour"><option value="all">All colourways</option>{colors.map((value) => <option key={value}>{value}</option>)}</select>}

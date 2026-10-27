@@ -15,13 +15,7 @@
   background: var(--cat-bg);
 }
 .category-shell.stock-ledger-shell .dashboard-main { padding: 0 32px 44px; background: var(--cat-bg); }
-.category-shell.stock-ledger-shell .dashboard-header { right: 32px; }
-.category-shell.stock-ledger-shell .dashboard-sidebar { background: #080d15; }
-.category-shell.stock-ledger-shell .business-context { min-height: 74px; margin: 0 -32px 30px; padding: 0 300px 0 34px; border-bottom: 1px solid var(--cat-line); color: var(--cat-muted); background: #080d15; font-size: 11px; }
-.category-shell .business-context .cat-breadcrumb { color: var(--cat-orange); text-transform: uppercase; letter-spacing: .5px; white-space: nowrap; }
-.category-shell .business-context .cat-synced { display: inline-flex; align-items: center; gap: 6px; margin-left: 4px; padding: 4px 9px; border: 1px solid rgba(47, 214, 168, .3); border-radius: 999px; color: var(--cat-green); background: rgba(47, 214, 168, .08); font: 9px 'sans-serif', sans-serif; text-transform: uppercase; letter-spacing: .7px; }
-.category-shell .business-context .cat-synced::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; box-shadow: 0 0 8px currentColor; }
-.category-shell .business-context .cat-workspace-tag { margin-left: auto; padding: 6px 12px; border: 1px solid var(--cat-line); border-radius: 6px; color: var(--cat-text); font: 10px 'sans-serif', sans-serif; text-transform: uppercase; letter-spacing: .6px; white-space: nowrap; }
+/* Retain default modern chrome for category-shell */
 
 .category-page { width: min(100%, 1360px); margin: 0 auto; color: var(--cat-text); animation: cat-rise .32s ease-out both; }
 .category-page *, .category-page *::before, .category-page *::after { box-sizing: border-box; }

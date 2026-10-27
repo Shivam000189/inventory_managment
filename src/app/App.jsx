@@ -3,8 +3,9 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from
 import "../App.css";
 import "../styles/ui-system.css";
 import "../styles/app-chrome.css";
-import "../styles/overview-dashboard.css";
 import "../styles/modern-dashboard.css";
+import "../features/dashboard/overview-dashboard.css";
+import "../styles/inventory-dashboard.css";
 
 // Layout & Context
 import AppSidebar from "../components/layout/AppSidebar.jsx";
@@ -43,7 +44,6 @@ function DashboardView() {
   const navigate = useNavigate();
 
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [notif, setNotif] = useState({ items: [], unreadCount: 0 });
   const [gettingStarted, setGettingStarted] = useState(null);
   const [checklistDismissed, setChecklistDismissed] = useState(
@@ -179,9 +179,7 @@ function DashboardView() {
     <main
       className={`dashboard-shell modern-theme ${currentShellClass} industry-${String(business?.industry || "general")
         .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")}${mobileNavOpen ? " nav-open" : ""}${
-        sidebarCollapsed ? " sidebar-collapsed" : ""
-      }`}
+        .replace(/[^a-z0-9]+/g, "-")}${mobileNavOpen ? " nav-open" : ""}`}
     >
       <AppSidebar
         business={business}
@@ -193,8 +191,6 @@ function DashboardView() {
         setExpandedNavSections={setExpandedNavSections}
         mobileNavOpen={mobileNavOpen}
         setMobileNavOpen={setMobileNavOpen}
-        sidebarCollapsed={sidebarCollapsed}
-        setSidebarCollapsed={setSidebarCollapsed}
         canOpen={canOpen}
         onLogout={logout}
       />
@@ -215,8 +211,6 @@ function DashboardView() {
           activeNav={activeNav}
           navigateTo={navigateTo}
           canOpen={canOpen}
-          sidebarCollapsed={sidebarCollapsed}
-          setSidebarCollapsed={setSidebarCollapsed}
           mobileNavOpen={mobileNavOpen}
           setMobileNavOpen={setMobileNavOpen}
           theme={theme}

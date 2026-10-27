@@ -19,25 +19,7 @@
   background-image: linear-gradient(var(--inward-grid) 1px, transparent 1px), linear-gradient(90deg, var(--inward-grid) 1px, transparent 1px);
   background-size: 30px 30px;
 }
-.stock-in-shell.stock-ledger-shell .dashboard-sidebar { background: #080e16; }
-.stock-in-shell.stock-ledger-shell .module-nav button { font-size: 13px; }
-.stock-in-shell.stock-ledger-shell .dashboard-brand { text-transform: none; letter-spacing: -.5px; }
-.stock-in-shell.stock-ledger-shell .business-context {
-  min-height: 80px;
-  margin: 0 -36px 36px;
-  padding: 0 300px 0 46px;
-  color: var(--inward-muted);
-  border-color: var(--inward-border);
-  background: var(--inward-bg);
-  font-size: 11px;
-  gap: 4px;
-}
-.stock-in-shell .stock-in-breadcrumb { color: var(--inward-orange); white-space: nowrap; }
-.stock-in-shell .business-context .stock-in-currency { margin-left: auto; padding: 6px 12px; border: 1px solid var(--inward-border); border-radius: 6px; color: var(--inward-text); }
-.stock-in-shell.stock-ledger-shell .dashboard-header { top: 14px; right: 36px; }
-.stock-in-shell.stock-ledger-shell .icon-button { flex: 0 0 40px; width: 40px; min-width: 40px; height: 42px; display: inline-flex; align-items: center; justify-content: center; padding: 9px; }
-.stock-in-shell.stock-ledger-shell .icon-button svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.7; }
-.stock-in-shell.stock-ledger-shell .user-chip { height: 48px; }
+/* Retain default modern chrome for stock-in-shell */
 .stock-in-shell .clothing-motion { display: none; }
 .stock-in-page { max-width: 1440px; margin: 0 auto; color: var(--inward-text); }
 .stock-in-page *, .stock-in-page *::before, .stock-in-page *::after { box-sizing: border-box; }

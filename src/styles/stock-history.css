@@ -15,13 +15,7 @@
   background: var(--audit-bg);
 }
 .stock-audit-shell.stock-ledger-shell .dashboard-main { padding: 0 32px 52px; background: var(--audit-bg); }
-.stock-audit-shell.stock-ledger-shell .dashboard-header { right: 32px; }
-.stock-audit-shell.stock-ledger-shell .dashboard-sidebar { background: #090f18; }
-.stock-audit-shell.stock-ledger-shell .business-context { min-height: 74px; margin: 0 -32px 30px; padding: 0 300px 0 34px; border-bottom: 1px solid var(--audit-line); color: var(--audit-muted); background: #090f18; font-size: 11px; }
-.stock-audit-shell .business-context .audit-breadcrumb { color: var(--audit-orange); text-transform: uppercase; letter-spacing: .5px; white-space: nowrap; }
-.stock-audit-shell .business-context .audit-stream { display: inline-flex; align-items: center; gap: 6px; margin-left: 4px; padding: 4px 9px; border: 1px solid rgba(47, 214, 168, .3); border-radius: 999px; color: var(--audit-green); background: rgba(47, 214, 168, .08); font: 9px 'sans-serif', sans-serif; text-transform: uppercase; letter-spacing: .7px; }
-.stock-audit-shell .business-context .audit-stream::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; box-shadow: 0 0 8px currentColor; }
-.stock-audit-shell .business-context .audit-workspace-tag { margin-left: auto; padding: 6px 12px; border: 1px solid var(--audit-line); border-radius: 6px; color: var(--audit-text); font: 10px 'sans-serif', sans-serif; text-transform: uppercase; letter-spacing: .6px; white-space: nowrap; }
+/* Retain default modern chrome for stock-audit-shell */
 
 .stock-audit-page { width: min(100%, 1360px); margin: 0 auto; color: var(--audit-text); animation: audit-rise .32s ease-out both; }
 .stock-audit-page *, .stock-audit-page *::before, .stock-audit-page *::after { box-sizing: border-box; }

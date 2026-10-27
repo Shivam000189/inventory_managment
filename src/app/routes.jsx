@@ -1,7 +1,6 @@
 /* oxlint-disable react/only-export-components */
 import DashboardOverview from '../features/dashboard/DashboardOverview.jsx'
 import ProductsPage from '../features/products/ProductsPage.jsx'
-import ProductImportPage from '../features/product-import/ProductImportPage.jsx'
 import InventoryOperations from '../features/inventory/InventoryOperations.jsx'
 import PurchaseOrdersPage from '../features/purchasing/PurchaseOrdersPage.jsx'
 import ReceivingGrnPage from '../features/purchasing/ReceivingGrnPage.jsx'
@@ -48,25 +47,19 @@ export const ROUTE_TABLE = {
   Products: {
     path: '/products',
     requiredPermission: 'view_inventory',
-    shellClass: 'stock-ledger-shell products-shell',
+    shellClass: 'overview-dashboard stock-ledger-shell products-shell',
     render: (ctx) => <ProductsPage business={ctx.business} account={ctx.account} />,
   },
   Medicines: {
     path: '/medicines',
     requiredPermission: 'view_inventory',
-    shellClass: 'stock-ledger-shell products-shell',
+    shellClass: 'overview-dashboard stock-ledger-shell products-shell',
     render: (ctx) => <ProductsPage business={ctx.business} account={ctx.account} />,
-  },
-  'Bulk Import': {
-    path: '/bulk-import',
-    requiredPermission: ['create_product', 'stock_in'],
-    shellClass: 'stock-ledger-shell import-shell',
-    render: (ctx) => <ProductImportPage business={ctx.business} />,
   },
   Categories: {
     path: '/categories',
     requiredPermission: 'view_inventory',
-    shellClass: 'stock-ledger-shell category-shell',
+    shellClass: 'overview-dashboard stock-ledger-shell category-shell',
     render: (ctx) => (
       <InventoryOperations
         section="Categories"
@@ -80,7 +73,7 @@ export const ROUTE_TABLE = {
   Stock: {
     path: '/stock',
     requiredPermission: 'view_inventory',
-    shellClass: 'stock-ledger-shell',
+    shellClass: 'overview-dashboard stock-ledger-shell',
     render: (ctx) => (
       <InventoryOperations
         section="Stock"
@@ -94,7 +87,7 @@ export const ROUTE_TABLE = {
   'Stock In': {
     path: '/stock-in',
     requiredPermission: 'stock_in',
-    shellClass: 'stock-ledger-shell stock-in-shell',
+    shellClass: 'overview-dashboard stock-ledger-shell stock-in-shell',
     render: (ctx) => (
       <InventoryOperations
         section="Stock In"
@@ -108,7 +101,7 @@ export const ROUTE_TABLE = {
   'Stock Out': {
     path: '/stock-out',
     requiredPermission: 'stock_out',
-    shellClass: 'stock-ledger-shell stock-in-shell stock-out-shell',
+    shellClass: 'overview-dashboard stock-ledger-shell stock-in-shell stock-out-shell',
     render: (ctx) => (
       <InventoryOperations
         section="Stock Out"
@@ -122,7 +115,7 @@ export const ROUTE_TABLE = {
   Adjustments: {
     path: '/adjustments',
     requiredPermission: 'edit_product',
-    shellClass: 'stock-ledger-shell stock-in-shell stock-adjustment-shell',
+    shellClass: 'overview-dashboard stock-ledger-shell stock-in-shell stock-adjustment-shell',
     render: (ctx) => (
       <InventoryOperations
         section="Adjustments"
@@ -136,7 +129,7 @@ export const ROUTE_TABLE = {
   'Stock History': {
     path: '/stock-history',
     requiredPermission: 'view_inventory',
-    shellClass: 'stock-ledger-shell stock-audit-shell',
+    shellClass: 'overview-dashboard stock-ledger-shell stock-audit-shell',
     render: (ctx) => (
       <InventoryOperations
         section="Stock History"
@@ -508,7 +501,7 @@ export function shellClassFor(routeOrLabel) {
 
 export function navLabelForPath(pathname, productLabel = 'Products') {
   if (pathname === '/' || pathname === '/overview') return 'Overview'
-  if (pathname === '/products' || pathname === '/medicines') return productLabel
+  if (pathname === '/products' || pathname === '/medicines' || pathname === '/bulk-import') return productLabel
   const entry = Object.entries(ROUTE_TABLE).find(([, config]) => config.path === pathname)
   return entry ? entry[0] : ''
 }

@@ -83,7 +83,12 @@ function downloadSampleTemplate() {
   URL.revokeObjectURL(url);
 }
 
-export default function ProductImport({ business }) {
+export default function ProductImport({
+  business,
+  onImportSuccess,
+  onClose,
+  isModal = false,
+}) {
   const load = useCallback(
     () =>
       Promise.all([
@@ -193,6 +198,9 @@ export default function ProductImport({ business }) {
       setLastResult(result);
       setPreview(null);
       await refetch();
+      if (onImportSuccess) {
+        onImportSuccess(result);
+      }
     } catch (error) {
       setMessage({ type: "error", text: error.message });
     } finally {
@@ -205,7 +213,7 @@ export default function ProductImport({ business }) {
       <div className="products-toolbar import-hero-top">
         <div>
           <p className="dashboard-kicker">Inventory / Bulk Import</p>
-          <h2>Import products</h2>
+          <h2 id="bulk-import-modal-title">Import products</h2>
           <p className="products-count">
             Validated PDF invoices, CSV sheets and Excel catalog sync for{" "}
             <b>{business.name}</b> {isClothing ? "clothing " : ""}workspace.
@@ -225,6 +233,17 @@ export default function ProductImport({ business }) {
           {preview && (
             <button className="outline-button" type="button" onClick={() => setPreview(null)}>
               Start over
+            </button>
+          )}
+          {onClose && (
+            <button
+              className="close-button import-modal-close"
+              type="button"
+              onClick={onClose}
+              aria-label="Close bulk import"
+              title="Close modal"
+            >
+              ×
             </button>
           )}
         </div>

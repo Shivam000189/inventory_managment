@@ -4,7 +4,6 @@ const NAVIGATION_LABELS = {
   Overview: "Dashboard",
   Products: "Products",
   Categories: "Categories",
-  "Bulk Import": "Bulk Import",
   Stock: "Stock Ledger",
   "Stock In": "Stock Inward",
   "Stock Out": "Stock Outward",
@@ -102,68 +101,34 @@ export default function AppSidebar({
   setExpandedNavSections,
   mobileNavOpen,
   setMobileNavOpen,
-  sidebarCollapsed,
-  setSidebarCollapsed,
   canOpen,
   onLogout,
 }) {
   const [showWorkspacePopover, setShowWorkspacePopover] = useState(false);
   const workspaceRef = useRef(null);
 
+  const rawName = (business?.name && business.name.toLowerCase() !== "name" && business.name.trim())
+    ? business.name
+    : "Aflix";
+  const companyName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
+
   return (
     <>
       <aside className="dashboard-sidebar modern-sidebar" id="dashboard-navigation">
         {/* Brand Header */}
         <div className="modern-sidebar-brand">
-          <div
-            className="modern-brand-icon"
-            aria-hidden="true"
-            role={sidebarCollapsed ? "button" : undefined}
-            tabIndex={sidebarCollapsed ? 0 : undefined}
-            onClick={() => {
-              if (sidebarCollapsed && setSidebarCollapsed) setSidebarCollapsed(false);
-            }}
-          >
+          <div className="modern-brand-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
               <path d="m7.5 4.27 9 5.15M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
               <path d="m3.3 7 8.7 5 8.7-5M12 22V12" />
             </svg>
           </div>
           <div className="modern-brand-info">
-            <span className="modern-brand-title">{business?.name || "stockroom Pro"}</span>
+            <span className="modern-brand-title">{companyName}</span>
             <span className="modern-brand-subtitle">
               {business?.industry ? `${business.industry.toUpperCase()} · SUITE` : "INVENTORY & POS"}
             </span>
           </div>
-          {setSidebarCollapsed && (
-            <button
-              className="modern-sidebar-collapse-btn"
-              type="button"
-              aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-              title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            >
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                {sidebarCollapsed ? (
-                  <path d="M9 18l6-6-6-6" />
-                ) : (
-                  <path d="M15 18l-6-6 6-6" />
-                )}
-              </svg>
-            </button>
-          )}
-          <button
-            className="modern-mobile-close-btn"
-            type="button"
-            aria-label="Close navigation"
-            title="Close navigation"
-            onClick={() => setMobileNavOpen(false)}
-          >
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-          </button>
         </div>
 
         {/* Workspace Quick Switcher */}
@@ -183,11 +148,11 @@ export default function AppSidebar({
             onClick={() => setShowWorkspacePopover(!showWorkspacePopover)}
           >
             <span className="workspace-avatar">
-              {(business?.name || "B")[0].toUpperCase()}
+              {companyName[0].toUpperCase()}
             </span>
             <span className="workspace-copy">
               <small>Workspace</small>
-              <strong>{business?.name || "Store"}</strong>
+              <strong>{companyName}</strong>
             </span>
             <span className={`chevron workspace-chevron ${showWorkspacePopover ? "open" : ""}`} aria-hidden="true">
               <svg viewBox="0 0 20 20"><path d="m6 8 4 4 4-4" /></svg>
@@ -198,10 +163,10 @@ export default function AppSidebar({
             <div className="workspace-popover" role="dialog" aria-label="Workspace Details">
               <div className="workspace-popover-header">
                 <span className="workspace-popover-avatar">
-                  {(business?.name || "B")[0].toUpperCase()}
+                  {companyName[0].toUpperCase()}
                 </span>
                 <div className="workspace-popover-title">
-                  <strong>{business?.name || "Your business"}</strong>
+                  <strong>{companyName}</strong>
                   <span className="workspace-role-badge">
                     {account?.role === "owner" ? "Owner / Admin" : (account?.role ? account.role.charAt(0).toUpperCase() + account.role.slice(1) : "Staff")}
                   </span>
@@ -308,9 +273,6 @@ export default function AppSidebar({
                   aria-expanded={isGroupOpen}
                   title={navigationLabel(section)}
                   onClick={() => {
-                    if (sidebarCollapsed && setSidebarCollapsed) {
-                      setSidebarCollapsed(false);
-                    }
                     setExpandedNavSections((current) => {
                       const next = new Set(current);
                       if (next.has(section)) next.delete(section);
@@ -374,28 +336,6 @@ export default function AppSidebar({
             }}
           >
             Contact Support
-          </button>
-        </div>
-
-        {/* Sidebar Footer with Sync indicator and Logout */}
-        <div className="modern-sidebar-footer">
-          <div className="sidebar-sync" aria-hidden="true" style={{ margin: 0, padding: "6px 10px", flex: 1, border: "none", background: "transparent" }}>
-            <span className="sidebar-sync-dot" />
-            <span style={{ fontSize: "11px", fontWeight: 600 }}>Cloud sync</span>
-            <b style={{ fontSize: "11px" }}>99.9%</b>
-          </div>
-          <button
-            type="button"
-            className="modern-logout-btn"
-            onClick={onLogout}
-            title="Sign out of account"
-          >
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-              <polyline points="16 17 21 12 16 7" />
-              <line x1="21" y1="12" x2="9" y2="12" />
-            </svg>
-            <span>Exit</span>
           </button>
         </div>
       </aside>

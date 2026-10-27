@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import QRCode from "qrcode";
 import { posApi } from "../../api/posApi.js";
 import { useResource } from "../../hooks/useResource.js";
 import AsyncBoundary from "../../components/feedback/AsyncBoundary.jsx";
-import invoiceStyles from "../../styles/pos-invoice.css?inline";
-import "../../styles/pos-terminal.css";
+import PosReceiptModal from "./components/PosReceiptModal.jsx";
+import PosCart from "./components/PosCart.jsx";
+import PosPaymentSection from "./components/PosPaymentSection.jsx";
+import "./pos-terminal.css";
 
 const METHODS = [
   "Cash",
@@ -26,241 +27,6 @@ const createPaymentRow = (method = "Cash", amount = 0, reference = "") => ({
 });
 const money = (currency, value) =>
   `${currency} ${Number(value || 0).toFixed(2)}`;
-
-function Invoice({ invoice, onClose }) {
-  const sheetRef = useRef(null);
-  const dialogRef = useRef(null);
-
-  useEffect(() => {
-    const previousFocus = document.activeElement;
-    const previousOverflow = document.body.style.overflow;
-    const previousTitle = document.title;
-    const beforePrint = () => document.body.classList.add("pos-printing");
-    const afterPrint = () => document.body.classList.remove("pos-printing");
-    document.body.style.overflow = "hidden";
-    document.title = `Bill ${invoice.invoiceNumber}`;
-    dialogRef.current?.focus();
-    window.addEventListener("beforeprint", beforePrint);
-    window.addEventListener("afterprint", afterPrint);
-    return () => {
-      window.removeEventListener("beforeprint", beforePrint);
-      window.removeEventListener("afterprint", afterPrint);
-      afterPrint();
-      document.body.style.overflow = previousOverflow;
-      document.title = previousTitle;
-      if (previousFocus?.isConnected) previousFocus.focus();
-    };
-  }, [invoice.invoiceNumber]);
-
-  const handleKeyDown = (event) => {
-    if (event.key === "Escape") {
-      event.preventDefault();
-      event.stopPropagation();
-      onClose();
-    }
-    if (event.key === "Tab") {
-      const buttons = dialogRef.current.querySelectorAll("button:not(:disabled)");
-      const first = buttons[0];
-      const last = buttons[buttons.length - 1];
-      if (event.shiftKey && [first, dialogRef.current].includes(document.activeElement)) {
-        event.preventDefault();
-        last?.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first?.focus();
-      }
-    }
-  };
-
-  const download = () => {
-    if (!sheetRef.current) return;
-    const copy = document.implementation.createHTMLDocument(`Bill ${invoice.invoiceNumber}`);
-    const charset = copy.createElement("meta");
-    charset.setAttribute("charset", "utf-8");
-    const viewport = copy.createElement("meta");
-    viewport.name = "viewport";
-    viewport.content = "width=device-width, initial-scale=1";
-    const style = copy.createElement("style");
-    style.textContent = invoiceStyles;
-    copy.head.prepend(charset, viewport, style);
-    copy.body.append(copy.importNode(sheetRef.current, true));
-    const blob = new Blob([`<!doctype html>${copy.documentElement.outerHTML}`], { type: "text/html;charset=utf-8" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `${invoice.invoiceNumber.replace(/[^a-zA-Z0-9_-]/g, "_")}.html`;
-    document.body.append(link);
-    link.click();
-    link.remove();
-    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
-  };
-  const print = () => {
-    document.body.classList.add("pos-printing");
-    window.print();
-  };
-  return createPortal(
-    <div
-      ref={dialogRef}
-      className="invoice-overlay pos-bill-preview"
-      role="dialog"
-      aria-modal="true"
-      aria-label={`Bill ${invoice.invoiceNumber}`}
-      tabIndex={-1}
-      onKeyDown={handleKeyDown}
-    >
-      <style>{invoiceStyles}</style>
-      <div className="invoice-actions">
-        <div className="invoice-ready">
-          <strong>Bill ready</strong>
-          <span>{invoice.invoiceNumber} · {invoice.paymentStatus}</span>
-        </div>
-        <button type="button" onClick={print}>
-          Print / Save PDF
-        </button>
-        <button type="button" onClick={download}>
-          Download bill
-        </button>
-        <button type="button" onClick={onClose}>
-          Close
-        </button>
-      </div>
-      <article className="invoice-sheet invoice-document" ref={sheetRef}>
-        <div className="invoice-brand">
-          <div>
-            <h2>{invoice.business.name}</h2>
-            <p>
-              {invoice.business.address}
-              <br />
-              {invoice.business.city}, {invoice.business.state}
-              <br />
-              GSTIN: {invoice.business.gstin || "Not provided"}
-            </p>
-          </div>
-          <div>
-            <strong>BILL / INVOICE</strong>
-            <p>
-              {invoice.invoiceNumber}
-              <br />
-              {new Date(invoice.createdAt).toLocaleString()}
-            </p>
-          </div>
-        </div>
-        <div className="invoice-meta">
-          <p>
-            <strong>Bill to</strong>
-            <br />
-            {invoice.customerName}
-            <br />
-            {invoice.customerSnapshot?.phone}
-            <br />
-            GSTIN: {invoice.customerSnapshot?.gstin || "N/A"}
-          </p>
-          <p>
-            <strong>Billing</strong>
-            <br />
-            {invoice.billingType}
-            <br />
-            Cashier: {invoice.cashierName}
-            <br />
-            Status: {invoice.paymentStatus}
-          </p>
-        </div>
-        <table className="invoice-table">
-          <thead>
-            <tr>
-              <th>Item / HSN</th>
-              <th>Qty</th>
-              <th>Rate</th>
-              <th>Discount</th>
-              <th>GST</th>
-              <th>Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {invoice.items.map((item, index) => (
-              <tr key={`${item.productId}:${item.variantId || ""}:${index}`}>
-                <td>
-                  {item.productName}
-                  <small>{item.hsnCode ? ` / ${item.hsnCode}` : ""}</small>
-                  <small className="invoice-item-variant">
-                    {[item.variantSku, item.variantSize, item.variantColor].filter(Boolean).join(" · ")}
-                  </small>
-                </td>
-                <td>{item.quantity}</td>
-                <td>{money(invoice.business.currency, item.sellingPrice)}</td>
-                <td>{money(invoice.business.currency, item.discount)}</td>
-                <td>{item.gstRate}%</td>
-                <td>{money(invoice.business.currency, item.total)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        <div className="invoice-totals">
-          <div className="invoice-total-row">
-            <span>Subtotal</span>
-            <span>{money(invoice.business.currency, invoice.subtotal)}</span>
-          </div>
-          <div className="invoice-total-row">
-            <span>Discounts</span>
-            <span>
-              -{" "}
-              {money(
-                invoice.business.currency,
-                Number(invoice.discount || 0) + Number(invoice.offerDiscount || 0),
-              )}
-            </span>
-          </div>
-          {invoice.cgst > 0 && (
-            <>
-              <div className="invoice-total-row">
-                <span>CGST</span>
-                <span>{money(invoice.business.currency, invoice.cgst)}</span>
-              </div>
-              <div className="invoice-total-row">
-                <span>SGST</span>
-                <span>{money(invoice.business.currency, invoice.sgst)}</span>
-              </div>
-            </>
-          )}
-          {invoice.igst > 0 && (
-            <div className="invoice-total-row">
-              <span>IGST</span>
-              <span>{money(invoice.business.currency, invoice.igst)}</span>
-            </div>
-          )}
-          <div className="invoice-total-row">
-            <span>Round off</span>
-            <span>{money(invoice.business.currency, invoice.roundOff)}</span>
-          </div>
-          <div className="invoice-total-row grand">
-            <span>Total</span>
-            <span>{money(invoice.business.currency, invoice.totalAmount)}</span>
-          </div>
-          <div className="invoice-total-row">
-            <span>Paid</span>
-            <span>{money(invoice.business.currency, invoice.amountPaid)}</span>
-          </div>
-          <div className="invoice-total-row due">
-            <span>Balance due</span>
-            <span>{money(invoice.business.currency, invoice.balanceDue)}</span>
-          </div>
-        </div>
-        <div className="invoice-payments">
-          <strong>Payments</strong>
-          {(invoice.paymentSummary || []).map((payment, index) => (
-            <span key={`${payment.method}-${index}`}>
-              {payment.method}:{" "}
-              {money(invoice.business.currency, payment.amount)}{" "}
-              {["Credit", "Pay Later"].includes(payment.method) && "(not collected) "}
-              {payment.reference && `(${payment.reference})`}
-            </span>
-          ))}
-        </div>
-        <footer>Thank you for your business.</footer>
-      </article>
-    </div>,
-    document.body,
-  );
-}
 
 export default function POS({ business, account }) {
   const load = useCallback(
@@ -801,265 +567,53 @@ export default function POS({ business, account }) {
               </div>
             )}
           </div>
-          <div className="pos-cart-head">
-            <strong>Current cart</strong>
-            <span>
-              {cart.length} items · {cart.reduce((sum, item) => sum + item.quantity, 0)} units
-            </span>
-            {cart.length > 0 && (
-              <button type="button" className="pos-clear-cart" onClick={() => setCart([])}>
-                Clear cart
-              </button>
-            )}
-          </div>
-          <div className="pos-cart">
-            {!cart.length ? (
-              <div className="pos-empty">
-                Scan or select a product to begin billing.
-              </div>
-            ) : (
-              cart.map((item) => (
-                <div className="pos-cart-row" key={item.cartKey}>
-                  <div>
-                    <strong>{item.name}</strong>
-                    <small>
-                      {item.sku} · GST {item.gstRate}%
-                    </small>
-                  </div>
-                  <button type="button" onClick={() => remove(item.cartKey)}>
-                    ×
-                  </button>
-                  <label>
-                    Qty
-                    <input
-                      type="number"
-                      min="1"
-                      max={item.stock}
-                      value={item.quantity}
-                      onChange={(event) =>
-                        update(item.cartKey, "quantity", event.target.value)
-                      }
-                    />
-                  </label>
-                  <label>
-                    Price
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={item.unitPrice}
-                      disabled={!canOverride}
-                      onChange={(event) =>
-                        update(item.cartKey, "unitPrice", event.target.value)
-                      }
-                    />
-                  </label>
-                  <label>
-                    Discount
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={item.discount}
-                      onChange={(event) =>
-                        update(item.cartKey, "discount", event.target.value)
-                      }
-                    />
-                  </label>
-                  <b>
-                    {money(
-                      business.currency,
-                      item.quantity * item.unitPrice - item.discount,
-                    )}
-                  </b>
-                </div>
-              ))
-            )}
-          </div>
-          <div className="pos-adjustments">
-            <label>
-              Bill discount
-              <select
-                value={discountType}
-                onChange={(event) => setDiscountType(event.target.value)}
-              >
-                <option value="fixed">Fixed</option>
-                <option value="percent">Percent</option>
-              </select>
-              <input
-                type="number"
-                min="0"
-                value={discountValue}
-                onChange={(event) =>
-                  setDiscountValue(Number(event.target.value))
-                }
-              />
-            </label>
-            <label>
-              Payment offer
-              <select
-                value={offerCode}
-                onChange={(event) => setOfferCode(event.target.value)}
-                disabled={!activePaymentOffers.length}
-                title={activePaymentOffers.length ? "Select a payment offer" : "No payment offers are configured"}
-              >
-                <option value="">No offer</option>
-                {activePaymentOffers.map((offer) => (
-                    <option value={offer.code} key={offer.code}>
-                      {offer.label || offer.code}
-                    </option>
-                  ))}
-              </select>
-              {offerNotice && (
-                <small className={selectedOffer ? "pos-offer-ok" : "pos-offer-hint"}>
-                  {offerNotice}
-                </small>
-              )}
-            </label>
-            <label>
-              Coupon code
-              <input value={couponCode} onChange={(event) => setCouponCode(event.target.value.toUpperCase())} placeholder="FASHION10" />
-              {couponCode && <small>Validated when the sale completes</small>}
-            </label>
-            {customerMode === "existing" && customerId && <label>
-              Loyalty points
-              <input type="number" min="0" max={customers.find((item) => item.customerId === customerId)?.loyaltyPoints || 0} value={loyaltyPointsRedeemed} onChange={(event) => setLoyaltyPointsRedeemed(Number(event.target.value))} />
-              <small>Available: {customers.find((item) => item.customerId === customerId)?.loyaltyPoints || 0} points · Store credit: {money(business.currency, customers.find((item) => item.customerId === customerId)?.creditBalance || 0)}</small>
-            </label>}
-          </div>
-          <div className="pos-totals">
-            <span>
-              Subtotal <b>{money(business.currency, subtotal)}</b>
-            </span>
-            <span>
-              Discount{" "}
-              <b>
-                -{" "}
-                {money(
-                  business.currency,
-                  lineDiscount + globalDiscount + offerDiscount,
-                )}
-              </b>
-            </span>
-            <span>
-              Estimated GST <b>{money(business.currency, estimatedTax)}</b>
-            </span>
-            <strong>
-              Payable <b>{money(business.currency, estimatedTotal)}</b>
-            </strong>
-          </div>
-          <div className="pos-payments">
-            <div className="pos-cart-head">
-              <strong>Payment</strong>
-              <button
-                type="button"
-                onClick={() =>
-                  setPayments([
-                    ...payments,
-                    { method: "UPI", amount: 0, reference: "" },
-                  ])
-                }
-              >
-                + Split
-              </button>
-            </div>
-            {payments.length === 1 && (
-              <div className="pos-quick-methods">
-                {[["Cash", "F8"], ["UPI", "F9"], ["Debit Card", "F10"]].map(([method, hint]) => (
-                  <button
-                    key={method}
-                    type="button"
-                    className={payments[0].method === method ? "active" : ""}
-                    onClick={() => setPayment(0, "method", method)}
-                  >
-                    {method === "Debit Card" ? "Card" : method}
-                    <small>{hint}</small>
-                  </button>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => setPayments([...payments, createPaymentRow("UPI", 0, "")])}
-                >
-                  Split
-                </button>
-              </div>
-            )}
-            {payments.map((payment, index) => (
-              <div className="pos-payment-row" key={payment.id}>
-                <select
-                  value={payment.method}
-                  onChange={(event) =>
-                    setPayment(index, "method", event.target.value)
-                  }
-                >
-                  {METHODS.map((method) => (
-                    <option key={method}>{method}</option>
-                  ))}
-                </select>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={payment.amount}
-                  onChange={(event) =>
-                    setPayment(index, "amount", event.target.value)
-                  }
-                  placeholder="Amount"
-                />
-                <input
-                  value={payment.reference}
-                  onChange={(event) =>
-                    setPayment(index, "reference", event.target.value)
-                  }
-                  placeholder="Reference"
-                />
-                {payments.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setPayments(payments.filter((_, i) => i !== index))
-                    }
-                  >
-                    ×
-                  </button>
-                )}
-              </div>
-            ))}
-            <button
-              className="pay-full"
-              type="button"
-              onClick={() => setPayment(0, "amount", estimatedTotal)}
-            >
-              Set full amount
-            </button>
-            {qrPaymentSelected && !business.settings?.upiId && (
-              <p className="pos-qr-notice">
-                Add your Business UPI ID in Business → Settings, save it, then
-                return here to display the payment QR.
-              </p>
-            )}
-            {qr && (
-              <div className="pos-qr">
-                <img
-                  src={qr}
-                  alt={`UPI payment QR for ${money(business.currency, qrAmount)}`}
-                />
-                <small>Scan to pay {money(business.currency, qrAmount)}</small>
-                <small>{business.settings.upiId}</small>
-              </div>
-            )}
-          </div>
-          <button
-            className="submit-button pos-checkout-button"
-            type="button"
-            disabled={!cart.length || saving}
-            onClick={checkout}
-          >
-            {saving
-              ? "Saving sale & generating bill…"
-              : `Complete sale & generate bill · ${money(business.currency, estimatedTotal)}`}{" "}
-            <span>→</span>
-          </button>
+          <PosCart
+            cart={cart}
+            setCart={setCart}
+            update={update}
+            remove={remove}
+            canOverride={canOverride}
+            business={business}
+            subtotal={subtotal}
+            lineDiscount={lineDiscount}
+            globalDiscount={globalDiscount}
+            offerDiscount={offerDiscount}
+            estimatedTax={estimatedTax}
+            estimatedTotal={estimatedTotal}
+            discountType={discountType}
+            setDiscountType={setDiscountType}
+            discountValue={discountValue}
+            setDiscountValue={setDiscountValue}
+            activePaymentOffers={activePaymentOffers}
+            offerCode={offerCode}
+            setOfferCode={setOfferCode}
+            offerNotice={offerNotice}
+            selectedOffer={selectedOffer}
+            couponCode={couponCode}
+            setCouponCode={setCouponCode}
+            customerMode={customerMode}
+            customerId={customerId}
+            customers={customers}
+            loyaltyPointsRedeemed={loyaltyPointsRedeemed}
+            setLoyaltyPointsRedeemed={setLoyaltyPointsRedeemed}
+            money={money}
+          />
+          <PosPaymentSection
+            payments={payments}
+            setPayments={setPayments}
+            setPayment={setPayment}
+            createPaymentRow={createPaymentRow}
+            METHODS={METHODS}
+            business={business}
+            estimatedTotal={estimatedTotal}
+            qrPaymentSelected={qrPaymentSelected}
+            qr={qr}
+            qrAmount={qrAmount}
+            saving={saving}
+            checkout={checkout}
+            cartLength={cart.length}
+            money={money}
+          />
         </aside>
       </div>
       <footer className="pos-statusbar">
@@ -1069,7 +623,7 @@ export default function POS({ business, account }) {
         <span className="pos-statusbar-suite">Enterprise Retail OS</span>
       </footer>
       {invoice && (
-        <Invoice invoice={invoice} onClose={() => setInvoice(null)} />
+        <PosReceiptModal invoice={invoice} onClose={() => setInvoice(null)} />
       )}
     </section>
   );
