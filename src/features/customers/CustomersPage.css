@@ -1,0 +1,129 @@
+/* CustomersPage.css - Scoped styles using tokens */
+.cust-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  width: min(100%, 1440px);
+  margin: 0 auto;
+}
+
+/* Customer cells */
+.cust-name {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.cust-avatar {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--sr-radius-md);
+  border: 1px solid var(--line);
+  background: var(--surface-soft);
+  color: var(--orange);
+  font: 700 var(--fs-sm) var(--font-family);
+}
+
+.cust-name strong {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.cust-name small {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-soft);
+  font-size: var(--fs-xs);
+  margin-top: 2px;
+}
+
+.cust-name small svg {
+  width: 12px;
+  height: 12px;
+  color: var(--muted);
+}
+
+.cust-contact {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.cust-contact svg {
+  width: 12px;
+  height: 12px;
+  color: var(--muted);
+}
+
+.cust-spend strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.cust-spend small {
+  color: var(--text-soft);
+  font-size: var(--fs-xs);
+}
+
+.cust-row-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Form layout */
+.cust-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-3);
+}
+
+.cust-form-grid .field-wide {
+  grid-column: 1 / -1;
+}
+
+/* Modal detail grid */
+.cust-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--sr-radius-md);
+  background: var(--surface-soft);
+  margin-bottom: var(--space-4);
+}
+
+.cust-detail-grid small {
+  display: block;
+  color: var(--text-soft);
+  font-size: var(--fs-xs);
+}
+
+.cust-detail-grid strong {
+  color: var(--text);
+  font-size: var(--fs-sm);
+}
+
+.cust-action-hint {
+  padding: var(--space-3);
+  border: 1px dashed var(--line);
+  border-radius: var(--sr-radius-md);
+  font-size: var(--fs-xs);
+  color: var(--text-soft);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.cust-action-hint strong {
+  color: var(--text);
+}
