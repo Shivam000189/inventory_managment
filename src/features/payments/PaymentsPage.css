@@ -1,0 +1,257 @@
+/* ==========================================================================
+   Payments Management - Unified Design System Styles
+   ========================================================================== */
+
+.pay-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4, 16px);
+  width: 100%;
+  animation: pay-fade 0.2s ease-out;
+  box-sizing: border-box;
+}
+
+@keyframes pay-fade {
+  from { opacity: 0; transform: translateY(3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Type switch in header actions */
+.pay-type-switch {
+  display: inline-flex;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid var(--line, #e9ddd0);
+  border-radius: var(--sr-radius, 10px);
+  background: var(--surface-soft, #f7f2ec);
+}
+
+.pay-type-switch button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: 0;
+  border-radius: var(--sr-radius-xs, 6px);
+  color: var(--text-soft, #6b5d4f);
+  background: transparent;
+  font-size: var(--fs-xs, 12px);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.pay-type-switch button b {
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--surface-muted, #efe3d3);
+  color: var(--text, #2a221c);
+  font-size: 10px;
+}
+
+.pay-type-switch button.active {
+  color: #fff;
+  background: var(--orange, #5b371f);
+}
+
+.pay-type-switch button.active b {
+  background: rgba(0, 0, 0, 0.2);
+  color: #fff;
+}
+
+/* Payment Entry Form Card */
+.pay-form-card {
+  border: 1px solid var(--line, #e9ddd0);
+  border-radius: var(--sr-radius, 10px);
+  background: var(--surface, #fff);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+}
+
+.pay-form-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2, 8px);
+  flex-wrap: wrap;
+  padding: var(--space-3, 12px) var(--space-4, 16px);
+  border-bottom: 1px solid var(--line, #e9ddd0);
+  background: var(--surface-soft, #f7f2ec);
+}
+
+.pay-form-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+}
+
+.pay-form-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--orange, #5b371f);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--orange, #5b371f) 15%, transparent);
+}
+
+.pay-form-head strong {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text, #2a221c);
+}
+
+.pay-form-head em {
+  font-size: 11px;
+  color: var(--muted, #8f8175);
+  font-style: normal;
+}
+
+.pay-form-note {
+  font-size: 11px;
+  color: var(--text-soft, #6b5d4f);
+}
+
+.pay-form-body {
+  padding: var(--space-4, 16px);
+  display: grid;
+  grid-template-columns: 1.5fr 1fr 1fr 1fr;
+  gap: var(--space-3, 12px);
+  align-items: start;
+}
+
+@media (max-width: 1023px) {
+  .pay-form-body {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .pay-form-body {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pay-field-full {
+  grid-column: 1 / -1;
+}
+
+.pay-quick-chips {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+.pay-quick-chip {
+  padding: 3px 8px;
+  border: 1px solid var(--line, #e9ddd0);
+  border-radius: var(--sr-radius-xs, 4px);
+  background: var(--surface-soft, #f7f2ec);
+  color: var(--text-soft, #6b5d4f);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pay-quick-chip:hover {
+  background: var(--surface-muted, #efe3d3);
+  color: var(--text, #2a221c);
+}
+
+.pay-form-submit-row {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  padding-top: var(--space-2, 8px);
+}
+
+/* Table cells */
+.pay-receipt-cell,
+.pay-entity-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pay-receipt-num {
+  font-family: var(--sr-font-mono, monospace);
+  font-weight: 700;
+  color: var(--text, #2a221c);
+}
+
+.pay-cell-sub {
+  font-size: 11px;
+  color: var(--muted, #8f8175);
+}
+
+.pay-ref-pill {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: var(--surface-soft, #f7f2ec);
+  border: 1px solid var(--line, #e9ddd0);
+  font-family: var(--sr-font-mono, monospace);
+  font-size: 11px;
+  color: var(--text-soft, #6b5d4f);
+}
+
+.pay-amount-cell {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.pay-amount-cell strong {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.pay-amount-cell.plus strong {
+  color: var(--success, #227a4e);
+}
+
+.pay-amount-cell.minus strong {
+  color: var(--danger, #b3402f);
+}
+
+/* Ledger header tools */
+.pay-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+  flex-wrap: wrap;
+}
+
+/* Footer status bar */
+.pay-statusbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  padding-top: var(--space-3, 12px);
+  border-top: 1px solid var(--line, #e9ddd0);
+  font-size: 10px;
+  color: var(--muted, #8f8175);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.pay-statusbar span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pay-statusbar span i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--success, #227a4e);
+}
+
+.pay-statusbar-suite {
+  margin-left: auto;
+  color: var(--orange, #5b371f);
+}
