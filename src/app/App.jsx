@@ -5,7 +5,6 @@ import "../styles/ui-system.css";
 import "../styles/app-chrome.css";
 import "../styles/modern-dashboard.css";
 import "../features/dashboard/overview-dashboard.css";
-import "../styles/inventory-dashboard.css";
 
 // Layout & Context
 import AppSidebar from "../components/layout/AppSidebar.jsx";

@@ -1,37 +1,18 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import AsyncBoundary from '../../components/feedback/AsyncBoundary.jsx'
-import '../../styles/stock-adjustments.css'
-import '../../styles/inventory-dashboard.css'
-
-function AdjustmentIcon({ name, size = 18, className = '', ...props }) {
-  const paths = {
-    search: <><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 4.5 4.5" /></>,
-    export: <><path d="M12 3v12m-4-4 4 4 4-4" /><path d="M5 18v3h14v-3" /></>,
-    log: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,
-    arrow: <path d="M4 12h15m-5-5 5 5-5 5" />,
-    scale: <><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" /><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" /><path d="M7 21h10" /><path d="M12 3v18" /><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2" /></>,
-    variance: <><path d="m7 15 5 5 5-5" /><path d="m7 9 5-5 5 5" /></>,
-    alert: <><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></>,
-    money: <><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></>,
-  }
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      width={size}
-      height={size}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-      {...props}
-    >
-      {paths[name]}
-    </svg>
-  )
-}
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  PageHeader,
+  Button,
+  Badge,
+  StatGrid,
+  StatCard,
+  Toolbar,
+  DataTable,
+  Select,
+  Input,
+  FormStatus,
+  Icon,
+} from '../../components/ui/index.js'
+import './InventoryOperations.css'
 
 export default function StockAdjustmentView({
   products = [],
@@ -54,12 +35,10 @@ export default function StockAdjustmentView({
   const [newQuantity, setNewQuantity] = useState('')
   const [selectedKeys, setSelectedKeys] = useState([])
   const [page, setPage] = useState(1)
-  const [tableOpen, setTableOpen] = useState(true)
-  const pageSize = 10
+  const [pageSize, setPageSize] = useState(10)
 
   const productRef = useRef(null)
   const quantityRef = useRef(null)
-  const searchRef = useRef(null)
   const formRef = useRef(null)
 
   const selectedProduct = products.find((product) => product.productId === selectedId)
@@ -68,9 +47,16 @@ export default function StockAdjustmentView({
   const formatMoney = (value) => {
     const amount = Number(value || 0)
     try {
-      return new Intl.NumberFormat('en-IN', { style: 'currency', currency, minimumFractionDigits: 2 }).format(amount)
+      return new Intl.NumberFormat('en-IN', {
+        style: 'currency',
+        currency,
+        minimumFractionDigits: 2,
+      }).format(amount)
     } catch {
-      return `${currency} ${amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+      return `${currency} ${amount.toLocaleString('en-IN', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}`
     }
   }
 
@@ -118,7 +104,18 @@ export default function StockAdjustmentView({
 
       const matchesSearch =
         !query ||
-        [product.name, product.sku, product.barcode, product.category, product.genericName, product.batchNumber, product.manufacturer, product.size, product.color, product.brand]
+        [
+          product.name,
+          product.sku,
+          product.barcode,
+          product.category,
+          product.genericName,
+          product.batchNumber,
+          product.manufacturer,
+          product.size,
+          product.color,
+          product.brand,
+        ]
           .filter(Boolean)
           .join(' ')
           .toLowerCase()
@@ -145,38 +142,15 @@ export default function StockAdjustmentView({
     return list
   }, [products, search, category, stockStatus, sortOrder, summary.latest])
 
-  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / pageSize))
-  const currentPage = Math.min(page, totalPages)
-  const currentItems = filteredProducts.slice((currentPage - 1) * pageSize, currentPage * pageSize)
-
-  const allCurrentSelected =
-    currentItems.length > 0 && currentItems.every((product) => selectedKeys.includes(product.productId))
-
-  const toggleSelectAll = (e) => {
-    if (e.target.checked) {
-      setSelectedKeys((prev) => [
-        ...new Set([...prev, ...currentItems.map((p) => p.productId)]),
-      ])
-    } else {
-      setSelectedKeys((prev) =>
-        prev.filter((id) => !currentItems.some((p) => p.productId === id))
-      )
-    }
-  }
-
-  const toggleSelectItem = (id) => {
-    setSelectedKeys((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-    )
-  }
-
   useEffect(() => {
     const handleShortcut = (event) => {
       if (event.defaultPrevented || event.repeat || event.isComposing) return
-      if ((event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === 'k') {
-        event.preventDefault()
-        searchRef.current?.focus()
-      } else if (event.altKey && !event.ctrlKey && !event.metaKey && event.key.toLowerCase() === 'j') {
+      if (
+        event.altKey &&
+        !event.ctrlKey &&
+        !event.metaKey &&
+        event.key.toLowerCase() === 'j'
+      ) {
         event.preventDefault()
         productRef.current?.focus()
       }
@@ -185,17 +159,16 @@ export default function StockAdjustmentView({
     return () => window.removeEventListener('keydown', handleShortcut)
   }, [])
 
-  const startAdjustment = (product) => {
+  const startAdjustment = useCallback((product) => {
     if (saving) return
     setSelectedId(product.productId)
     setNewQuantity(String(product.currentStock ?? 0))
-    if (productRef.current) productRef.current.value = product.productId
     formRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' })
     setTimeout(() => {
       quantityRef.current?.focus()
       quantityRef.current?.select()
     }, 100)
-  }
+  }, [saving])
 
   const exportAdjustments = () => {
     const escapeCell = (value) => {
@@ -237,619 +210,430 @@ export default function StockAdjustmentView({
       ? Number(newQuantity) - Number(selectedProduct.currentStock || 0)
       : null
 
+  const columns = useMemo(() => {
+    return [
+      {
+        key: 'sku',
+        header: 'SKU',
+        mobileLabel: 'SKU',
+        render: (product) => (
+          <code style={{ fontSize: '11px', fontFamily: 'var(--font-mono)' }}>
+            {product.sku || product.productId.slice(-6)}
+          </code>
+        ),
+      },
+      {
+        key: 'product',
+        header: 'Product & Details',
+        mobileLabel: 'Product',
+        render: (product) => (
+          <div className="inventory-prod-cell">
+            <span className="inventory-prod-avatar">{product.name?.[0]?.toUpperCase()}</span>
+            <div className="inventory-prod-info">
+              <span className="inventory-prod-name">{product.name}</span>
+              <span className="inventory-prod-meta">
+                {[
+                  product.brand,
+                  product.batchNumber ? `Batch: ${product.batchNumber}` : null,
+                  product.expiryDate ? `Exp: ${String(product.expiryDate).slice(0, 10)}` : null,
+                ]
+                  .filter(Boolean)
+                  .join(' · ')}
+              </span>
+            </div>
+          </div>
+        ),
+      },
+      {
+        key: 'category',
+        header: 'Category',
+        mobileLabel: 'Category',
+        render: (product) => <Badge tone="neutral">{product.category || 'Unassigned'}</Badge>,
+      },
+      {
+        key: 'stock',
+        header: 'Recorded Stock',
+        mobileLabel: 'Stock',
+        render: (product) => (
+          <div>
+            <span className="inventory-qty-val">
+              {Number(product.currentStock || 0).toLocaleString('en-IN')}
+            </span>{' '}
+            <small style={{ color: 'var(--text-soft)', fontSize: '11px' }}>
+              {product.unit || 'units'}
+            </small>
+          </div>
+        ),
+      },
+      {
+        key: 'lastAdjust',
+        header: 'Last Adjustment',
+        mobileLabel: 'Last Adjustment',
+        render: (product) => {
+          const latest = summary.latest.get(product.productId)
+          if (!latest) return <span style={{ color: 'var(--text-soft)', fontSize: '12px' }}>Never</span>
+          const variance = Number(latest.newStock || 0) - Number(latest.previousStock || 0)
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+              <span
+                style={{
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  color: variance < 0 ? 'var(--danger)' : 'var(--success)',
+                }}
+              >
+                {variance > 0 ? `+${variance}` : variance} {product.unit || 'units'}
+              </span>
+              <small style={{ color: 'var(--text-soft)', fontSize: '11px' }}>
+                {latest.reason || 'Reconciled'}
+              </small>
+            </div>
+          )
+        },
+      },
+      {
+        key: 'status',
+        header: 'Status',
+        mobileLabel: 'Status',
+        render: (product) => {
+          const stock = Number(product.currentStock || 0)
+          const minimum = Number(product.minimumStock || 10)
+          const isOut = stock === 0
+          const isLow = stock <= minimum && !isOut
+          return (
+            <Badge tone={isOut ? 'danger' : isLow ? 'warning' : 'success'}>
+              {isOut ? 'Out of Stock' : isLow ? 'Low Stock' : 'In Stock'}
+            </Badge>
+          )
+        },
+      },
+      {
+        key: 'actions',
+        header: '',
+        mobileLabel: 'Actions',
+        align: 'right',
+        render: (product) => (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => startAdjustment(product)}
+            aria-label={`Adjust ${product.name}`}
+          >
+            Reconcile
+          </Button>
+        ),
+      },
+    ]
+  }, [summary.latest, startAdjustment])
+
   return (
-    <div className="modern-dashboard-content inventory-dashboard-page" aria-busy={loading}>
-      {/* 1. Header Toolbar */}
-      <header className="inventory-page-header">
-        <div className="inventory-header-left">
-          <div className="inventory-header-title-row">
-            <h1>Stock Adjustments &amp; Reconciliation</h1>
-            <span className={`inventory-live-badge ${error ? 'is-error' : ''}`}>
-              <i /> Live Reconciliation
-            </span>
-          </div>
-          <p className="inventory-header-sub">
-            Reconcile physical counts with digital balances and maintain an immutable discrepancy audit trail for{' '}
-            <strong>{business.name}</strong>.
-          </p>
-        </div>
-
-        <div className="inventory-header-actions">
-          <button type="button" onClick={() => searchRef.current?.focus()}>
-            <AdjustmentIcon name="search" /> Find Product
-          </button>
-          <button
-            type="button"
-            onClick={exportAdjustments}
-            disabled={loading || !!error || !summary.entries.length}
-          >
-            <AdjustmentIcon name="export" /> Export CSV ({summary.entries.length})
-          </button>
-          {onNavigate && (
-            <button
-              type="button"
-              className="primary"
-              onClick={() => onNavigate('Stock History')}
+    <div className="inventory-page">
+      <PageHeader
+        kicker="Inventory"
+        title="Stock Adjustments & Reconciliation"
+        description={`Reconcile physical stock counts, log damage/shrinkage, and audit inventory for ${business.name}`}
+        actions={
+          <>
+            <Button
+              variant="outline"
+              onClick={exportAdjustments}
+              disabled={!summary.entries.length}
+              icon="download"
             >
-              <AdjustmentIcon name="log" /> Audit Log
-            </button>
-          )}
-        </div>
-      </header>
-
-      {/* 2. Top Metric KPI 4 Cards Grid */}
-      <div className="modern-kpi-row">
-        {/* KPI 1: Recent Adjustments Logged */}
-        <div className="modern-kpi-card" tabIndex={0} role="region" aria-label="Recent adjustments">
-          <div className="modern-kpi-texts">
-            <span className="modern-kpi-title">Adjustments Logged</span>
-            <span className="modern-kpi-value">
-              {loading || error ? '—' : summary.entries.length}
-            </span>
-            <span style={{ fontSize: '11.5px', color: 'var(--muted)', fontWeight: 500 }}>
-              Across {summary.latest.size} distinct items
-            </span>
-          </div>
-          <div className="modern-kpi-icon-bubble bubble-blue" aria-hidden="true">
-            <AdjustmentIcon name="scale" />
-          </div>
-        </div>
-
-        {/* KPI 2: Net Quantity Variance */}
-        <div className="modern-kpi-card" tabIndex={0} role="region" aria-label="Net variance">
-          <div className="modern-kpi-texts">
-            <span className="modern-kpi-title">Net Unit Variance</span>
-            <span className="modern-kpi-value">
-              {loading || error
-                ? '—'
-                : `${summary.netVariance > 0 ? '+' : ''}${summary.netVariance}`}
-            </span>
-            <span
-              style={{
-                fontSize: '11.5px',
-                color: summary.netVariance >= 0 ? 'var(--success)' : 'var(--danger)',
-                fontWeight: 600,
-              }}
+              Export log
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => onNavigate?.('Stock')}
+              icon="eye"
             >
-              {summary.netVariance >= 0 ? 'Net positive discrepancy' : 'Net shrinkage / deduction'}
-            </span>
-          </div>
-          <div
-            className={`modern-kpi-icon-bubble ${
-              summary.netVariance >= 0 ? 'bubble-yellow' : 'bubble-rose'
-            }`}
-            aria-hidden="true"
-          >
-            <AdjustmentIcon name="variance" />
-          </div>
-        </div>
+              View Stock Ledger
+            </Button>
+          </>
+        }
+      />
 
-        {/* KPI 3: Cost Impact */}
-        <div className="modern-kpi-card" tabIndex={0} role="region" aria-label="Cost impact">
-          <div className="modern-kpi-texts">
-            <span className="modern-kpi-title">Estimated Cost Impact</span>
-            <span className="modern-kpi-value">
-              {loading || error ? '—' : formatMoney(summary.valueImpact)}
-            </span>
-            <span style={{ fontSize: '11.5px', color: 'var(--muted)', fontWeight: 500 }}>
-              Variance × unit cost
-            </span>
-          </div>
-          <div className="modern-kpi-icon-bubble bubble-green" aria-hidden="true">
-            <AdjustmentIcon name="money" />
-          </div>
-        </div>
+      {!loading && !error && (
+        <StatGrid>
+          <StatCard
+            label="Reconciliations Logged"
+            value={summary.entries.length}
+            helpText="Total adjustments recorded"
+            icon="clock"
+            tone="blue"
+          />
+          <StatCard
+            label="Net Variance"
+            value={`${summary.netVariance >= 0 ? '+' : ''}${summary.netVariance} units`}
+            helpText="Physical count variance"
+            icon="variance"
+            tone={summary.netVariance < 0 ? 'warning' : 'success'}
+          />
+          <StatCard
+            label="Flagged for Audit"
+            value={summary.flaggedCount}
+            helpText="SKUs with low or zero balance"
+            icon="alert"
+            tone={summary.flaggedCount > 0 ? 'warning' : 'neutral'}
+          />
+          <StatCard
+            label="Valuation Impact"
+            value={formatMoney(summary.valueImpact)}
+            helpText="Net inventory cost difference"
+            icon="trending-up"
+            tone={summary.valueImpact < 0 ? 'danger' : 'success'}
+          />
+        </StatGrid>
+      )}
 
-        {/* KPI 4: Needing Review */}
-        <div
-          className="modern-kpi-card"
-          tabIndex={0}
-          role="button"
-          onClick={() => {
-            setStockStatus('flagged')
-            setPage(1)
-          }}
-          aria-label="Filter items needing review"
-        >
-          <div className="modern-kpi-texts">
-            <span className="modern-kpi-title">Needing Review</span>
-            <span className="modern-kpi-value">
-              {loading || error ? '—' : summary.flaggedCount}
-            </span>
-            <span style={{ fontSize: '11.5px', color: 'var(--danger)', fontWeight: 600 }}>
-              At or below minimum threshold
-            </span>
-          </div>
-          <div className="modern-kpi-icon-bubble bubble-rose" aria-hidden="true">
-            <AdjustmentIcon name="alert" />
-          </div>
-        </div>
-      </div>
-
-      {/* 3. Fast Adjustment / Reconciliation Terminal Card */}
-      <section className="inventory-terminal-panel" aria-labelledby="adjustment-terminal-title">
+      {/* Adjustment Terminal Card */}
+      <section className="inventory-terminal-card" aria-labelledby="adjust-title">
         <div className="inventory-terminal-header">
-          <div className="inventory-terminal-title-group">
-            <div className="inventory-terminal-icon bubble-yellow">
-              <AdjustmentIcon name="scale" />
+          <div className="inventory-terminal-title-wrap">
+            <div className="inventory-terminal-icon adjust">
+              <Icon name="warning" />
             </div>
             <div>
-              <h3 id="adjustment-terminal-title">
-                Record Inventory Adjustment
-                <span className="inventory-terminal-badge">Audit Reconciliation</span>
+              <h3 id="adjust-title" className="inventory-terminal-title">
+                Record Stock Count Adjustment
+                <Badge tone="warning">Audit Reconciliation</Badge>
               </h3>
             </div>
           </div>
-          <kbd className="inventory-kbd-shortcut">Alt + J</kbd>
+          <kbd className="inventory-kbd">Alt + J</kbd>
         </div>
 
-        <div className="inventory-terminal-body">
-          <form
-            ref={formRef}
-            onSubmit={onSubmit}
-            onReset={() => {
-              setSelectedId('')
-              setNewQuantity('')
-            }}
-          >
-            <div className="inventory-form-grid" style={{ gridTemplateColumns: 'minmax(220px, 1.5fr) minmax(130px, 0.7fr) minmax(150px, 0.9fr) minmax(170px, 1.1fr) minmax(140px, 0.8fr)' }}>
-              {/* Product Select */}
-              <div className="inventory-field">
-                <label htmlFor="adj-product" className="inventory-field-label">
-                  Product / SKU <span className="inventory-field-required">*</span>
-                </label>
-                <div className="inventory-select-wrap">
-                  <select
-                    ref={productRef}
-                    id="adj-product"
-                    name="productId"
-                    value={selectedId}
-                    required
-                    disabled={saving}
-                    className="inventory-select"
-                    onChange={(event) => {
-                      const id = event.target.value
-                      const product = products.find((item) => item.productId === id)
-                      setSelectedId(id)
-                      setNewQuantity(product ? String(product.currentStock ?? 0) : '')
-                    }}
-                  >
-                    <option value="" disabled>Select product to reconcile…</option>
-                    {products.map((product) => (
-                      <option key={product.productId} value={product.productId}>
-                        {product.name} ({product.sku}){product.batchNumber ? ` · Batch: ${product.batchNumber}` : ''}{product.expiryDate ? ` · Exp: ${String(product.expiryDate).slice(0, 10)}` : ''} · {product.currentStock} {product.unit} current
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Current Stock Preview */}
-              <div className="inventory-field">
-                <label className="inventory-field-label">Current Stock</label>
-                <div
-                  className="inventory-input"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    background: '#f8fafc',
-                  }}
-                >
-                  <strong>{selectedProduct ? Number(selectedProduct.currentStock || 0).toLocaleString('en-IN') : '—'}</strong>
-                  <span style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 600 }}>{selectedProduct?.unit || 'units'}</span>
-                </div>
-              </div>
-
-              {/* New Physical Count Quantity */}
-              <div className="inventory-field">
-                <label htmlFor="adj-quantity" className="inventory-field-label">
-                  New Quantity <span className="inventory-field-required">*</span>
-                </label>
-                <div className="inventory-input-wrap">
-                  <input
-                    ref={quantityRef}
-                    id="adj-quantity"
-                    name="quantity"
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={newQuantity}
-                    onChange={(event) => setNewQuantity(event.target.value)}
-                    required
-                    disabled={saving}
-                    placeholder="0"
-                    className="inventory-input inventory-input-qty"
-                    style={{ paddingRight: selectedVariance !== null ? '75px' : '40px' }}
-                  />
-                  {selectedVariance !== null && (
-                    <span
-                      className={`inventory-variance-tag ${
-                        selectedVariance >= 0 ? 'positive' : 'negative'
-                      }`}
-                    >
-                      {selectedVariance > 0 ? `+${selectedVariance}` : selectedVariance}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Reason / Audit Note */}
-              <div className="inventory-field">
-                <label htmlFor="adj-reason" className="inventory-field-label">
-                  Reason / Note <span className="inventory-field-optional">(optional)</span>
-                </label>
-                <div className="inventory-input-wrap">
-                  <input
-                    id="adj-reason"
-                    name="reason"
-                    list="adj-reasons"
-                    placeholder="Physical count correction"
-                    disabled={saving}
-                    className="inventory-input"
-                  />
-                </div>
-                <datalist id="adj-reasons">
-                  {[
-                    'Physical count correction',
-                    'Damaged stock',
-                    'Shrinkage / discrepancy',
-                    'Opening balance correction',
-                    'Audit reconciliation',
-                    'Found unrecorded stock',
-                  ].map((r) => (
-                    <option key={r} value={r} />
-                  ))}
-                </datalist>
-              </div>
-
-              {/* Submit Button */}
-              <div className="inventory-submit-col">
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="inventory-submit-btn"
-                >
-                  <span>{saving ? 'Recording…' : 'Record'}</span>
-                  <AdjustmentIcon name="arrow" size={16} />
-                </button>
-              </div>
-            </div>
-
-            {/* Context Meta Row */}
-            <div className="inventory-context-row">
-              <div className="inventory-context-tile">
-                <div className="inventory-context-icon" aria-hidden="true">📍</div>
-                <div className="inventory-context-content">
-                  <span className="inventory-context-label">Rack / Bin Location</span>
-                  <span className={`inventory-context-val ${!selectedProduct ? 'is-placeholder' : ''}`}>
-                    {selectedProduct
-                      ? selectedProduct.rackLocation || selectedProduct.warehouse || 'Unassigned'
-                      : 'Select product to inspect location'}
-                  </span>
-                </div>
-              </div>
-              <div className="inventory-context-tile">
-                <div className="inventory-context-icon" aria-hidden="true">💰</div>
-                <div className="inventory-context-content">
-                  <span className="inventory-context-label">Unit Cost Value ({currency})</span>
-                  <span className={`inventory-context-val ${!selectedProduct ? 'is-placeholder' : ''}`}>
-                    {selectedProduct ? formatMoney(selectedProduct.purchasePrice) : '—'}
-                  </span>
-                </div>
-              </div>
-              <div className="inventory-context-tile">
-                <div className="inventory-context-icon" aria-hidden="true">⚖️</div>
-                <div className="inventory-context-content">
-                  <span className="inventory-context-label">Authorized Auditor</span>
-                  <span className="inventory-context-val">
-                    {account?.name || account?.email || 'Current Auditor'} ({account?.role || 'Staff'})
-                  </span>
-                </div>
-              </div>
-            </div>
-          </form>
-
-          {/* Feedback Status */}
-          {message && (
-            <div
-              className={`inventory-status-alert ${message.type}`}
-              role={message.type === 'error' ? 'alert' : 'status'}
-            >
-              <span>{message.type === 'error' ? '⚠️' : '✅'}</span>
-              <span>{message.text}</span>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* 4. Physical Count & Reconciliation Ledger (Dashboard invoice-style-panel) */}
-      <section className="modern-panel-card invoice-style-panel">
-        <div className="section-heading" style={{ marginBottom: '20px' }}>
-          <div>
-            <h2 style={{ fontSize: '20px', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '12px', margin: 0 }}>
-              <span
-                className="inventory-heading-icon"
-                aria-hidden="true"
-                style={{
-                  fontSize: '32px',
-                  lineHeight: 1,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
+        <form
+          ref={formRef}
+          onSubmit={onSubmit}
+          onReset={() => {
+            setSelectedId('')
+            setNewQuantity('')
+          }}
+          className="inventory-form"
+        >
+          <div className="inventory-form-grid">
+            <div className="inventory-field">
+              <label htmlFor="adjust-product">Product to Reconcile *</label>
+              <Select
+                ref={productRef}
+                id="adjust-product"
+                name="productId"
+                value={selectedId}
+                required
+                disabled={saving}
+                onChange={(e) => {
+                  const id = e.target.value
+                  setSelectedId(id)
+                  const prod = products.find((p) => p.productId === id)
+                  setNewQuantity(prod ? String(prod.currentStock ?? 0) : '')
                 }}
               >
-                ⚖️
-              </span>
-              <span>Stock Reconciliation Ledger &amp; Discrepancy Audit</span>
-            </h2>
-          </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button
-              className="outline-button"
-              type="button"
-              onClick={() => setTableOpen(!tableOpen)}
-            >
-              {tableOpen ? 'Hide Table' : 'Show Table'}
-            </button>
-          </div>
-        </div>
-
-        {tableOpen && (
-          <>
-            {/* Controls Row: Search + Filter Selects */}
-            <div className="invoice-controls-row">
-              <div className="invoice-controls-left">
-                <div className="invoice-search-wrap">
-                  <input
-                    ref={searchRef}
-                    type="text"
-                    className="invoice-search-input"
-                    aria-label="Search adjustment products"
-                    value={search}
-                    onChange={(event) => {
-                      setSearch(event.target.value)
-                      setPage(1)
-                    }}
-                    placeholder="Search product, SKU, barcode, brand…"
-                  />
-                  <span className="invoice-search-icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="11" cy="11" r="7" />
-                      <path d="m21 21-4.35-4.35" />
-                    </svg>
-                  </span>
-                </div>
-
-                <select
-                  className="invoice-select"
-                  aria-label="Filter by category"
-                  value={category}
-                  onChange={(event) => {
-                    setCategory(event.target.value)
-                    setPage(1)
-                  }}
-                >
-                  <option value="all">All categories ({products.length})</option>
-                  {summary.categories.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-
-                <select
-                  className="invoice-select"
-                  aria-label="Filter by reconciliation status"
-                  value={stockStatus}
-                  onChange={(event) => {
-                    setStockStatus(event.target.value)
-                    setPage(1)
-                  }}
-                >
-                  <option value="all">All items</option>
-                  <option value="flagged">Needs Review / Low Stock ({summary.flaggedCount})</option>
-                  <option value="adjusted">Adjusted in History ({summary.latest.size})</option>
-                  <option value="in">In Stock (Healthy)</option>
-                  <option value="out">Out of Stock</option>
-                </select>
-
-                <select
-                  className="invoice-select"
-                  aria-label="Sort products"
-                  value={sortOrder}
-                  onChange={(event) => {
-                    setSortOrder(event.target.value)
-                    setPage(1)
-                  }}
-                >
-                  <option value="default">Default order</option>
-                  <option value="high">Stock: High to Low</option>
-                  <option value="low">Stock: Low to High</option>
-                </select>
-              </div>
-
-              <button
-                type="button"
-                className="invoice-primary-btn"
-                onClick={exportAdjustments}
-                disabled={!summary.entries.length}
-              >
-                Export CSV
-              </button>
+                <option value="" disabled>
+                  Select product to adjust…
+                </option>
+                {products.map((product) => (
+                  <option key={product.productId} value={product.productId}>
+                    {product.name} ({product.sku}) · {product.currentStock} {product.unit || 'units'} on hand
+                  </option>
+                ))}
+              </Select>
             </div>
 
-            {/* The Table */}
-            <AsyncBoundary
-              loading={loading}
-              error={error}
-              onRetry={refetch}
-              isEmpty={!filteredProducts.length}
-              emptyText={
-                products.length
-                  ? 'No items match your filter criteria.'
-                  : 'No products in this workspace yet.'
-              }
-            >
-              <div className="invoice-table-wrap">
-                <table className="invoice-table">
-                  <thead>
-                    <tr>
-                      <th style={{ width: '42px' }}>
-                        <input
-                          type="checkbox"
-                          className="invoice-checkbox"
-                          aria-label="Select all products"
-                          checked={allCurrentSelected}
-                          onChange={toggleSelectAll}
-                        />
-                      </th>
-                      <th style={{ width: '100px' }}>SKU</th>
-                      <th>Product &amp; Details</th>
-                      <th>Category</th>
-                      <th>Current Balance</th>
-                      <th>Last Adjustment</th>
-                      <th>Status</th>
-                      <th style={{ textAlign: 'right', paddingRight: '20px' }}>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {currentItems.map((product) => {
-                      const stock = Number(product.currentStock || 0)
-                      const minimum = Number(product.minimumStock || 10)
-                      const isOutOfStock = stock === 0
-                      const isLowStock = stock <= minimum && !isOutOfStock
-                      const latest = summary.latest.get(product.productId)
-                      const isSelected = selectedKeys.includes(product.productId)
-
-                      const pillClass = isOutOfStock
-                        ? 'pill-out'
-                        : isLowStock
-                        ? 'pill-pending'
-                        : 'pill-delivered'
-
-                      const statusText = isOutOfStock
-                        ? 'Out of Stock'
-                        : isLowStock
-                        ? 'Low Stock'
-                        : 'In Stock'
-
-                      return (
-                        <tr
-                          key={product.productId}
-                          className={isSelected ? 'is-selected' : ''}
-                        >
-                          <td>
-                            <input
-                              type="checkbox"
-                              className="invoice-checkbox"
-                              aria-label={`Select ${product.name}`}
-                              checked={isSelected}
-                              onChange={() => toggleSelectItem(product.productId)}
-                            />
-                          </td>
-                          <td className="invoice-cell-id">
-                            <strong>{product.sku || product.productId.slice(-6)}</strong>
-                          </td>
-                          <td className="invoice-cell-name">
-                            <span className="invoice-product-title">{product.name}</span>
-                            <small className="invoice-product-sub">
-                              {[
-                                product.genericName,
-                                product.batchNumber ? `Batch ${product.batchNumber}` : '',
-                                product.expiryDate ? `Exp: ${String(product.expiryDate).slice(0, 10)}` : '',
-                                product.brand,
-                                product.size ? `Size: ${product.size}` : '',
-                                product.color,
-                              ]
-                                .filter(Boolean)
-                                .join(' · ') || 'Standard variant'}
-                            </small>
-                          </td>
-                          <td className="invoice-cell-category">
-                            {product.category || 'General'}
-                          </td>
-                          <td className="invoice-cell-cost">
-                            <strong>{stock.toLocaleString('en-IN')}</strong>{' '}
-                            <small style={{ color: 'var(--muted)', fontWeight: 500 }}>
-                              {product.unit || 'units'}
-                            </small>
-                          </td>
-                          <td style={{ fontSize: '12px' }}>
-                            {latest ? (
-                              <div>
-                                <span style={{ fontWeight: 600, color: 'var(--ink)' }}>
-                                  {new Date(latest.createdAt).toLocaleDateString([], {
-                                    month: 'short',
-                                    day: 'numeric',
-                                  })}
-                                </span>
-                                <small style={{ display: 'block', color: 'var(--muted)', fontSize: '11px' }}>
-                                  {latest.previousStock} → {latest.newStock} · {latest.reason || 'Reconciliation'}
-                                </small>
-                              </div>
-                            ) : (
-                              <span style={{ color: 'var(--muted)' }}>No prior adjustment</span>
-                            )}
-                          </td>
-                          <td>
-                            <span className={`invoice-pill ${pillClass}`}>
-                              {statusText}
-                            </span>
-                          </td>
-                          <td style={{ textAlign: 'right', paddingRight: '20px' }}>
-                            <div className="invoice-actions-cell">
-                              <button
-                                type="button"
-                                className="inventory-row-action-btn"
-                                disabled={saving}
-                                title={`Reconcile physical stock for ${product.name}`}
-                                onClick={() => startAdjustment(product)}
-                              >
-                                Reconcile
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Pagination footer */}
-              <footer className="overview-pagination invoice-pagination">
-                <span>
-                  Showing {(currentPage - 1) * pageSize + 1}–
-                  {Math.min(currentPage * pageSize, filteredProducts.length)} of{' '}
-                  {filteredProducts.length} products
+            <div className="inventory-field">
+              <label htmlFor="adjust-quantity">New Physical Count *</label>
+              <div className="inventory-input-with-suffix">
+                <input
+                  ref={quantityRef}
+                  id="adjust-quantity"
+                  name="quantity"
+                  type="number"
+                  min="0"
+                  step="1"
+                  required
+                  disabled={saving}
+                  placeholder="0"
+                  value={newQuantity}
+                  onChange={(e) => setNewQuantity(e.target.value)}
+                />
+                <span className="inventory-suffix">
+                  {selectedProduct?.unit || 'units'}
                 </span>
-                <div className="invoice-page-buttons">
-                  <button
-                    type="button"
-                    className="invoice-page-btn"
-                    disabled={currentPage === 1}
-                    onClick={() => setPage(currentPage - 1)}
-                  >
-                    Previous
-                  </button>
-                  <span className="invoice-page-num">
-                    {currentPage} / {totalPages}
-                  </span>
-                  <button
-                    type="button"
-                    className="invoice-page-btn"
-                    disabled={currentPage === totalPages}
-                    onClick={() => setPage(currentPage + 1)}
-                  >
-                    Next
-                  </button>
-                </div>
-              </footer>
-            </AsyncBoundary>
-          </>
+              </div>
+            </div>
+
+            <div className="inventory-field">
+              <label htmlFor="adjust-reason">Discrepancy Reason *</label>
+              <Input
+                id="adjust-reason"
+                name="reason"
+                list="adjustment-reasons"
+                placeholder="Physical count, damage, expired…"
+                required
+                disabled={saving}
+              />
+              <datalist id="adjustment-reasons">
+                {[
+                  'Physical count verification',
+                  'Damaged during handling',
+                  'Expired stock write-off',
+                  'Spillage / leakage',
+                  'Unrecorded customer return',
+                  'Shrinkage / discrepancy',
+                  'Initial stock setup',
+                ].map((reason) => (
+                  <option key={reason} value={reason} />
+                ))}
+              </datalist>
+            </div>
+
+            <Button
+              type="submit"
+              variant="primary"
+              loading={saving}
+              icon="check"
+            >
+              {saving ? 'Adjusting…' : 'Record Adjustment'}
+            </Button>
+          </div>
+
+          <div className="inventory-context-row">
+            <div className="inventory-context-tile">
+              <span className="inventory-context-icon">⚖️</span>
+              <div className="inventory-context-details">
+                <span className="inventory-context-label">Calculated Variance</span>
+                <span
+                  className="inventory-context-value"
+                  style={{
+                    color:
+                      selectedVariance === null
+                        ? 'inherit'
+                        : selectedVariance < 0
+                        ? 'var(--danger)'
+                        : selectedVariance > 0
+                        ? 'var(--success)'
+                        : 'var(--text-soft)',
+                  }}
+                >
+                  {selectedVariance === null
+                    ? '—'
+                    : selectedVariance === 0
+                    ? 'No discrepancy (0 change)'
+                    : `${selectedVariance > 0 ? '+' : ''}${selectedVariance} ${selectedProduct?.unit || 'units'}`}
+                </span>
+              </div>
+            </div>
+            <div className="inventory-context-tile">
+              <span className="inventory-context-icon">💰</span>
+              <div className="inventory-context-details">
+                <span className="inventory-context-label">Financial Value Variance</span>
+                <span className="inventory-context-value">
+                  {selectedVariance !== null && selectedProduct
+                    ? formatMoney(selectedVariance * Number(selectedProduct.purchasePrice || 0))
+                    : '—'}
+                </span>
+              </div>
+            </div>
+            <div className="inventory-context-tile">
+              <span className="inventory-context-icon">👤</span>
+              <div className="inventory-context-details">
+                <span className="inventory-context-label">Auditing User</span>
+                <span className="inventory-context-value">
+                  {account?.name || account?.email || 'Current user'} ({account?.role || 'Staff'})
+                </span>
+              </div>
+            </div>
+          </div>
+        </form>
+
+        {message && (
+          <FormStatus
+            type={message.type === 'error' ? 'error' : 'success'}
+            message={message.text}
+          />
         )}
       </section>
+
+      {/* Products list */}
+      <Toolbar
+        search={search}
+        onSearchChange={(val) => {
+          setSearch(val)
+          setPage(1)
+        }}
+        placeholder="Search product, SKU, barcode, brand…"
+        filters={
+          <>
+            <Select
+              aria-label="Filter by category"
+              value={category}
+              onChange={(e) => {
+                setCategory(e.target.value)
+                setPage(1)
+              }}
+            >
+              <option value="all">All categories ({products.length})</option>
+              {summary.categories.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </Select>
+
+            <Select
+              aria-label="Filter by audit status"
+              value={stockStatus}
+              onChange={(e) => {
+                setStockStatus(e.target.value)
+                setPage(1)
+              }}
+            >
+              <option value="all">All stock items</option>
+              <option value="flagged">Flagged for Audit ({summary.flaggedCount})</option>
+              <option value="adjusted">Recently Adjusted</option>
+              <option value="out">Out of Stock</option>
+            </Select>
+
+            <Select
+              aria-label="Sort stock"
+              value={sortOrder}
+              onChange={(e) => {
+                setSortOrder(e.target.value)
+                setPage(1)
+              }}
+            >
+              <option value="default">Default order</option>
+              <option value="high">Stock: High to Low</option>
+              <option value="low">Stock: Low to High</option>
+            </Select>
+          </>
+        }
+      />
+
+      <DataTable
+        columns={columns}
+        data={filteredProducts}
+        keyField="productId"
+        selectable={true}
+        selectedKeys={selectedKeys}
+        onSelectionChange={setSelectedKeys}
+        page={page}
+        pageSize={pageSize}
+        total={filteredProducts.length}
+        onPageChange={setPage}
+        onPageSizeChange={(newSize) => {
+          setPageSize(newSize)
+          setPage(1)
+        }}
+        loading={loading}
+        error={error}
+        onRetry={refetch}
+        emptyText={
+          products.length
+            ? 'No items match your search and filter criteria.'
+            : 'No products found to adjust.'
+        }
+      />
     </div>
   )
 }
