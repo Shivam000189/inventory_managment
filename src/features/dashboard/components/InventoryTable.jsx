@@ -23,8 +23,8 @@ export default function InventoryTable({
   overviewPages,
   expandedInventoryGroups,
   toggleInventoryGroup,
-  stockLevelPct,
-  business,
+  _stockLevelPct,
+  _business,
 }) {
   const [selectedKeys, setSelectedKeys] = useState([]);
 

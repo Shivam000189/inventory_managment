@@ -389,8 +389,8 @@ export default function ProductImport({
       {lastResult?.failures?.length > 0 && (
         <div className="import-failures-box">
           <strong>Rows not imported ({lastResult.failures.length})</strong>
-          {lastResult.failures.map((failure, index) => (
-            <p key={`${failure.rowNumber}-${failure.sku}-${index}`}>
+          {lastResult.failures.map((failure) => (
+            <p key={failure.rowNumber != null ? `fail-row-${failure.rowNumber}` : (failure.sku || failure.name)}>
               <b>Row {failure.rowNumber}: {failure.sku || failure.name || "Unnamed product"}</b> - {failure.reasons.join(" ")}
             </p>
           ))}
@@ -539,9 +539,9 @@ export default function ProductImport({
                   </tr>
                 </thead>
                 <tbody>
-                  {preview.rows.map((row, index) => (
+                  {preview.rows.map((row) => (
                     <tr
-                      key={`${row.rowNumber}-${index}`}
+                      key={row.rowNumber != null ? `preview-row-${row.rowNumber}` : (row.sku || row.name)}
                       className={!row.valid ? "invalid" : row.duplicate ? "duplicate" : ""}
                     >
                       <td>
@@ -669,8 +669,8 @@ export default function ProductImport({
             <strong className="text-danger">Failure Log for Batch {expandedLog}</strong>
             {history
               .find((h) => h.importId === expandedLog)
-              ?.failures?.map((failure, index) => (
-                <p key={`${expandedLog}-${index}`}>
+              ?.failures?.map((failure) => (
+                <p key={failure.rowNumber != null ? `batch-fail-${failure.rowNumber}` : (failure.sku || failure.name)}>
                   <b>Row {failure.rowNumber}: {failure.sku || failure.name || "Unnamed"}</b> - {failure.reasons?.join(" ")}
                 </p>
               ))}

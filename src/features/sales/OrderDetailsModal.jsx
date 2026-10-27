@@ -141,8 +141,8 @@ export default function OrderDetails({ order, business, onClose }) {
               <Badge tone={statusTone} dot>
                 {order.status} · {order.paymentStatus || 'Unpaid'}
               </Badge>
-              {order.paymentSummary?.map((payment, index) => (
-                <small key={`pay-${payment.method}-${index}`}>
+              {order.paymentSummary?.map((payment) => (
+                <small key={payment.id || payment.reference || payment.method}>
                   Payment: {payment.method}
                   {payment.reference ? ` · Ref: ${payment.reference}` : ''}
                 </small>

@@ -149,7 +149,7 @@ export default function AppSidebar({
 
   return (
     <>
-      <aside className="dashboard-sidebar modern-sidebar" id="dashboard-navigation" ref={sidebarRef}>
+      <aside className="dashboard-sidebar modern-sidebar" id="dashboard-navigation" aria-label="Sidebar navigation" ref={sidebarRef}>
         {/* Brand Header */}
         <div className="modern-sidebar-brand">
           <div className="modern-brand-icon" aria-hidden="true">

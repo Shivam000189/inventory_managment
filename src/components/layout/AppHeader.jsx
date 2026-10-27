@@ -121,7 +121,7 @@ export default function AppHeader({
                 {business?.name || "Workspace"} • {business?.industry ? capitalize(business.industry) : "Retail"}
               </span>
               <div className="modern-navbar-name-row">
-                <h1 className="modern-navbar-name">{navigationLabel(activeNav)}</h1>
+                <span className="modern-navbar-name">{navigationLabel(activeNav)}</span>
               </div>
               <p className="modern-navbar-sub">Manage your {activeNav.toLowerCase()} operations</p>
             </>

@@ -202,87 +202,81 @@ function DashboardView() {
   };
 
   return (
-    <main
-      className={`dashboard-shell modern-theme ${sidebarCollapsed ? "sidebar-collapsed" : ""} industry-${String(business?.industry || "general")
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")}${mobileNavOpen ? " nav-open" : ""}`}
-    >
-      <AppSidebar
-        business={business}
-        account={account}
-        activeNav={activeNav}
-        navigateTo={navigateTo}
-        visibleNavigation={visibleNavigation}
-        expandedNavSections={expandedNavSections}
-        setExpandedNavSections={setExpandedNavSections}
-        mobileNavOpen={mobileNavOpen}
-        setMobileNavOpen={setMobileNavOpen}
-        canOpen={canOpen}
-        onLogout={logout}
-        sidebarCollapsed={sidebarCollapsed}
-        setSidebarCollapsed={setSidebarCollapsed}
-      />
-
-      <section className="dashboard-main">
-        {String(business?.industry || "").toLowerCase() === "clothing" && (
-          <div className="clothing-motion" aria-hidden="true">
-            <span />
-            <span />
-            <span />
-            <span />
-          </div>
-        )}
-
-        <AppHeader
+    <>
+      <a href="#main-content" className="sr-skip-link">Skip to main content</a>
+      <div
+        className={`dashboard-shell modern-theme ${sidebarCollapsed ? "sidebar-collapsed" : ""} industry-${String(business?.industry || "general")
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")}${mobileNavOpen ? " nav-open" : ""}`}
+      >
+        <AppSidebar
           business={business}
           account={account}
           activeNav={activeNav}
           navigateTo={navigateTo}
-          canOpen={canOpen}
+          visibleNavigation={visibleNavigation}
+          expandedNavSections={expandedNavSections}
+          setExpandedNavSections={setExpandedNavSections}
           mobileNavOpen={mobileNavOpen}
           setMobileNavOpen={setMobileNavOpen}
-          theme={theme}
-          toggleTheme={toggleTheme}
-          openNotification={openNotification}
-          setNotif={setNotif}
+          canOpen={canOpen}
           onLogout={logout}
-          menuButtonRef={menuButtonRef}
+          sidebarCollapsed={sidebarCollapsed}
+          setSidebarCollapsed={setSidebarCollapsed}
         />
 
-        {activeNav && activeNav !== "Overview" && (
-          <header className="dashboard-header">
-            <div>
-              <p className="dashboard-kicker">Manage your {activeNav.toLowerCase()}</p>
-              <h1>{activeNav}</h1>
+        <main id="main-content" className="dashboard-main" tabIndex="-1">
+          {String(business?.industry || "").toLowerCase() === "clothing" && (
+            <div className="clothing-motion" aria-hidden="true">
+              <span />
+              <span />
+              <span />
+              <span />
             </div>
-          </header>
-        )}
+          )}
 
-        <ErrorBoundary>
-          <Suspense fallback={<PageSkeleton />}>
-            <Routes>
-              <Route path="/overview" element={<Navigate to="/" replace />} />
-              {Object.entries(ROUTE_TABLE).map(([label, config]) => {
-                const hasPermission =
-                  !config.requiredPermission ||
-                  (Array.isArray(config.requiredPermission)
-                    ? config.requiredPermission.every(can)
-                    : can(config.requiredPermission));
+          <AppHeader
+            business={business}
+            account={account}
+            activeNav={activeNav}
+            navigateTo={navigateTo}
+            canOpen={canOpen}
+            mobileNavOpen={mobileNavOpen}
+            setMobileNavOpen={setMobileNavOpen}
+            theme={theme}
+            toggleTheme={toggleTheme}
+            openNotification={openNotification}
+            setNotif={setNotif}
+            onLogout={logout}
+            menuButtonRef={menuButtonRef}
+          />
 
-                return (
-                  <Route
-                    key={label}
-                    path={config.path}
-                    element={hasPermission ? config.render(routeContext) : <Navigate to="/" replace />}
-                  />
-                );
-              })}
-              <Route path="*" element={<NotFoundPage onNavigate={navigateTo} />} />
-            </Routes>
-          </Suspense>
-        </ErrorBoundary>
-      </section>
-    </main>
+          <ErrorBoundary>
+            <Suspense fallback={<PageSkeleton />}>
+              <Routes>
+                <Route path="/overview" element={<Navigate to="/" replace />} />
+                {Object.entries(ROUTE_TABLE).map(([label, config]) => {
+                  const hasPermission =
+                    !config.requiredPermission ||
+                    (Array.isArray(config.requiredPermission)
+                      ? config.requiredPermission.every(can)
+                      : can(config.requiredPermission));
+
+                  return (
+                    <Route
+                      key={label}
+                      path={config.path}
+                      element={hasPermission ? config.render(routeContext) : <Navigate to="/" replace />}
+                    />
+                  );
+                })}
+                <Route path="*" element={<NotFoundPage onNavigate={navigateTo} />} />
+              </Routes>
+            </Suspense>
+          </ErrorBoundary>
+        </main>
+      </div>
+    </>
   );
 }
 

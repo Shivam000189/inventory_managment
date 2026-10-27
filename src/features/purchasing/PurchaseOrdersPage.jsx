@@ -16,7 +16,8 @@ import { FormStatus } from '../../components/ui/Feedback.jsx'
 import { Icon } from '../../components/ui/icons.jsx'
 import './PurchaseOrdersPage.css'
 
-const emptyLine = () => ({ productId: '', quantity: 1, purchasePrice: '', discount: 0, tax: 0 })
+let nextLineId = 1
+const emptyLine = () => ({ _lineKey: 'line-' + (nextLineId++), productId: '', quantity: 1, purchasePrice: '', discount: 0, tax: 0 })
 
 function PoLocalIcon({ name }) {
   const paths = {
@@ -144,6 +145,7 @@ function PurchaseOrders({ business, onNavigate }) {
     setLineItems(
       order
         ? order.items.map((item) => ({
+            _lineKey: item._id || ('line-' + (nextLineId++)),
             productId: item.productId,
             quantity: item.quantity,
             purchasePrice: item.purchasePrice,
@@ -838,7 +840,7 @@ function PurchaseOrders({ business, onNavigate }) {
 
           <div className="order-items">
             {lineItems.map((item, index) => (
-              <div className="order-item-row" key={`${index}-${item.productId}`}>
+              <div className="order-item-row" key={item._lineKey || item.productId}>
                 <Select
                   aria-label="Select product"
                   value={item.productId}
@@ -956,8 +958,8 @@ function PurchaseOrders({ business, onNavigate }) {
               </div>
             </div>
             <div className="po-detail-items">
-              {viewingOrder.items.map((item, idx) => (
-                <div key={`${item.productId}-${idx}`}>
+              {viewingOrder.items.map((item) => (
+                <div key={item._id || item.productId || item.productName}>
                   <span>
                     {item.productName} × {item.quantity}
                   </span>

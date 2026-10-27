@@ -839,7 +839,7 @@ function PageNumbers({ currentPage, pages, onChange }) {
       </button>
       {items.map((item, index) =>
         item === '…' ? (
-          <span key={`ellipsis-${index}`} style={{ padding: '0 4px', color: 'var(--text-soft)' }}>
+          <span key={`ellipsis-after-${items[index - 1] || 'start'}`} style={{ padding: '0 4px', color: 'var(--text-soft)' }}>
             …
           </span>
         ) : (

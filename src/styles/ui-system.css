@@ -33,6 +33,29 @@ button, a, input, select, textarea, [tabindex] { transition: border-color .18s e
 *::-webkit-scrollbar { width: 9px; height: 9px; }
 *::-webkit-scrollbar-thumb { border: 2px solid transparent; border-radius: 999px; background: var(--line-strong); background-clip: padding-box; }
 
+/* Accessibility Skip Link */
+.sr-skip-link {
+  position: absolute;
+  top: -9999px;
+  left: -9999px;
+  z-index: 99999;
+  padding: 10px 18px;
+  border-radius: var(--sr-radius);
+  background: var(--surface-raised);
+  color: var(--orange);
+  font-weight: 700;
+  font-size: var(--sr-fs-body);
+  text-decoration: none;
+  box-shadow: var(--sr-shadow-lg);
+  border: 2px solid var(--orange);
+}
+.sr-skip-link:focus {
+  top: 16px;
+  left: 16px;
+  outline: none;
+  box-shadow: var(--sr-focus), var(--sr-shadow-lg);
+}
+
 .dashboard-shell{ color: var(--text); background: var(--bg); }
 .dashboard-main { min-width: 0; color: var(--text); background: var(--bg); line-height: var(--sr-lh); }
 .dashboard-main :is(h1,h2,h3,h4) { color: var(--ink); }

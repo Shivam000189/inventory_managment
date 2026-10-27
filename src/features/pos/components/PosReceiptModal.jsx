@@ -152,8 +152,8 @@ export default function PosReceiptModal({ invoice, onClose }) {
             </tr>
           </thead>
           <tbody>
-            {(invoice.items || []).map((item, index) => (
-              <tr key={`${item.productId}-${index}`}>
+            {(invoice.items || []).map((item) => (
+              <tr key={item.id || item.productId || item.sku || item.productName}>
                 <td>
                   <strong>{item.productName || item.name}</strong>
                   <br />
@@ -220,8 +220,8 @@ export default function PosReceiptModal({ invoice, onClose }) {
         </div>
         <div className="invoice-payments">
           <strong>Payments</strong>
-          {(invoice.paymentSummary || []).map((payment, index) => (
-            <span key={`${payment.method}-${index}`}>
+          {(invoice.paymentSummary || []).map((payment) => (
+            <span key={payment.id || payment.method || payment.reference}>
               {payment.method}:{" "}
               {money(invoice.business.currency, payment.amount)}{" "}
               {["Credit", "Pay Later"].includes(payment.method) && "(not collected) "}
