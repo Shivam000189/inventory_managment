@@ -1,11 +1,25 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { productApi } from "../../api/productApi.js";
 import { useResource } from "../../hooks/useResource.js";
 import { resolveBusinessCapabilities } from "../../../shared/industryConfig.js";
-import AsyncBoundary from "../../components/feedback/AsyncBoundary.jsx";
-import { ConfirmDialog } from "../../components/ui/ConfirmDialog.jsx";
+import {
+  PageHeader,
+  Button,
+  Badge,
+  StatGrid,
+  StatCard,
+  Toolbar,
+  DataTable,
+  Modal,
+  ConfirmDialog,
+  Field,
+  Input,
+  Select,
+  Textarea,
+  FormStatus,
+} from "../../components/ui/index.js";
 import ProductImportPage from "../product-import/ProductImportPage.jsx";
-import "../../styles/products-catalog.css";
+import "./ProductsPage.css";
 
 function Products({ business, account }) {
   const loadProducts = useCallback(() => productApi.list(), []);
@@ -16,6 +30,7 @@ function Products({ business, account }) {
     refetch,
     setData,
   } = useResource(loadProducts, [], []);
+
   const [category, setCategory] = useState("all");
   const [stockFilter, setStockFilter] = useState("all");
   const [page, setPage] = useState(1);
@@ -28,6 +43,8 @@ function Products({ business, account }) {
   const [formError, setFormError] = useState("");
   const [saving, setSaving] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+
+  const [nowTimestamp] = useState(() => Date.now());
 
   const capabilities = useMemo(
     () => business?.capabilities || resolveBusinessCapabilities(business || {}),
@@ -48,68 +65,89 @@ function Products({ business, account }) {
   const canEdit = account.role === "owner" || account.permissions?.includes("edit_product");
   const canDelete = account.role === "owner" || account.permissions?.includes("delete_product");
 
-  useEffect(() => {
-    if (!isImportOpen) return;
-    const handleKeyDown = (e) => {
-      if (e.key === "Escape") setIsImportOpen(false);
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isImportOpen]);
+  const visibleProducts = useMemo(() => {
+    return products.filter((product) => {
+      const matchesSearch =
+        !search.trim() ||
+        [
+          product.name,
+          product.sku,
+          product.category,
+          product.genericName,
+          product.batchNumber,
+          product.manufacturer,
+          product.brand,
+          product.barcode,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase()
+          .includes(search.toLowerCase());
 
-  const visibleProducts = products.filter((product) => {
-    const matchesSearch =
-      !search.trim() ||
-      [
-        product.name,
-        product.sku,
-        product.category,
-        product.genericName,
-        product.batchNumber,
-        product.manufacturer,
-        product.brand,
-        product.barcode,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase()
-        .includes(search.toLowerCase());
+      const matchesCategory = category === "all" || product.category === category;
+      const matchesStock =
+        stockFilter === "all" ||
+        (stockFilter === "in"
+          ? product.currentStock > 0
+          : product.currentStock <= product.minimumStock);
 
-    const matchesCategory = category === "all" || product.category === category;
-    const matchesStock =
-      stockFilter === "all" ||
-      (stockFilter === "in"
-        ? product.currentStock > 0
-        : product.currentStock <= product.minimumStock);
+      return matchesSearch && matchesCategory && matchesStock;
+    });
+  }, [products, search, category, stockFilter]);
 
-    return matchesSearch && matchesCategory && matchesStock;
-  });
+  const money = useCallback(
+    (value) => {
+      const sym = business.currency === "INR" ? "₹" : business.currency || "";
+      return `${sym}${Number(value || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
+    },
+    [business.currency]
+  );
 
-  const pages = Math.max(1, Math.ceil(visibleProducts.length / pageSize));
-  const currentPage = Math.min(page, pages);
-  const pageProducts = visibleProducts.slice((currentPage - 1) * pageSize, currentPage * pageSize);
-  const money = (value) => `${business.currency === 'INR' ? '₹' : business.currency || ''}${Number(value).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
-  const toggleSelected = (id) => setSelected((list) => list.includes(id) ? list.filter((value) => value !== id) : [...list, id]);
+  const stats = useMemo(() => {
+    const lowStockCount = products.filter(
+      (p) => Number(p.currentStock || 0) <= Number(p.minimumStock || 0)
+    ).length;
+    const totalQty = products.reduce(
+      (sum, p) => sum + Number(p.currentStock || 0),
+      0
+    );
+    const valuation = products.reduce(
+      (sum, p) => sum + Number(p.currentStock || 0) * Number(p.purchasePrice || 0),
+      0
+    );
+    return { lowStockCount, totalQty, valuation };
+  }, [products]);
+
   const exportSheet = (selectionOnly = false) => {
-    const rows = selectionOnly ? visibleProducts.filter((product) => selected.includes(product.productId)) : visibleProducts;
-    const cell = (value) => `"${String(value ?? '').replace(/^[=+@-]/, "'$&").replaceAll('"', '""')}"`;
+    const rows = selectionOnly
+      ? visibleProducts.filter((product) => selected.includes(product.productId))
+      : visibleProducts;
+    const cell = (value) => `"${String(value ?? "").replace(/^[=+@-]/, "'$&").replaceAll('"', '""')}"`;
     const values = [
-      ['Product / Medicine', 'Generic Name', 'Batch', 'Expiry', 'SKU', 'Category', 'Stock', 'Price', 'MRP', 'Currency'],
+      ["Product / Medicine", "Generic Name", "Batch", "Expiry", "SKU", "Category", "Stock", "Price", "MRP", "Currency"],
       ...rows.map((product) => [
         product.name,
-        product.genericName || '',
-        product.batchNumber || '',
-        product.expiryDate ? String(product.expiryDate).slice(0, 10) : '',
+        product.genericName || "",
+        product.batchNumber || "",
+        product.expiryDate ? String(product.expiryDate).slice(0, 10) : "",
         product.sku,
         product.category,
         product.currentStock,
         product.sellingPrice,
-        product.mrp || '',
+        product.mrp || "",
         business.currency,
       ]),
     ];
-    const url = URL.createObjectURL(new Blob(['\uFEFF' + values.map((row) => row.map(cell).join(',')).join('\r\n')], { type: 'text/csv;charset=utf-8;' }));
-    const link = document.createElement('a'); link.href = url; link.download = `${itemsLabel.toLowerCase()}.csv`; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+    const url = URL.createObjectURL(
+      new Blob(["\uFEFF" + values.map((row) => row.map(cell).join(",")).join("\r\n")], {
+        type: "text/csv;charset=utf-8;",
+      })
+    );
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${itemsLabel.toLowerCase()}.csv`;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
   const handleSubmit = async (event) => {
@@ -148,12 +186,11 @@ function Products({ business, account }) {
       Number.isNaN(rawPayload.sellingPrice)
     ) {
       setFormError(
-        `Please complete the ${itemLabel.toLowerCase()} name, SKU, category, and retail price.`,
+        `Please complete the ${itemLabel.toLowerCase()} name, SKU, category, and retail price.`
       );
       return;
     }
 
-    // Only transmit keys that are allowed for this business capability
     const payload = {};
     for (const [key, val] of Object.entries(rawPayload)) {
       if (val !== undefined && (allowedFields.size === 0 || allowedFields.has(key))) {
@@ -169,10 +206,8 @@ function Products({ business, account }) {
         : await productApi.create(payload);
       setData((current) =>
         editingProduct
-          ? current.map((item) =>
-              item.productId === saved.productId ? saved : item,
-            )
-          : [saved, ...current],
+          ? current.map((item) => (item.productId === saved.productId ? saved : item))
+          : [saved, ...current]
       );
       setIsFormOpen(false);
       setEditingProduct(null);
@@ -183,235 +218,423 @@ function Products({ business, account }) {
     }
   };
 
-  const deleteProduct = async (productId) => {
+  const deleteProduct = (productId) => {
     setConfirmDeleteId(productId);
   };
+
   const handleConfirmDelete = async () => {
     const productId = confirmDeleteId;
     setConfirmDeleteId(null);
     if (!productId) return;
     try {
       await productApi.remove(productId);
-      setData((current) =>
-        current.filter((product) => product.productId !== productId),
-      );
+      setData((current) => current.filter((product) => product.productId !== productId));
     } catch (caught) {
       setFormError(caught.message || "Could not delete the product.");
     }
   };
+
   const openForm = (product = null) => {
     setEditingProduct(product);
     setFormError("");
     setIsFormOpen(true);
   };
 
-  return (
-    <section className="products-page products-catalog">
-      <div className="products-toolbar">
-        <div>
-          <p className="dashboard-kicker">Inventory / {itemsLabel}</p>
-          <h2>{itemsLabel}</h2>
-          <p className="products-count">
-            {products.length} {itemsLabel.toLowerCase()} in {business.name}
-          </p>
-        </div>
-        <div className="catalog-toolbar-actions">
-          <button
-            className="outline-button"
-            type="button"
-            disabled={loading || !!error || !visibleProducts.length}
-            onClick={() => exportSheet()}
-          >
-            ↥ Export sheet
-          </button>
-          {canCreate && (
-            <>
-              <button
-                className="outline-button bulk-import-btn"
-                type="button"
-                onClick={() => setIsImportOpen(true)}
-              >
-                <span aria-hidden="true">⇧</span> Bulk import
-              </button>
-              <button
-                className="submit-button product-add-button"
-                type="button"
-                onClick={() => openForm()}
-              >
-                Add {itemLabel.toLowerCase()} <span>+</span>
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-      {!loading && !error && <div className="catalog-stats">
-        <article><span>Total {itemsLabel}</span><strong>{products.length.toLocaleString()}</strong><small>Registered {itemsLabel.toLowerCase()} in catalog</small><b aria-hidden="true">◇</b></article>
-        <article><span>Low Stock Alert</span><strong>{products.filter((product) => product.currentStock <= product.minimumStock).length} SKUs</strong><small>At or below reorder level</small><b aria-hidden="true">⚠</b></article>
-        <article><span>Total Stock Quantity</span><strong>{products.reduce((total, product) => total + Number(product.currentStock || 0), 0).toLocaleString()} <em>Units</em></strong><small>Across all registered {itemsLabel.toLowerCase()}</small><b aria-hidden="true">#</b></article>
-        <article><span>Inventory Valuation</span><strong>{money(products.reduce((total, product) => total + Number(product.currentStock || 0) * Number(product.purchasePrice || 0), 0))}</strong><small>At purchase cost ({business.currency})</small><b aria-hidden="true">＄</b></article>
-      </div>}      <div className="products-controls">
-        <div className="search-box">
-          <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 4.5 4.5" /></svg></span>
-          <input
-            aria-label={`Search ${itemsLabel.toLowerCase()}`}
-            value={search}
-            onChange={(event) => { setSearch(event.target.value); setPage(1); }}
-            placeholder={`Search by name, ${isPharmacy ? 'generic composition, batch, ' : ''}SKU, or category`}
-          />
-        </div>
-        <span className="business-filter">{business.industry} business</span><select aria-label="Product category" value={category} onChange={(event) => { setCategory(event.target.value); setPage(1); }}><option value="all">All categories</option>{[...new Set(products.map((product) => product.category).filter(Boolean))].map((value) => <option key={value}>{value}</option>)}</select><select aria-label="Stock filter" value={stockFilter} onChange={(event) => { setStockFilter(event.target.value); setPage(1); }}><option value="all">All stock</option><option value="in">In stock (&gt;0)</option><option value="low">Low / out of stock</option></select><button className="outline-button" type="button" disabled={!visibleProducts.some((product) => selected.includes(product.productId))} onClick={() => exportSheet(true)}>Export selected</button>
-      </div>
-      {isFormOpen && (
-        <form className="product-form" onSubmit={handleSubmit}>
-          <div className="product-form-heading">
-            <div>
-              <p className="dashboard-kicker">
-                {editingProduct ? `Update ${itemLabel.toLowerCase()}` : `New ${itemLabel.toLowerCase()}`}
-              </p>
-              <h3>{editingProduct ? `Edit ${itemLabel.toLowerCase()}` : `Add a ${itemLabel.toLowerCase()}`}</h3>
+  const categories = useMemo(() => {
+    return [...new Set(products.map((p) => p.category).filter(Boolean))];
+  }, [products]);
+
+  const columns = useMemo(() => {
+    return [
+      {
+        key: "product",
+        header: itemLabel,
+        mobileLabel: itemLabel,
+        render: (product) => {
+          let expiryInfo = null;
+          if (product.expiryDate) {
+            const expTime = new Date(product.expiryDate).getTime();
+            if (!Number.isNaN(expTime)) {
+              const isExpired = expTime < nowTimestamp;
+              const isSoon = expTime < nowTimestamp + 60 * 86400000;
+              expiryInfo = {
+                tone: isExpired ? "danger" : isSoon ? "warning" : "neutral",
+                label: `${isExpired ? "⚠️ Expired: " : "Exp: "}${new Date(product.expiryDate).toLocaleDateString("en-IN", { month: "short", year: "numeric" })}`,
+              };
+            }
+          }
+
+          return (
+            <div className="product-info-cell">
+              <span className="product-avatar">{product.name?.[0]?.toUpperCase() || "P"}</span>
+              <div className="product-details">
+                <div className="product-title-row">
+                  <span className="product-name">{product.name}</span>
+                  {product.genericName && (
+                    <span className="product-generic">{product.genericName}</span>
+                  )}
+                </div>
+                <div className="product-meta">
+                  <span>{product.sku}</span>
+                  <span>·</span>
+                  <span>{product.unit || "unit"}</span>
+                  {product.batchNumber && (
+                    <>
+                      <span>·</span>
+                      <span>Batch {product.batchNumber}</span>
+                    </>
+                  )}
+                  {expiryInfo && (
+                    <Badge tone={expiryInfo.tone} size="sm">
+                      {expiryInfo.label}
+                    </Badge>
+                  )}
+                </div>
+              </div>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              {!editingProduct && (
-                <button
-                  type="button"
-                  className="outline-button"
-                  style={{ minHeight: "34px", padding: "0 12px", fontSize: "11px" }}
-                  onClick={() => {
-                    setIsFormOpen(false);
-                    setIsImportOpen(true);
-                  }}
-                >
-                  <span aria-hidden="true">⇧</span> Bulk import
-                </button>
-              )}
-              <button
-                type="button"
-                className="close-button"
-                onClick={() => setIsFormOpen(false)}
-                aria-label="Close form"
-              >
-                ×
-              </button>
+          );
+        },
+      },
+      {
+        key: "category",
+        header: "Category",
+        mobileLabel: "Category",
+        render: (product) => <Badge tone="neutral">{product.category}</Badge>,
+      },
+      {
+        key: "stock",
+        header: "Stock",
+        mobileLabel: "Stock",
+        render: (product) => {
+          const isOut = product.currentStock === 0;
+          const isLow = product.currentStock <= product.minimumStock;
+          return (
+            <div className="product-stock-cell">
+              <span className={`product-stock-val ${isOut ? "out" : isLow ? "low" : "in"}`}>
+                {product.currentStock}
+              </span>
+              <Badge tone={isOut ? "danger" : isLow ? "warning" : "success"} size="sm">
+                {isOut ? "Out of stock" : isLow ? "Low stock" : "In stock"}
+              </Badge>
             </div>
+          );
+        },
+      },
+      {
+        key: "price",
+        header: "Price",
+        mobileLabel: "Price",
+        align: "right",
+        render: (product) => (
+          <div className="product-price-cell">
+            <strong>{money(product.sellingPrice)}</strong>
+            {product.mrp && Number(product.mrp) > 0 && (
+              <small className="product-mrp">MRP {money(product.mrp)}</small>
+            )}
           </div>
+        ),
+      },
+      {
+        key: "actions",
+        header: "",
+        mobileLabel: "Actions",
+        align: "right",
+        render: (product) => (
+          <div className="product-row-actions">
+            {canEdit && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => openForm(product)}
+                aria-label={`Edit ${product.name}`}
+              >
+                Edit
+              </Button>
+            )}
+            {canDelete && (
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={() => deleteProduct(product.productId)}
+                aria-label={`Delete ${product.name}`}
+              >
+                Delete
+              </Button>
+            )}
+          </div>
+        ),
+      },
+    ];
+  }, [itemLabel, nowTimestamp, money, canEdit, canDelete]);
+
+  return (
+    <section className="products-page">
+      <PageHeader
+        kicker={`Inventory / ${itemsLabel}`}
+        title={itemsLabel}
+        description={`${products.length} registered ${itemsLabel.toLowerCase()} in ${business.name}`}
+        actions={
+          <>
+            <Button
+              variant="outline"
+              onClick={() => exportSheet()}
+              disabled={loading || !!error || !visibleProducts.length}
+              icon="download"
+            >
+              Export sheet
+            </Button>
+            {canCreate && (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsImportOpen(true)}
+                  icon="upload"
+                >
+                  Bulk import
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={() => openForm()}
+                  icon="plus"
+                >
+                  Add {itemLabel.toLowerCase()}
+                </Button>
+              </>
+            )}
+          </>
+        }
+      />
+
+      {!loading && !error && (
+        <StatGrid>
+          <StatCard
+            label={`Total ${itemsLabel}`}
+            value={products.length.toLocaleString()}
+            helpText={`Registered ${itemsLabel.toLowerCase()} in catalog`}
+            icon="box"
+          />
+          <StatCard
+            label="Low Stock Alert"
+            value={`${stats.lowStockCount} SKUs`}
+            helpText="At or below reorder level"
+            icon="warning"
+            tone={stats.lowStockCount > 0 ? "warning" : "neutral"}
+          />
+          <StatCard
+            label="Total Stock Quantity"
+            value={`${stats.totalQty.toLocaleString()} Units`}
+            helpText={`Across all registered ${itemsLabel.toLowerCase()}`}
+            icon="clock"
+            tone="info"
+          />
+          <StatCard
+            label="Inventory Valuation"
+            value={money(stats.valuation)}
+            helpText={`At purchase cost (${business.currency || "INR"})`}
+            icon="trending-up"
+            tone="purple"
+          />
+        </StatGrid>
+      )}
+
+      <Toolbar
+        search={search}
+        onSearchChange={(val) => {
+          setSearch(val);
+          setPage(1);
+        }}
+        placeholder={`Search by name, ${isPharmacy ? "generic composition, batch, " : ""}SKU, or category`}
+        filters={
+          <>
+            <Select
+              aria-label="Category filter"
+              value={category}
+              onChange={(e) => {
+                setCategory(e.target.value);
+                setPage(1);
+              }}
+            >
+              <option value="all">All categories</option>
+              {categories.map((val) => (
+                <option key={val} value={val}>
+                  {val}
+                </option>
+              ))}
+            </Select>
+            <Select
+              aria-label="Stock filter"
+              value={stockFilter}
+              onChange={(e) => {
+                setStockFilter(e.target.value);
+                setPage(1);
+              }}
+            >
+              <option value="all">All stock</option>
+              <option value="in">In stock (&gt;0)</option>
+              <option value="low">Low / out of stock</option>
+            </Select>
+          </>
+        }
+        actions={
+          selected.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => exportSheet(true)}
+              icon="download"
+            >
+              Export selected ({selected.length})
+            </Button>
+          )
+        }
+      />
+
+      {!isFormOpen && formError && <FormStatus type="error" message={formError} />}
+
+      <DataTable
+        columns={columns}
+        data={visibleProducts}
+        keyField="productId"
+        selectable={true}
+        selectedKeys={selected}
+        onSelectionChange={setSelected}
+        page={page}
+        pageSize={pageSize}
+        total={visibleProducts.length}
+        onPageChange={setPage}
+        onPageSizeChange={(newSize) => {
+          setPageSize(newSize);
+          setPage(1);
+        }}
+        loading={loading}
+        error={error}
+        onRetry={refetch}
+        emptyText={
+          products.length
+            ? `No ${itemsLabel.toLowerCase()} match your search.`
+            : `No ${itemsLabel.toLowerCase()} yet. Add your first ${itemLabel.toLowerCase()}.`
+        }
+      />
+
+      <Modal
+        isOpen={isFormOpen}
+        onClose={() => setIsFormOpen(false)}
+        title={editingProduct ? `Edit ${itemLabel}` : `Add a ${itemLabel}`}
+        subtitle={editingProduct ? `Update ${itemLabel.toLowerCase()} details` : `Register a new ${itemLabel.toLowerCase()} in catalog`}
+        size="lg"
+      >
+        <form className="product-modal-form" onSubmit={handleSubmit}>
           <div className="product-form-grid">
-            <div className="field-wide">
-              <label htmlFor="product-name">{itemLabel} name *</label>
-              <input
-                id="product-name"
+            <Field label={`${itemLabel} name`} required className="field-wide">
+              <Input
                 name="name"
                 defaultValue={editingProduct?.name || ""}
-                placeholder={isPharmacy ? "e.g. Augmentin 625 Duo Tablet" : "e.g. Premium Rice"}
+                placeholder={isPharmacy ? "e.g. Augmentin 625 Duo Tablet" : "e.g. Premium Basmati Rice"}
                 required
               />
-            </div>
+            </Field>
+
             {(isPharmacy || allowedFields.has("genericName")) && (
-              <div className="field-wide">
-                <label htmlFor="product-generic">Generic composition / salt</label>
-                <input
-                  id="product-generic"
+              <Field label="Generic composition / salt" className="field-wide">
+                <Input
                   name="genericName"
                   defaultValue={editingProduct?.genericName || ""}
                   placeholder="e.g. Amoxicillin (500mg) + Clavulanic Acid (125mg)"
                 />
-              </div>
+              </Field>
             )}
-            <div>
-              <label htmlFor="product-sku">SKU / item code *</label>
-              <input
-                id="product-sku"
+
+            <Field label="SKU / Item code" required>
+              <Input
                 name="sku"
                 defaultValue={editingProduct?.sku || ""}
                 placeholder={isPharmacy ? "e.g. MED-AUG-625" : "e.g. RIC-001"}
                 required
               />
-            </div>
-            <div>
-              <label htmlFor="product-category">Category *</label>
-              <input
-                id="product-category"
+            </Field>
+
+            <Field label="Category" required>
+              <Input
                 name="category"
                 defaultValue={editingProduct?.category || ""}
-                placeholder={isPharmacy ? "e.g. Antibiotics, Analgesics" : "e.g. Grocery"}
+                placeholder={isPharmacy ? "e.g. Antibiotics" : "e.g. Grocery"}
                 required
               />
-            </div>
+            </Field>
+
             {(isPharmacy || allowedFields.has("manufacturer")) && (
-              <div>
-                <label htmlFor="product-manufacturer">Manufacturer / Pharma brand</label>
-                <input
-                  id="product-manufacturer"
+              <Field label="Manufacturer / Pharma brand">
+                <Input
                   name="manufacturer"
                   defaultValue={editingProduct?.manufacturer || ""}
                   placeholder="e.g. GlaxoSmithKline / Cipla"
                 />
-              </div>
+              </Field>
             )}
+
             {(!isPharmacy || allowedFields.has("brand")) && (
-              <div>
-                <label htmlFor="product-brand">Brand</label>
-                <input
-                  id="product-brand"
+              <Field label="Brand">
+                <Input
                   name="brand"
                   defaultValue={editingProduct?.brand || ""}
                   placeholder="Brand name"
                 />
-              </div>
+              </Field>
             )}
+
             {(isPharmacy || allowedFields.has("batchNumber")) && (
-              <div>
-                <label htmlFor="product-batch">Batch number</label>
-                <input
-                  id="product-batch"
+              <Field label="Batch number">
+                <Input
                   name="batchNumber"
                   defaultValue={editingProduct?.batchNumber || ""}
                   placeholder="e.g. AUG-24B01"
                 />
-              </div>
+              </Field>
             )}
+
             {(isPharmacy || allowedFields.has("expiryDate")) && (
-              <div>
-                <label htmlFor="product-expiry">Expiry date</label>
-                <input
-                  id="product-expiry"
+              <Field label="Expiry date">
+                <Input
                   name="expiryDate"
                   type="date"
-                  defaultValue={editingProduct?.expiryDate ? new Date(editingProduct.expiryDate).toISOString().slice(0, 10) : ""}
+                  defaultValue={
+                    editingProduct?.expiryDate
+                      ? new Date(editingProduct.expiryDate).toISOString().slice(0, 10)
+                      : ""
+                  }
                 />
-              </div>
+              </Field>
             )}
-            <div>
-              <label htmlFor="product-unit">Unit</label>
-              <select
-                id="product-unit"
+
+            <Field label="Unit">
+              <Select
                 name="unit"
                 defaultValue={editingProduct?.unit || (isPharmacy ? "box" : "piece")}
               >
                 {isPharmacy ? (
                   <>
-                    <option>box</option>
-                    <option>strip</option>
-                    <option>bottle</option>
-                    <option>vial</option>
-                    <option>tube</option>
-                    <option>piece</option>
-                    <option>tablet</option>
+                    <option value="box">box</option>
+                    <option value="strip">strip</option>
+                    <option value="bottle">bottle</option>
+                    <option value="vial">vial</option>
+                    <option value="tube">tube</option>
+                    <option value="piece">piece</option>
+                    <option value="tablet">tablet</option>
                   </>
                 ) : (
                   <>
-                    <option>piece</option>
-                    <option>kg</option>
-                    <option>gram</option>
-                    <option>litre</option>
-                    <option>box</option>
+                    <option value="piece">piece</option>
+                    <option value="kg">kg</option>
+                    <option value="gram">gram</option>
+                    <option value="litre">litre</option>
+                    <option value="box">box</option>
                   </>
                 )}
-              </select>
-            </div>
-            <div>
-              <label htmlFor="purchase-price">Purchase price ({business.currency})</label>
-              <input
-                id="purchase-price"
+              </Select>
+            </Field>
+
+            <Field label={`Purchase price (${business.currency || "INR"})`}>
+              <Input
                 name="purchasePrice"
                 type="number"
                 min="0"
@@ -419,11 +642,10 @@ function Products({ business, account }) {
                 defaultValue={editingProduct?.purchasePrice || ""}
                 placeholder="0.00"
               />
-            </div>
-            <div>
-              <label htmlFor="selling-price">Retail / Selling price * ({business.currency})</label>
-              <input
-                id="selling-price"
+            </Field>
+
+            <Field label={`Retail / Selling price * (${business.currency || "INR"})`} required>
+              <Input
                 name="sellingPrice"
                 type="number"
                 min="0"
@@ -432,12 +654,11 @@ function Products({ business, account }) {
                 placeholder="0.00"
                 required
               />
-            </div>
+            </Field>
+
             {(isPharmacy || allowedFields.has("mrp")) && (
-              <div>
-                <label htmlFor="product-mrp">MRP (Max Retail Price)</label>
-                <input
-                  id="product-mrp"
+              <Field label="MRP (Max Retail Price)">
+                <Input
                   name="mrp"
                   type="number"
                   min="0"
@@ -445,13 +666,12 @@ function Products({ business, account }) {
                   defaultValue={editingProduct?.mrp || ""}
                   placeholder="0.00"
                 />
-              </div>
+              </Field>
             )}
+
             {allowedFields.has("wholesalePrice") && (
-              <div>
-                <label htmlFor="wholesale-price">Wholesale price ({business.currency})</label>
-                <input
-                  id="wholesale-price"
+              <Field label={`Wholesale price (${business.currency || "INR"})`}>
+                <Input
                   name="wholesalePrice"
                   type="number"
                   min="0"
@@ -459,42 +679,38 @@ function Products({ business, account }) {
                   defaultValue={editingProduct?.wholesalePrice || ""}
                   placeholder="0.00"
                 />
-              </div>
+              </Field>
             )}
+
             {allowedFields.has("wholesaleMinQuantity") && (
-              <div>
-                <label htmlFor="wholesale-min">Wholesale minimum qty</label>
-                <input
-                  id="wholesale-min"
+              <Field label="Wholesale minimum qty">
+                <Input
                   name="wholesaleMinQuantity"
                   type="number"
                   min="1"
                   defaultValue={editingProduct?.wholesaleMinQuantity || 10}
                 />
-              </div>
+              </Field>
             )}
-            <div>
-              <label htmlFor="product-barcode">Barcode / EAN</label>
-              <input
-                id="product-barcode"
+
+            <Field label="Barcode / EAN">
+              <Input
                 name="barcode"
                 defaultValue={editingProduct?.barcode || ""}
                 placeholder="Scan or enter barcode"
               />
-            </div>
-            <div>
-              <label htmlFor="product-hsn">HSN code</label>
-              <input
-                id="product-hsn"
+            </Field>
+
+            <Field label="HSN code">
+              <Input
                 name="hsnCode"
                 defaultValue={editingProduct?.hsnCode || (isPharmacy ? "30049099" : "")}
                 placeholder={isPharmacy ? "e.g. 30041000" : "e.g. 6205"}
               />
-            </div>
-            <div>
-              <label htmlFor="product-gst">GST rate %</label>
-              <input
-                id="product-gst"
+            </Field>
+
+            <Field label="GST rate %">
+              <Input
                 name="gstRate"
                 type="number"
                 min="0"
@@ -506,201 +722,110 @@ function Products({ business, account }) {
                   (isPharmacy ? 12 : 0)
                 }
               />
-            </div>
-            <div>
-              <label htmlFor="current-stock">Current stock</label>
-              <input
-                id="current-stock"
+            </Field>
+
+            <Field label="Current stock">
+              <Input
                 name="currentStock"
                 type="number"
                 min="0"
                 defaultValue={editingProduct?.currentStock ?? 0}
               />
-            </div>
-            <div>
-              <label htmlFor="minimum-stock">Minimum reorder level</label>
-              <input
-                id="minimum-stock"
+            </Field>
+
+            <Field label="Minimum reorder level">
+              <Input
                 name="minimumStock"
                 type="number"
                 min="0"
                 defaultValue={editingProduct?.minimumStock ?? 0}
               />
-            </div>
-            <div>
-              <label htmlFor="supplier">Assigned Supplier</label>
-              <input
-                id="supplier"
+            </Field>
+
+            <Field label="Assigned Supplier">
+              <Input
                 name="supplier"
                 defaultValue={editingProduct?.supplier || ""}
                 placeholder="Supplier name"
               />
-            </div>
-            <div className="field-wide">
-              <label htmlFor="description">Description / Usage notes</label>
-              <textarea
-                id="description"
+            </Field>
+
+            <Field label="Description / Usage notes" className="field-wide">
+              <Textarea
                 name="description"
                 defaultValue={editingProduct?.description || ""}
                 placeholder="Dosage instructions, formulation or short description"
               />
-            </div>
+            </Field>
           </div>
-          {formError && <p className="setup-error">{formError}</p>}
+
+          {formError && <FormStatus type="error" message={formError} />}
+
           <div className="product-form-actions">
-            <button
+            {!editingProduct && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setIsFormOpen(false);
+                  setIsImportOpen(true);
+                }}
+                icon="upload"
+              >
+                Bulk import
+              </Button>
+            )}
+            <Button
               type="button"
-              className="outline-button"
+              variant="outline"
               onClick={() => setIsFormOpen(false)}
             >
               Cancel
-            </button>
-            <button className="submit-button" type="submit" disabled={saving}>
-              {saving ? "Saving…" : `Save ${itemLabel.toLowerCase()}`} <span>→</span>
-            </button>
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              loading={saving}
+            >
+              {saving ? "Saving…" : `Save ${itemLabel.toLowerCase()}`}
+            </Button>
           </div>
         </form>
-      )}
-      {!isFormOpen && formError && (
-        <p className="form-status error">{formError}</p>
-      )}
-      <AsyncBoundary
-        loading={loading}
-        error={error}
-        onRetry={refetch}
-        isEmpty={!visibleProducts.length}
-        emptyText={
-          products.length
-            ? `No ${itemsLabel.toLowerCase()} match your search.`
-            : `No ${itemsLabel.toLowerCase()} yet. Add your first ${itemLabel.toLowerCase()}.`
-        }
-      >
-        <div className="products-table">
-          <div className="product-table-row product-table-head">
-            <input className="catalog-check" type="checkbox" aria-label={`Select all ${itemsLabel.toLowerCase()} on this page`} checked={pageProducts.length > 0 && pageProducts.every((product) => selected.includes(product.productId))} onChange={(event) => setSelected((list) => event.target.checked ? [...new Set([...list, ...pageProducts.map((product) => product.productId)])] : list.filter((id) => !pageProducts.some((product) => product.productId === id)))} /><span>{itemLabel}</span>
-            <span>Category</span>
-            <span>Stock</span>
-            <span>Price</span>
-            <span>Actions</span>
-          </div>
-          {pageProducts.map((product) => (
-            <div className="product-table-row" key={product.productId}><input className="catalog-check" type="checkbox" aria-label={`Select ${product.name} ${product.sku}`} checked={selected.includes(product.productId)} onChange={() => toggleSelected(product.productId)} />
-              <span className="product-cell">
-                <span className="product-thumb">{product.name[0]}</span>
-                <span>
-                  <strong>{product.name}</strong>
-                  {product.genericName && (
-                    <small style={{ color: 'var(--muted)', display: 'block', fontSize: '11px', fontStyle: 'italic', marginTop: '1px' }}>
-                      {product.genericName}
-                    </small>
-                  )}
-                  <small style={{ display: 'block', marginTop: '2px' }}>
-                    {product.sku} · {product.unit || 'unit'} {product.batchNumber ? `· Batch ${product.batchNumber}` : ''}
-                  </small>
-                  {product.expiryDate && (
-                    <span
-                      style={{
-                        display: 'inline-block',
-                        fontSize: '10.5px',
-                        fontWeight: 600,
-                        padding: '1px 6px',
-                        borderRadius: '4px',
-                        marginTop: '3px',
-                        background: new Date(product.expiryDate) < new Date() ? '#fee2e2' : new Date(product.expiryDate) < new Date(Date.now() + 60*86400000) ? '#fef3c7' : '#f1f5f9',
-                        color: new Date(product.expiryDate) < new Date() ? '#b91c1c' : new Date(product.expiryDate) < new Date(Date.now() + 60*86400000) ? '#b45309' : '#475569',
-                      }}
-                    >
-                      {new Date(product.expiryDate) < new Date() ? '⚠️ Expired: ' : 'Exp: '}
-                      {new Date(product.expiryDate).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}
-                    </span>
-                  )}
-                </span>
-              </span>
-              <span><span className="catalog-category">{product.category}</span></span>
-              <span
-                className={
-                  product.currentStock <= product.minimumStock
-                    ? "product-stock low"
-                    : "product-stock"
-                }
-              >
-                {product.currentStock}
-                <small>
-                  {product.currentStock === 0
-                    ? "Out of stock"
-                    : product.currentStock <= product.minimumStock
-                      ? "Low stock"
-                      : "In stock"}
-                </small>
-                <i
-                  className="stock-bar"
-                  style={{
-                    "--stock-pct": `${Math.max(4, Math.min(100, Math.round((product.currentStock / Math.max(product.minimumStock * 3, 10)) * 100)))}%`,
-                  }}
-                  aria-hidden="true"
-                />
-              </span>
-              <span className="price-cell">
-                <strong>{business.currency === 'INR' ? '₹' : business.currency || ''}{Number(product.sellingPrice).toFixed(2)}</strong>
-                {product.mrp && Number(product.mrp) > 0 && (
-                  <small style={{ display: 'block', fontSize: '11px', color: 'var(--muted)', fontWeight: 500 }}>
-                    MRP {business.currency === 'INR' ? '₹' : business.currency || ''}{Number(product.mrp).toFixed(2)}
-                  </small>
-                )}
-              </span>
-              <span className="product-actions">
-                {canEdit && <button type="button" onClick={() => openForm(product)}>
-                  Edit
-                </button>}
-                {canDelete && <button
-                  type="button"
-                  onClick={() => deleteProduct(product.productId)}
-                >
-                  Delete
-                </button>}
-              </span>
-            </div>
-          ))}
-        </div>
-<footer className="catalog-pagination"><span>Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, visibleProducts.length)} of {visibleProducts.length} {itemsLabel.toLowerCase()}</span><label>Rows per page <select value={pageSize} onChange={(event) => { setPageSize(Number(event.target.value)); setPage(1); }}>{[10, 25, 50].map((size) => <option key={size}>{size}</option>)}</select></label><div><button type="button" disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)}>Previous</button><span aria-current="page">{currentPage}</span><span>of {pages}</span><button type="button" disabled={currentPage === pages} onClick={() => setPage(currentPage + 1)}>Next</button></div></footer>      </AsyncBoundary>
+      </Modal>
+
       <ConfirmDialog
         isOpen={Boolean(confirmDeleteId)}
         title={`Delete ${itemLabel}`}
         message={`Delete this ${itemLabel.toLowerCase()}? This action cannot be undone.`}
         confirmText="Delete"
+        variant="danger"
         onConfirm={handleConfirmDelete}
         onCancel={() => setConfirmDeleteId(null)}
       />
-      {isImportOpen && (
-        <div
-          className="supplier-modal-backdrop bulk-import-modal-backdrop"
-          role="presentation"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) setIsImportOpen(false);
+
+      <Modal
+        isOpen={isImportOpen}
+        onClose={() => {
+          setIsImportOpen(false);
+          refetch();
+        }}
+        title="Bulk Import Products"
+        subtitle="Upload CSV or Excel file to batch create or update inventory"
+        size="xl"
+      >
+        <ProductImportPage
+          business={business}
+          isModal={true}
+          onClose={() => {
+            setIsImportOpen(false);
+            refetch();
           }}
-        >
-          <div
-            className="bulk-import-modal-container import-shell stock-ledger-shell"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="bulk-import-modal-title"
-          >
-            <ProductImportPage
-              business={business}
-              isModal={true}
-              onClose={() => {
-                setIsImportOpen(false);
-                refetch();
-              }}
-              onImportSuccess={() => refetch()}
-            />
-          </div>
-        </div>
-      )}
+          onImportSuccess={() => refetch()}
+        />
+      </Modal>
     </section>
   );
 }
 
 export default Products;
-
-

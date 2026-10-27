@@ -1,3 +1,4 @@
+import { Icon } from './icons.jsx'
 import './Card.css'
 
 export function Card({
@@ -39,8 +40,10 @@ export function StatGrid({ children, className = '', ...props }) {
 
 export function StatCard({
   title,
+  label,
   value,
   subtitle = null,
+  helpText = null,
   icon = null,
   tone = 'blue',
   onClick = null,
@@ -51,6 +54,9 @@ export function StatCard({
   const isClickable = Boolean(onClick || href)
   const Component = href ? 'a' : isClickable ? 'button' : 'div'
   const componentProps = href ? { href } : isClickable ? { type: 'button', onClick } : {}
+
+  const displayTitle = title || label
+  const displaySubtitle = subtitle || helpText
 
   const classes = [
     'ui-stat-card',
@@ -65,13 +71,13 @@ export function StatCard({
   return (
     <Component className={classes} {...componentProps} {...props}>
       <div className="ui-stat-texts modern-kpi-texts">
-        <span className="ui-stat-title modern-kpi-title">{title}</span>
+        <span className="ui-stat-title modern-kpi-title">{displayTitle}</span>
         <span className="ui-stat-value modern-kpi-value">{value}</span>
-        {subtitle && <span className="ui-stat-subtitle">{subtitle}</span>}
+        {displaySubtitle && <span className="ui-stat-subtitle">{displaySubtitle}</span>}
       </div>
       {icon && (
         <div className={bubbleClass} aria-hidden="true">
-          {icon}
+          {typeof icon === 'string' ? <Icon name={icon} /> : icon}
         </div>
       )}
     </Component>
