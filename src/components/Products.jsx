@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import { productApi } from "../api/productApi.js";
 import { useResource } from "../hooks/useResource.js";
 import AsyncBoundary from "./AsyncBoundary.jsx";
+import { ConfirmDialog } from "./ui/ConfirmDialog.jsx";
 import "../styles/products-catalog.css";
 
 function Products({ business, account }) {
@@ -19,6 +20,7 @@ function Products({ business, account }) {
   const [editingProduct, setEditingProduct] = useState(null);
   const [formError, setFormError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const canCreate = account.role === "owner" || account.permissions?.includes("create_product");
   const canEdit = account.role === "owner" || account.permissions?.includes("edit_product");
   const canDelete = account.role === "owner" || account.permissions?.includes("delete_product");
@@ -96,7 +98,12 @@ function Products({ business, account }) {
   };
 
   const deleteProduct = async (productId) => {
-    if (!window.confirm("Delete this product? This action cannot be undone.")) return;
+    setConfirmDeleteId(productId);
+  };
+  const handleConfirmDelete = async () => {
+    const productId = confirmDeleteId;
+    setConfirmDeleteId(null);
+    if (!productId) return;
     try {
       await productApi.remove(productId);
       setData((current) =>
@@ -429,6 +436,14 @@ function Products({ business, account }) {
           ))}
         </div>
 <footer className="catalog-pagination"><span>Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, visibleProducts.length)} of {visibleProducts.length} products</span><label>Rows per page <select value={pageSize} onChange={(event) => { setPageSize(Number(event.target.value)); setPage(1); }}>{[10, 25, 50].map((size) => <option key={size}>{size}</option>)}</select></label><div><button type="button" disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)}>Previous</button><span aria-current="page">{currentPage}</span><span>of {pages}</span><button type="button" disabled={currentPage === pages} onClick={() => setPage(currentPage + 1)}>Next</button></div></footer>      </AsyncBoundary>
+      <ConfirmDialog
+        isOpen={Boolean(confirmDeleteId)}
+        title="Delete Product"
+        message="Delete this product? This action cannot be undone."
+        confirmText="Delete"
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setConfirmDeleteId(null)}
+      />
     </section>
   );
 }

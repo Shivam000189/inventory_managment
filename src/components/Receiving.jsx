@@ -89,7 +89,7 @@ function Receiving({ business, account, onNavigate }) {
 
     setSaving(true)
     try {
-      const userNotes = (new FormData(event.currentTarget).get('notes') || '').trim()
+      const form = event.currentTarget; const userNotes = (new FormData(form).get('notes') || '').trim()
       const context = [challan.trim() && `Challan ${challan.trim()}`, dockBay].filter(Boolean).join(' · ')
       const payload = {
         purchaseOrderId: selectedOrder.purchaseOrderId,
@@ -110,7 +110,7 @@ function Receiving({ business, account, onNavigate }) {
       setLines([])
       setChallan('')
       setMessage({ type: 'success', text: `GRN ${receiving.receivingId} posted. Accepted stock was added to inventory.` })
-      event.currentTarget.reset()
+      form.reset()
     } catch (caught) {
       setMessage({ type: 'error', text: caught.message || 'Could not record the receiving.' })
     } finally {

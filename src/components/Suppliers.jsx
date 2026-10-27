@@ -5,6 +5,7 @@ import { paymentApi } from '../api/paymentApi.js'
 import { productApi } from '../api/productApi.js'
 import { useResource } from '../hooks/useResource.js'
 import AsyncBoundary from './AsyncBoundary.jsx'
+import { ConfirmDialog } from './ui/ConfirmDialog.jsx'
 import '../styles/suppliers.css'
 
 const PHONE_PATTERN = /^[+\d][\d\s()-]{6,}$/
@@ -47,6 +48,7 @@ function Suppliers({ business, onNavigate, canNavigate }) {
   const [editingSupplier, setEditingSupplier] = useState(null)
   const [message, setMessage] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [archiveTarget, setArchiveTarget] = useState(null)
   const [nowTs] = useState(() => Date.now())
 
   const currency = business.currency || 'INR'
@@ -136,7 +138,7 @@ function Suppliers({ business, onNavigate, canNavigate }) {
   const handleSubmit = async (event) => {
     event.preventDefault()
     if (saving) return
-    const formData = new FormData(event.currentTarget)
+    const form = event.currentTarget; const formData = new FormData(form)
     const supplier = {
       supplierName: formData.get('supplierName').trim(),
       contactPerson: formData.get('contactPerson').trim(),
@@ -162,7 +164,7 @@ function Suppliers({ business, onNavigate, canNavigate }) {
       setFormOpen(false)
       setEditingSupplier(null)
       setMessage({ type: 'success', text: editingSupplier ? 'Supplier updated.' : 'Supplier added.' })
-      event.currentTarget.reset()
+      form.reset()
     } catch (caught) {
       setMessage({ type: 'error', text: caught.message || 'Could not save the supplier.' })
     } finally {
@@ -171,7 +173,12 @@ function Suppliers({ business, onNavigate, canNavigate }) {
   }
 
   const archiveSupplier = async (supplier) => {
-    if (!window.confirm(`Archive ${supplier.supplierName}? Their history stays, but they won't show up when raising new purchase orders.`)) return
+    setArchiveTarget(supplier)
+  }
+  const handleConfirmArchive = async () => {
+    const supplier = archiveTarget
+    setArchiveTarget(null)
+    if (!supplier) return
     try {
       const saved = await supplierApi.archive(supplier.supplierId)
       updateSuppliers((list) => list.map((item) => (item.supplierId === saved.supplierId ? saved : item)))
@@ -400,6 +407,14 @@ function Suppliers({ business, onNavigate, canNavigate }) {
         </div>
       </article>
     </div>}
+    <ConfirmDialog
+      isOpen={Boolean(archiveTarget)}
+      title="Archive Supplier"
+      message={archiveTarget ? `Archive ${archiveTarget.supplierName}? Their history stays, but they won't show up when raising new purchase orders.` : ''}
+      confirmText="Archive"
+      onConfirm={handleConfirmArchive}
+      onCancel={() => setArchiveTarget(null)}
+    />
   </section>
 }
 

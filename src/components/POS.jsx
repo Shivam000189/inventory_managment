@@ -18,6 +18,12 @@ const METHODS = [
   "Gift Card",
   "Pay Later",
 ];
+const createPaymentRow = (method = "Cash", amount = 0, reference = "") => ({
+  id: Math.random().toString(36).slice(2, 9),
+  method,
+  amount,
+  reference,
+});
 const money = (currency, value) =>
   `${currency} ${Number(value || 0).toFixed(2)}`;
 
@@ -286,11 +292,7 @@ export default function POS({ business, account }) {
   const [couponCode, setCouponCode] = useState("");
   const [loyaltyPointsRedeemed, setLoyaltyPointsRedeemed] = useState(0);
   const [payments, setPayments] = useState([
-    {
-      method: business.settings?.defaultPaymentMethod || "Cash",
-      amount: 0,
-      reference: "",
-    },
+    createPaymentRow(business.settings?.defaultPaymentMethod || "Cash", 0, ""),
   ]);
   const [newCustomer, setNewCustomer] = useState({
     name: "",
@@ -557,11 +559,7 @@ export default function POS({ business, account }) {
         setCustomerId(result.invoice.customerId);
       }
       setPayments([
-        {
-          method: business.settings?.defaultPaymentMethod || "Cash",
-          amount: 0,
-          reference: "",
-        },
+        createPaymentRow(business.settings?.defaultPaymentMethod || "Cash", 0, ""),
       ]);
       setMessage({
         type: "success",
@@ -980,14 +978,14 @@ export default function POS({ business, account }) {
                 ))}
                 <button
                   type="button"
-                  onClick={() => setPayments([...payments, { method: "UPI", amount: 0, reference: "" }])}
+                  onClick={() => setPayments([...payments, createPaymentRow("UPI", 0, "")])}
                 >
                   Split
                 </button>
               </div>
             )}
             {payments.map((payment, index) => (
-              <div className="pos-payment-row" key={index}>
+              <div className="pos-payment-row" key={payment.id}>
                 <select
                   value={payment.method}
                   onChange={(event) =>

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { productApi } from '../api/productApi.js'
 import { useResource } from '../hooks/useResource.js'
 import AsyncBoundary from './AsyncBoundary.jsx'
+import { ConfirmDialog } from './ui/ConfirmDialog.jsx'
 import '../styles/credit-sales.css'
 import '../styles/bulk-pricing.css'
 import '../styles/cs-dark.css'
@@ -72,6 +73,7 @@ export default function BulkPricing({ business, account }) {
   const [priceMax, setPriceMax] = useState('')
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [page, setPage] = useState(1)
+  const [removeTarget, setRemoveTarget] = useState(null)
   const [pageSize, setPageSize] = useState(10)
   const [editing, setEditing] = useState(null)
   const [viewing, setViewing] = useState(null)
@@ -143,7 +145,12 @@ export default function BulkPricing({ business, account }) {
     finally { setSaving(false) }
   }
   const removeRule = async (product) => {
-    if (!window.confirm(`Remove the bulk pricing rule for ${product.name} (${product.sku})? This clears its wholesale price and minimum quantity.`)) return
+    setRemoveTarget(product)
+  }
+  const handleConfirmRemove = async () => {
+    const product = removeTarget
+    setRemoveTarget(null)
+    if (!product) return
     setMessage(null)
     try {
       const saved = await productApi.update(product.productId, { wholesalePrice: 0, wholesaleMinQuantity: 0 })
@@ -225,6 +232,14 @@ export default function BulkPricing({ business, account }) {
       </div>
     </div>}
     {editing && <div className="credit-form-backdrop" onKeyDown={(event) => { if (event.key === 'Escape' && !saving) setEditing(null) }}><form className="purchase-order-form bulk-rule-form" onSubmit={save} aria-label="Bulk pricing rule"><div className="product-form-heading"><h3>{editing.productId ? 'Edit bulk pricing' : 'Add bulk rule'}</h3><button type="button" aria-label="Close bulk rule" disabled={saving} onClick={() => setEditing(null)}>×</button></div><label htmlFor="bulk-product">Product</label><select id="bulk-product" name="productId" defaultValue={editing.productId || ''} required autoFocus><option value="" disabled>Select a product</option>{products.filter((product) => !editing.productId || product.productId === editing.productId).map((product) => <option key={product.productId} value={product.productId}>{product.name} · {product.sku}</option>)}</select><label htmlFor="bulk-price">Wholesale unit price ({business.currency})</label><input id="bulk-price" name="price" type="number" min="0.01" step="0.01" defaultValue={editing.wholesalePrice || ''} required /><label htmlFor="bulk-minimum">Minimum order quantity</label><input id="bulk-minimum" name="quantity" type="number" min="1" step="1" defaultValue={editing.wholesaleMinQuantity || 10} required />{message && <p role="alert" className={`form-status ${message.type}`}>{message.text}</p>}<div className="credit-buttons"><button type="button" disabled={saving} onClick={() => setEditing(null)}>Cancel</button><button className="credit-create" type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save rule'}</button></div></form></div>}
+    <ConfirmDialog
+      isOpen={Boolean(removeTarget)}
+      title="Remove Bulk Pricing"
+      message={removeTarget ? `Remove the bulk pricing rule for ${removeTarget.name} (${removeTarget.sku})? This clears its wholesale price and minimum quantity.` : ''}
+      confirmText="Remove"
+      onConfirm={handleConfirmRemove}
+      onCancel={() => setRemoveTarget(null)}
+    />
   </section>
 }
 

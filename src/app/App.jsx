@@ -294,7 +294,7 @@ function DashboardView({ initialNav = "Overview" }) {
           <SalesOrdersPage
             business={business}
             account={account}
-            creditSales={["Credit Sales", "Bulk Orders"].includes(activeNav)}
+            creditSales={false}
             section={activeNav}
           />
         ) : activeNav === "POS / Billing" ? (
@@ -348,7 +348,7 @@ function DashboardView({ initialNav = "Overview" }) {
           <SalesOrdersPage
             business={business}
             account={account}
-            creditSales={["Credit Sales", "Bulk Orders"].includes(activeNav)}
+            creditSales={false}
             section={activeNav}
           />
         ) : (

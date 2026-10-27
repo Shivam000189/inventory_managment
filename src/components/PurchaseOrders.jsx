@@ -91,7 +91,7 @@ function PurchaseOrders({ business, onNavigate }) {
   const handleSubmit = async (event) => {
     event.preventDefault()
     if (saving) return
-    const formData = new FormData(event.currentTarget)
+    const form = event.currentTarget; const formData = new FormData(form)
     if (!suppliers.length) { setMessage({ type: 'error', text: 'Add an active supplier before creating a purchase order.' }); return }
     const validItems = lineItems.filter((item) => item.productId && Number(item.quantity) > 0 && Number(item.purchasePrice) >= 0)
     if (!validItems.length) { setMessage({ type: 'error', text: 'Add at least one product with a valid quantity and price.' }); return }
@@ -111,7 +111,7 @@ function PurchaseOrders({ business, onNavigate }) {
       setFormOpen(false)
       setEditingOrder(null)
       setMessage({ type: 'success', text: `${saved.orderNumber} saved successfully.` })
-      event.currentTarget.reset()
+      form.reset()
     } catch (caught) {
       setMessage({ type: 'error', text: caught.message || 'Could not save the purchase order.' })
     } finally {

@@ -1,9 +1,13 @@
 const getApiBaseUrl = () => {
   if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
-  if (typeof window !== "undefined" && window.location.hostname) {
-    return `${window.location.protocol}//${window.location.hostname}:4000/api`;
+  if (import.meta.env.DEV) {
+    if (typeof window !== "undefined" && window.location.hostname) {
+      return `${window.location.protocol}//${window.location.hostname}:4000/api`;
+    }
+    return "http://localhost:4000/api";
   }
-  return "http://localhost:4000/api";
+  // In production, fallback to relative /api (can be overridden by VITE_API_URL)
+  return "/api";
 };
 
 const API_BASE_URL = getApiBaseUrl();
@@ -25,12 +29,15 @@ export class ApiError extends Error {
  */
 function readCookie(name) {
   try {
-    return (
-      document.cookie
-        .split("; ")
-        .find((row) => row.startsWith(`${name}=`))
-        ?.split("=")[1] ?? null
-    );
+    if (typeof document === "undefined") return null;
+    const prefix = `${name}=`;
+    const row = document.cookie
+      .split("; ")
+      .find((entry) => entry.startsWith(prefix));
+    if (!row) return null;
+    const eqIdx = row.indexOf("=");
+    if (eqIdx === -1) return null;
+    return decodeURIComponent(row.slice(eqIdx + 1));
   } catch {
     return null;
   }
@@ -53,7 +60,10 @@ export async function request(
   path,
   { method = "GET", body, params } = {},
 ) {
-  const url = new URL(`${API_BASE_URL}${path}`);
+  const url = new URL(
+    `${API_BASE_URL}${path}`,
+    typeof window !== "undefined" ? window.location.origin : "http://localhost"
+  );
   if (params) {
     for (const [key, value] of Object.entries(params)) {
       if (value !== undefined && value !== null && value !== "")

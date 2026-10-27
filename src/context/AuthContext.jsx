@@ -1,46 +1,45 @@
 import { useEffect, useState, useCallback } from "react";
 import { authApi } from "../api/authApi.js";
-import { getCsrfToken, clearSession } from "../api/client.js";
+import { getCsrfToken } from "../api/client.js";
 import { AuthContext } from "./authContext.js";
 
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(Boolean(getCsrfToken()));
 
-  const loadSession = useCallback(async () => {
+  const loadSession = useCallback(async (isMounted = () => true) => {
     try {
       const result = await authApi.me();
-      setSession({ user: result.user, business: result.business });
+      if (isMounted()) {
+        setSession({ user: result.user, business: result.business });
+      }
       return result;
     } catch {
-      setSession(null);
+      if (isMounted()) {
+        setSession(null);
+      }
       return null;
     } finally {
-      setLoading(false);
+      if (isMounted()) {
+        setLoading(false);
+      }
     }
   }, []);
 
   useEffect(() => {
     let active = true;
-    authApi.me().then((result) => {
+    Promise.resolve().then(() => {
       if (active) {
-        setSession({ user: result.user, business: result.business });
-        setLoading(false);
-      }
-    }).catch(() => {
-      if (active) {
-        setSession(null);
-        setLoading(false);
+        loadSession(() => active);
       }
     });
     return () => {
       active = false;
     };
-  }, []);
+  }, [loadSession]);
 
   useEffect(() => {
     const handleUnauthorized = () => {
-      authApi.logout().catch(() => {});
       setSession(null);
     };
     window.addEventListener("stockroom:unauthorized", handleUnauthorized);
@@ -65,7 +64,6 @@ export function AuthProvider({ children }) {
     } catch {
       // ignore
     } finally {
-      clearSession();
       setSession(null);
     }
   };

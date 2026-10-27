@@ -8,7 +8,7 @@ import CreditSalesList from './CreditSalesList.jsx'
 import OrderDetails from './OrderDetails.jsx'
 import '../styles/sales-orders.css'
 
-const emptyItem = () => ({ productId: '', quantity: 1, sellingPrice: '', discount: 0, tax: 0 })
+const emptyItem = () => ({ id: Math.random().toString(36).slice(2, 9), productId: '', quantity: 1, sellingPrice: '', discount: 0, tax: 0 })
 const startOfToday = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d }
 
 function OrdIcon({ name }) {
@@ -75,7 +75,7 @@ function SalesOrders({ business, creditSales = false, section = 'Credit Sales' }
   const itemTotal = (item) => Math.max(0, Number(item.quantity || 0) * Number(item.sellingPrice || 0) - Number(item.discount || 0) + Number(item.tax || 0))
   const totals = items.reduce((result, item) => ({ totalAmount: result.totalAmount + itemTotal(item) }), { totalAmount: 0 })
   const updateItem = (index, field, value) => setItems(items.map((item, itemIndex) => itemIndex === index ? { ...item, [field]: value, ...(field === 'productId' ? { sellingPrice: products.find((product) => product.productId === value)?.sellingPrice ?? '' } : {}) } : item))
-  const openForm = (order = null) => { setEditingOrder(order); setItems(order ? order.items.map((item) => ({ productId: item.productId, quantity: item.quantity, sellingPrice: item.sellingPrice, discount: item.discount, tax: item.tax })) : [emptyItem()]); setFormOpen(true); setMessage(null); setMenu(null) }
+  const openForm = (order = null) => { setEditingOrder(order); setItems(order ? order.items.map((item) => ({ id: item.productId || Math.random().toString(36).slice(2, 9), productId: item.productId, quantity: item.quantity, sellingPrice: item.sellingPrice, discount: item.discount, tax: item.tax })) : [emptyItem()]); setFormOpen(true); setMessage(null); setMenu(null) }
 
   const handleSubmit = async (event) => {
     event.preventDefault()
@@ -415,7 +415,7 @@ function OrderFormModal({ creditSales, editingOrder, customers, products, items,
         <div className="field-wide"><label htmlFor="order-notes">Notes</label><input id="order-notes" name="notes" defaultValue={editingOrder?.notes || ''} placeholder="Order notes" /></div>
       </div>
       <div className="order-items-heading"><h4>Order items</h4><button type="button" className="outline-button" onClick={() => setItems([...items, emptyItem()])}>Add item <span>+</span></button></div>
-      <div className="order-items">{items.map((item, index) => <div className="order-item-row" key={index}><select aria-label="Select product" value={item.productId} onChange={(event) => updateItem(index, 'productId', event.target.value)} required><option value="">Select product</option>{products.map((product) => <option key={product.productId} value={product.productId}>{product.name} ({product.sku})</option>)}</select><input aria-label="Quantity" type="number" min="1" value={item.quantity} onChange={(event) => updateItem(index, 'quantity', event.target.value)} required /><input aria-label="Selling price" type="number" min="0" step="0.01" value={item.sellingPrice} onChange={(event) => updateItem(index, 'sellingPrice', event.target.value)} required /><input aria-label="Discount" type="number" min="0" value={item.discount} onChange={(event) => updateItem(index, 'discount', event.target.value)} /><input aria-label="Tax" type="number" min="0" value={item.tax} onChange={(event) => updateItem(index, 'tax', event.target.value)} /><strong>{business.currency} {itemTotal(item).toFixed(2)}</strong>{items.length > 1 && <button type="button" className="remove-item" onClick={() => setItems(items.filter((_, itemIndex) => itemIndex !== index))}>×</button>}</div>)}</div>
+      <div className="order-items">{items.map((item, index) => <div className="order-item-row" key={item.id}><select aria-label="Select product" value={item.productId} onChange={(event) => updateItem(index, 'productId', event.target.value)} required><option value="">Select product</option>{products.map((product) => <option key={product.productId} value={product.productId}>{product.name} ({product.sku})</option>)}</select><input aria-label="Quantity" type="number" min="1" value={item.quantity} onChange={(event) => updateItem(index, 'quantity', event.target.value)} required /><input aria-label="Selling price" type="number" min="0" step="0.01" value={item.sellingPrice} onChange={(event) => updateItem(index, 'sellingPrice', event.target.value)} required /><input aria-label="Discount" type="number" min="0" value={item.discount} onChange={(event) => updateItem(index, 'discount', event.target.value)} /><input aria-label="Tax" type="number" min="0" value={item.tax} onChange={(event) => updateItem(index, 'tax', event.target.value)} /><strong>{business.currency} {itemTotal(item).toFixed(2)}</strong>{items.length > 1 && <button type="button" className="remove-item" onClick={() => setItems(items.filter((_, itemIndex) => itemIndex !== index))}>×</button>}</div>)}</div>
       <p className="order-total">Total: <strong>{business.currency} {totals.totalAmount.toFixed(2)}</strong></p>
       <div className="product-form-actions"><button type="button" className="outline-button" onClick={onClose}>Cancel</button><button className="submit-button" type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save order'} <span>→</span></button></div>
     </form>

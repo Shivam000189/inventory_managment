@@ -3,6 +3,7 @@ import { customerApi } from '../api/customerApi.js'
 import { salesOrderApi } from '../api/salesOrderApi.js'
 import { useResource } from '../hooks/useResource.js'
 import AsyncBoundary from './AsyncBoundary.jsx'
+import { ConfirmDialog } from './ui/ConfirmDialog.jsx'
 import '../styles/customers.css'
 
 const PHONE_PATTERN = /^[+\d][\d\s()-]{6,}$/
@@ -42,6 +43,7 @@ function Customers({ business, onNavigate }) {
   const [editingCustomer, setEditingCustomer] = useState(null)
   const [viewingCustomer, setViewingCustomer] = useState(null)
   const [message, setMessage] = useState(null)
+  const [archiveTarget, setArchiveTarget] = useState(null)
   const [saving, setSaving] = useState(false)
 
   const currency = business.currency || 'INR'
@@ -101,7 +103,12 @@ function Customers({ business, onNavigate }) {
   }
 
   const archiveCustomer = async (customer) => {
-    if (!window.confirm(`Archive ${customer.name}? Their purchase history stays intact.`)) return
+    setArchiveTarget(customer)
+  }
+  const handleConfirmArchive = async () => {
+    const customer = archiveTarget
+    setArchiveTarget(null)
+    if (!customer) return
     try {
       const saved = await customerApi.archive(customer.customerId)
       setCustomers((list) => list.map((item) => (item.customerId === saved.customerId ? saved : item)))
@@ -339,6 +346,14 @@ function Customers({ business, onNavigate }) {
         </div>
       </article>
     </div>}
+    <ConfirmDialog
+      isOpen={Boolean(archiveTarget)}
+      title="Archive Customer"
+      message={archiveTarget ? `Archive ${archiveTarget.name}? Their purchase history stays intact.` : ''}
+      confirmText="Archive"
+      onConfirm={handleConfirmArchive}
+      onCancel={() => setArchiveTarget(null)}
+    />
   </section>
 }
 

@@ -24,14 +24,15 @@ function LegacyReturns({ business, purchase = false }) {
   const handleSubmit = async (event) => {
     event.preventDefault()
     if (saving) return
-    const data = new FormData(event.currentTarget)
+    const form = event.currentTarget
+    const formData = new FormData(form)
     const payload = {
       type: purchase ? 'purchase' : 'sale',
-      orderId: data.get('orderId'),
-      productId: data.get('productId'),
-      quantity: Number(data.get('quantity')),
-      reason: data.get('reason'),
-      refundAmount: Number(data.get('refundAmount') || 0),
+      orderId: formData.get('orderId'),
+      productId: formData.get('productId'),
+      quantity: Number(formData.get('quantity')),
+      reason: formData.get('reason'),
+      refundAmount: Number(formData.get('refundAmount') || 0),
     }
     if (!payload.orderId || !payload.productId || !payload.quantity) {
       setMessage({ type: 'error', text: 'Select a valid order, product, and return quantity.' })
@@ -43,7 +44,7 @@ function LegacyReturns({ business, purchase = false }) {
       const [freshReturns, freshProducts] = await Promise.all([returnApi.list({ type: payload.type }), productApi.list()])
       setData((current) => [freshReturns, freshProducts, current[2]])
       setMessage({ type: 'success', text: `${record.returnId} completed and inventory updated.` })
-      event.currentTarget.reset()
+      form.reset()
     } catch (caught) {
       setMessage({ type: 'error', text: caught.message || 'Could not process the return.' })
     } finally {
