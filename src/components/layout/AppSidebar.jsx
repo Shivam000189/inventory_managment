@@ -261,6 +261,7 @@ export default function AppSidebar({
           <button
             className={`modern-nav-item ${activeNav === "Overview" ? "active" : ""}`}
             type="button"
+            title="Dashboard Overview"
             onClick={() => navigateTo("Overview")}
           >
             <span className="modern-nav-icon" aria-hidden="true">
@@ -287,6 +288,7 @@ export default function AppSidebar({
                   key={section}
                   className={`modern-nav-item ${activeNav === section ? "active" : ""}`}
                   type="button"
+                  title={navigationLabel(section)}
                   onClick={() => navigateTo(section)}
                 >
                   <span className="modern-nav-icon" aria-hidden="true">
@@ -304,7 +306,11 @@ export default function AppSidebar({
                   className={`modern-nav-group-toggle ${containsActive ? "contains-active" : ""}`}
                   type="button"
                   aria-expanded={isGroupOpen}
+                  title={navigationLabel(section)}
                   onClick={() => {
+                    if (sidebarCollapsed && setSidebarCollapsed) {
+                      setSidebarCollapsed(false);
+                    }
                     setExpandedNavSections((current) => {
                       const next = new Set(current);
                       if (next.has(section)) next.delete(section);
@@ -332,6 +338,7 @@ export default function AppSidebar({
                         key={item}
                         className={`modern-subnav-item ${activeNav === item ? "active" : ""}`}
                         type="button"
+                        title={navigationLabel(item)}
                         onClick={() => navigateTo(item)}
                       >
                         <span className="modern-nav-label">{navigationLabel(item)}</span>

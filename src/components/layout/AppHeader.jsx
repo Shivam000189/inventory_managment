@@ -72,18 +72,22 @@ export default function AppHeader({
       <header className="modern-navbar" role="banner">
         {/* Left Side: Greeting & Status */}
         <div className="modern-navbar-left">
-          {sidebarCollapsed && (
+          {setSidebarCollapsed && (
             <button
               className="modern-expand-sidebar-btn"
               type="button"
-              aria-label="Expand sidebar"
-              title="Expand sidebar"
-              onClick={() => setSidebarCollapsed(false)}
+              aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
             >
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="3" y="3" width="18" height="18" rx="2" />
                 <path d="M9 3v18" />
-                <path d="m14 9 3 3-3 3" />
+                {sidebarCollapsed ? (
+                  <path d="m14 9 3 3-3 3" />
+                ) : (
+                  <path d="m17 15-3-3 3-3" />
+                )}
               </svg>
             </button>
           )}

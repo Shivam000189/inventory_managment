@@ -26,28 +26,32 @@
 .dashboard-shell.modern-theme.pos-shell .dashboard-main,
 .dashboard-shell.modern-theme.biz-shell .dashboard-main,
 .dashboard-shell.modern-theme.cloth-shell .dashboard-main {
-  flex: 1 1 0% !important;
+  flex: 1 1 auto !important;
   min-width: 0 !important;
-  margin-left: 0 !important;
+  margin-left: 250px !important;
+  width: calc(100% - 250px) !important;
   padding: 0 28px 36px !important;
   background: var(--bg) !important;
   overflow-y: auto !important;
   overflow-x: hidden !important;
-  width: auto !important;
   box-sizing: border-box !important;
+  min-height: 100vh !important;
+  transition: margin-left 0.22s var(--sr-ease), width 0.22s var(--sr-ease) !important;
 }
 
 .sidebar-collapsed .dashboard-shell.modern-theme .dashboard-main,
-.dashboard-shell.modern-theme.sidebar-collapsed .dashboard-main {
-  margin-left: 0 !important;
+.dashboard-shell.modern-theme.sidebar-collapsed .dashboard-main,
+.stock-in-shell.stock-ledger-shell.sidebar-collapsed .dashboard-main {
+  margin-left: 72px !important;
+  width: calc(100% - 72px) !important;
 }
 
 /* === Modern Sidebar === */
 #dashboard-navigation.dashboard-sidebar.modern-sidebar {
-  position: sticky !important;
+  position: fixed !important;
   top: 0 !important;
   left: 0 !important;
-  inset: auto !important;
+  bottom: 0 !important;
   width: 250px !important;
   min-width: 250px !important;
   max-width: 250px !important;
@@ -60,12 +64,25 @@
   flex-direction: column !important;
   padding: 18px 12px 14px !important;
   box-sizing: border-box !important;
-  z-index: 50 !important;
-  overflow: hidden !important; /* Prevents outer double scrollbar */
+  z-index: 100 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
   transform: none !important;
   pointer-events: auto !important;
   opacity: 1 !important;
-  transition: width 0.22s var(--sr-ease), flex-basis 0.22s var(--sr-ease) !important;
+  visibility: visible !important;
+  transition: width 0.22s var(--sr-ease), min-width 0.22s var(--sr-ease), max-width 0.22s var(--sr-ease), padding 0.22s var(--sr-ease) !important;
+}
+
+#dashboard-navigation.dashboard-sidebar.modern-sidebar::-webkit-scrollbar {
+  width: 4px !important;
+}
+#dashboard-navigation.dashboard-sidebar.modern-sidebar::-webkit-scrollbar-thumb {
+  background: var(--line-strong) !important;
+  border-radius: 4px !important;
+}
+#dashboard-navigation.dashboard-sidebar.modern-sidebar::-webkit-scrollbar-track {
+  background: transparent !important;
 }
 
 /* Sidebar Brand Header */
@@ -1138,17 +1155,24 @@
 /* Collapsed Sidebar Rules */
 .dashboard-shell.modern-theme.sidebar-collapsed #dashboard-navigation.modern-sidebar,
 .sidebar-collapsed #dashboard-navigation.dashboard-sidebar.modern-sidebar {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  bottom: 0 !important;
   width: 72px !important;
   min-width: 72px !important;
   max-width: 72px !important;
   flex: 0 0 72px !important;
-  padding: 18px 8px 14px !important;
+  padding: 16px 8px 14px !important;
   transform: none !important;
   pointer-events: auto !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
 }
 
 .sidebar-collapsed .modern-sidebar .modern-brand-info,
-.sidebar-collapsed .modern-sidebar .modern-sidebar-collapse-btn,
 .sidebar-collapsed .modern-sidebar .modern-nav-label,
 .sidebar-collapsed .modern-sidebar .modern-nav-chevron,
 .sidebar-collapsed .modern-sidebar .modern-live-badge,
@@ -1160,14 +1184,47 @@
 }
 
 .sidebar-collapsed .modern-sidebar .modern-sidebar-brand {
-  justify-content: center;
-  padding-bottom: 12px;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  padding-bottom: 12px !important;
+  border-bottom: 1px solid var(--line) !important;
+  margin-bottom: 12px !important;
+}
+
+.sidebar-collapsed .modern-sidebar .modern-sidebar-collapse-btn {
+  display: flex !important;
+  margin: 0 auto !important;
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 8px !important;
+  background: var(--surface-soft) !important;
+  border: 1px solid var(--line) !important;
+  color: var(--text-soft) !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+}
+
+.sidebar-collapsed .modern-sidebar .modern-sidebar-collapse-btn:hover {
+  background: var(--surface-muted) !important;
+  color: var(--ink) !important;
+  border-color: var(--line-strong) !important;
+  transform: scale(1.05) !important;
 }
 
 .sidebar-collapsed .modern-sidebar .modern-nav-item,
 .sidebar-collapsed .modern-sidebar .modern-nav-group-toggle {
-  justify-content: center;
-  padding: 10px;
+  justify-content: center !important;
+  padding: 10px 0 !important;
+  border-radius: 8px !important;
+}
+
+.sidebar-collapsed .modern-sidebar .modern-nav-icon {
+  margin: 0 !important;
 }
 
 /* Mobile Sidebar Drawer */
