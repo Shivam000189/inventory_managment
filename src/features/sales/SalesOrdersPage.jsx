@@ -3,47 +3,75 @@ import { salesOrderApi } from '../../api/salesOrderApi.js'
 import { productApi } from '../../api/productApi.js'
 import { customerApi } from '../../api/customerApi.js'
 import { useResource } from '../../hooks/useResource.js'
-import AsyncBoundary from '../../components/feedback/AsyncBoundary.jsx'
+import { PageHeader } from '../../components/ui/PageHeader.jsx'
+import { StatGrid, StatCard } from '../../components/ui/Card.jsx'
+import { Toolbar } from '../../components/ui/Toolbar.jsx'
+import { Tabs } from '../../components/ui/Tabs.jsx'
+import { DataTable } from '../../components/ui/DataTable.jsx'
+import { Badge } from '../../components/ui/Badge.jsx'
+import { Button } from '../../components/ui/Button.jsx'
+import { Modal } from '../../components/ui/Modal.jsx'
+import { Field, Input, Select } from '../../components/ui/FormControls.jsx'
 import CreditSalesList from './CreditSalesPage.jsx'
 import OrderDetails from './OrderDetailsModal.jsx'
-import '../../styles/sales-orders.css'
+import './SalesOrdersPage.css'
 
-const emptyItem = () => ({ id: Math.random().toString(36).slice(2, 9), productId: '', quantity: 1, sellingPrice: '', discount: 0, tax: 0 })
-const startOfToday = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d }
+const emptyItem = () => ({
+  id: Math.random().toString(36).slice(2, 9),
+  productId: '',
+  quantity: 1,
+  sellingPrice: '',
+  discount: 0,
+  tax: 0,
+})
 
-function OrdIcon({ name }) {
-  const paths = {
-    print: <><path d="M7 8V3h10v5M7 18H5a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M7 14h10v7H7z" /></>,
-    export: <><path d="M12 3v12m-4-4 4 4 4-4" /><path d="M5 17v3h14v-3" /></>,
-    plus: <path d="M12 5v14M5 12h14" />,
-    search: <><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 4.5 4.5" /></>,
-    refresh: <><path d="M4 12a8 8 0 0 1 13.7-5.7L20 8m0-4v4h-4M20 12a8 8 0 0 1-13.7 5.7L4 16m0 4v-4h4" /></>,
-    calendar: <><rect x="3.5" y="5" width="17" height="15.5" rx="2" /><path d="M3.5 9.5h17M8 3v4M16 3v4" /></>,
-    coin: <><ellipse cx="12" cy="6" rx="8" ry="3" /><path d="M4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6" /></>,
-    truck: <><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7z" /><circle cx="7" cy="18" r="1.6" /><circle cx="17.5" cy="18" r="1.6" /></>,
-    clock: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,
-    check: <><circle cx="12" cy="12" r="9" /><path d="m8.4 12 2.4 2.4 4.8-5.4" /></>,
-  }
-  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>
+const startOfToday = () => {
+  const d = new Date()
+  d.setHours(0, 0, 0, 0)
+  return d
 }
 
 const TABS = [
   { id: 'all', label: 'All Orders', match: () => true },
-  { id: 'processing', label: 'Processing', match: (o) => o.status !== 'Completed' && o.status !== 'Cancelled' && o.paymentStatus === 'Paid' },
-  { id: 'pending', label: 'Pending Payment', match: (o) => o.status !== 'Completed' && o.status !== 'Cancelled' && o.paymentStatus !== 'Paid' },
+  {
+    id: 'processing',
+    label: 'Processing',
+    match: (o) =>
+      o.status !== 'Completed' &&
+      o.status !== 'Cancelled' &&
+      o.paymentStatus === 'Paid',
+  },
+  {
+    id: 'pending',
+    label: 'Pending Payment',
+    match: (o) =>
+      o.status !== 'Completed' &&
+      o.status !== 'Cancelled' &&
+      o.paymentStatus !== 'Paid',
+  },
   { id: 'completed', label: 'Completed', match: (o) => o.status === 'Completed' },
-  { id: 'cancelled', label: 'Cancelled / Returns', match: (o) => o.status === 'Cancelled' },
+  {
+    id: 'cancelled',
+    label: 'Cancelled / Returns',
+    match: (o) => o.status === 'Cancelled',
+  },
 ]
 
 const FULFILLMENT = (order) => {
-  if (order.status === 'Completed') return { label: 'Completed · handed over', tone: 'green' }
-  if (order.status === 'Cancelled') return { label: 'Cancelled', tone: 'rose' }
-  if (order.paymentStatus === 'Paid') return { label: 'Ready to pack', tone: 'blue' }
-  return { label: 'Awaiting payment', tone: 'amber' }
+  if (order.status === 'Completed')
+    return { label: 'Completed · handed over', tone: 'success' }
+  if (order.status === 'Cancelled')
+    return { label: 'Cancelled', tone: 'danger' }
+  if (order.paymentStatus === 'Paid')
+    return { label: 'Ready to pack', tone: 'info' }
+  return { label: 'Awaiting payment', tone: 'warning' }
 }
 
-function SalesOrders({ business, creditSales = false, section = 'Credit Sales' }) {
-  const load = useCallback(() => Promise.all([salesOrderApi.list(), productApi.list(), customerApi.list()]), [])
+function SalesOrders({ business = {}, creditSales = false, section = 'Credit Sales' }) {
+  const load = useCallback(
+    () => Promise.all([salesOrderApi.list(), productApi.list(), customerApi.list()]),
+    []
+  )
   const { data, loading, error, refetch, setData } = useResource(load, [], [[], [], []])
   const [orders, products, customers] = data
 
@@ -57,74 +85,175 @@ function SalesOrders({ business, creditSales = false, section = 'Credit Sales' }
   const [statusFilter, setStatusFilter] = useState('all')
   const [message, setMessage] = useState(null)
   const [saving, setSaving] = useState(false)
-  const [menu, setMenu] = useState(null)
   const searchRef = useRef(null)
 
-  const currency = business.currency || 'INR'
+  const currency = business?.currency || 'INR'
   const money = (value, dp = 2) => {
     const amount = Number(value || 0)
     try {
-      return new Intl.NumberFormat('en-IN', { style: 'currency', currency, minimumFractionDigits: dp, maximumFractionDigits: dp }).format(amount)
+      return new Intl.NumberFormat('en-IN', {
+        style: 'currency',
+        currency,
+        minimumFractionDigits: dp,
+        maximumFractionDigits: dp,
+      }).format(amount)
     } catch {
-      return `${currency} ${amount.toLocaleString('en-IN', { minimumFractionDigits: dp, maximumFractionDigits: dp })}`
+      return `${currency} ${amount.toLocaleString('en-IN', {
+        minimumFractionDigits: dp,
+        maximumFractionDigits: dp,
+      })}`
     }
   }
-  const customerById = useMemo(() => new Map(customers.map((customer) => [customer.customerId, customer])), [customers])
 
-  const setOrders = (updater) => setData((current) => [updater(current[0]), current[1], current[2]])
-  const itemTotal = (item) => Math.max(0, Number(item.quantity || 0) * Number(item.sellingPrice || 0) - Number(item.discount || 0) + Number(item.tax || 0))
-  const totals = items.reduce((result, item) => ({ totalAmount: result.totalAmount + itemTotal(item) }), { totalAmount: 0 })
-  const updateItem = (index, field, value) => setItems(items.map((item, itemIndex) => itemIndex === index ? { ...item, [field]: value, ...(field === 'productId' ? { sellingPrice: products.find((product) => product.productId === value)?.sellingPrice ?? '' } : {}) } : item))
-  const openForm = (order = null) => { setEditingOrder(order); setItems(order ? order.items.map((item) => ({ id: item.productId || Math.random().toString(36).slice(2, 9), productId: item.productId, quantity: item.quantity, sellingPrice: item.sellingPrice, discount: item.discount, tax: item.tax })) : [emptyItem()]); setFormOpen(true); setMessage(null); setMenu(null) }
+  const customerById = useMemo(
+    () => new Map(customers.map((customer) => [customer.customerId, customer])),
+    [customers]
+  )
+
+  const setOrders = (updater) =>
+    setData((current) => [updater(current[0]), current[1], current[2]])
+
+  const itemTotal = (item) =>
+    Math.max(
+      0,
+      Number(item.quantity || 0) * Number(item.sellingPrice || 0) -
+        Number(item.discount || 0) +
+        Number(item.tax || 0)
+    )
+
+  const totals = items.reduce(
+    (result, item) => ({ totalAmount: result.totalAmount + itemTotal(item) }),
+    { totalAmount: 0 }
+  )
+
+  const updateItem = (index, field, value) =>
+    setItems(
+      items.map((item, itemIndex) =>
+        itemIndex === index
+          ? {
+              ...item,
+              [field]: value,
+              ...(field === 'productId'
+                ? {
+                    sellingPrice:
+                      products.find((p) => p.productId === value)?.sellingPrice ?? '',
+                  }
+                : {}),
+            }
+          : item
+      )
+    )
+
+  const openForm = (order = null) => {
+    setEditingOrder(order)
+    setItems(
+      order
+        ? order.items.map((item) => ({
+            id: item.productId || Math.random().toString(36).slice(2, 9),
+            productId: item.productId,
+            quantity: item.quantity,
+            sellingPrice: item.sellingPrice,
+            discount: item.discount,
+            tax: item.tax,
+          }))
+        : [emptyItem()]
+    )
+    setFormOpen(true)
+    setMessage(null)
+  }
 
   const handleSubmit = async (event) => {
     event.preventDefault()
     if (saving) return
-    if (!customers.length) { setMessage({ type: 'error', text: 'Add a customer before creating an order.' }); return }
+    if (!customers.length) {
+      setMessage({ type: 'error', text: 'Add a customer before creating an order.' })
+      return
+    }
     const formData = new FormData(event.currentTarget)
-    const validItems = items.filter((item) => item.productId && Number(item.quantity) > 0 && Number(item.sellingPrice) >= 0)
-    if (!validItems.length) { setMessage({ type: 'error', text: 'Add at least one product with a valid quantity and price.' }); return }
+    const validItems = items.filter(
+      (item) =>
+        item.productId &&
+        Number(item.quantity) > 0 &&
+        Number(item.sellingPrice) >= 0
+    )
+    if (!validItems.length) {
+      setMessage({
+        type: 'error',
+        text: 'Add at least one product with a valid quantity and price.',
+      })
+      return
+    }
     const payload = {
       customerId: formData.get('customerId'),
-      notes: formData.get('notes').trim(),
-      items: validItems.map((item) => ({ productId: item.productId, quantity: Number(item.quantity), sellingPrice: Number(item.sellingPrice), discount: Number(item.discount || 0), tax: Number(item.tax || 0) })),
+      notes: (formData.get('notes') || '').trim(),
+      items: validItems.map((item) => ({
+        productId: item.productId,
+        quantity: Number(item.quantity),
+        sellingPrice: Number(item.sellingPrice),
+        discount: Number(item.discount || 0),
+        tax: Number(item.tax || 0),
+      })),
     }
     setSaving(true)
     try {
       const saved = editingOrder
         ? await salesOrderApi.update(editingOrder.orderId, payload)
         : await salesOrderApi.create(payload)
-      setOrders((list) => (editingOrder ? list.map((item) => (item.orderId === saved.orderId ? saved : item)) : [saved, ...list]))
+      setOrders((list) =>
+        editingOrder
+          ? list.map((item) => (item.orderId === saved.orderId ? saved : item))
+          : [saved, ...list]
+      )
       setFormOpen(false)
       setEditingOrder(null)
-      setMessage({ type: 'success', text: `${saved.orderNumber} saved successfully.` })
+      setMessage({
+        type: 'success',
+        text: `${saved.orderNumber} saved successfully.`,
+      })
     } catch (caught) {
-      setMessage({ type: 'error', text: caught.message || 'Could not save the order.' })
+      setMessage({
+        type: 'error',
+        text: caught.message || 'Could not save the order.',
+      })
     } finally {
       setSaving(false)
     }
   }
 
   const completeOrder = async (order) => {
-    setMenu(null)
     if (order.status === 'Completed') return
     try {
       const saved = await salesOrderApi.complete(order.orderId)
       const freshProducts = await productApi.list()
-      setData((current) => [current[0].map((item) => (item.orderId === saved.orderId ? saved : item)), freshProducts, current[2]])
-      setMessage({ type: 'success', text: `${order.orderNumber} completed. Inventory was reduced.` })
+      setData((current) => [
+        current[0].map((item) => (item.orderId === saved.orderId ? saved : item)),
+        freshProducts,
+        current[2],
+      ])
+      setMessage({
+        type: 'success',
+        text: `${order.orderNumber} completed. Inventory was reduced.`,
+      })
     } catch (caught) {
-      setMessage({ type: 'error', text: caught.message || 'Could not complete the order.' })
+      setMessage({
+        type: 'error',
+        text: caught.message || 'Could not complete the order.',
+      })
     }
   }
+
   const cancelOrder = async (order) => {
-    setMenu(null)
     if (order.status === 'Completed') return
     try {
       const saved = await salesOrderApi.cancel(order.orderId)
-      setOrders((list) => list.map((item) => (item.orderId === saved.orderId ? saved : item)))
+      setOrders((list) =>
+        list.map((item) => (item.orderId === saved.orderId ? saved : item))
+      )
     } catch (caught) {
-      setMessage({ type: 'error', text: caught.message || 'Could not cancel the order.' })
+      setMessage({
+        type: 'error',
+        text: caught.message || 'Could not cancel the order.',
+      })
     }
   }
 
@@ -132,39 +261,65 @@ function SalesOrders({ business, creditSales = false, section = 'Credit Sales' }
     if (creditSales) return undefined
     const handler = (event) => {
       if (event.defaultPrevented || event.repeat || event.isComposing) return
-      if (event.altKey && !event.ctrlKey && !event.metaKey && event.key === '0') { event.preventDefault(); openForm() }
-      else if ((event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === 'k') { event.preventDefault(); searchRef.current?.focus() }
+      if (event.altKey && !event.ctrlKey && !event.metaKey && event.key === '0') {
+        event.preventDefault()
+        openForm()
+      } else if (
+        (event.ctrlKey || event.metaKey) &&
+        !event.altKey &&
+        event.key.toLowerCase() === 'k'
+      ) {
+        event.preventDefault()
+        searchRef.current?.focus()
+      }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [creditSales])
-
-  useEffect(() => {
-    if (!menu) return undefined
-    const close = () => setMenu(null)
-    window.addEventListener('scroll', close, true)
-    window.addEventListener('resize', close)
-    return () => { window.removeEventListener('scroll', close, true); window.removeEventListener('resize', close) }
-  }, [menu])
 
   const stats = useMemo(() => {
     const today = startOfToday()
     const yesterday = new Date(today.getTime() - 864e5)
     const active = orders.filter((order) => order.status !== 'Cancelled')
     const todays = active.filter((order) => new Date(order.createdAt) >= today)
-    const yestSales = active.filter((order) => { const at = new Date(order.createdAt); return at >= yesterday && at < today }).reduce((sum, order) => sum + Number(order.totalAmount || 0), 0)
-    const todaySales = todays.reduce((sum, order) => sum + Number(order.totalAmount || 0), 0)
-    const inFulfilment = orders.filter((order) => order.status === 'Pending' && order.paymentStatus === 'Paid')
-    const fulfilUnits = inFulfilment.reduce((sum, order) => sum + order.items.reduce((n, item) => n + Number(item.quantity || 0), 0), 0)
-    const awaiting = orders.filter((order) => order.status !== 'Cancelled' && Number(order.balanceDue || 0) > 0)
-    const awaitingAmount = awaiting.reduce((sum, order) => sum + Number(order.balanceDue || 0), 0)
+    const yestSales = active
+      .filter((order) => {
+        const at = new Date(order.createdAt)
+        return at >= yesterday && at < today
+      })
+      .reduce((sumVal, order) => sumVal + Number(order.totalAmount || 0), 0)
+    const todaySales = todays.reduce(
+      (sumVal, order) => sumVal + Number(order.totalAmount || 0),
+      0
+    )
+    const inFulfilment = orders.filter(
+      (order) => order.status === 'Pending' && order.paymentStatus === 'Paid'
+    )
+    const fulfilUnits = inFulfilment.reduce(
+      (sumVal, order) =>
+        sumVal +
+        (order.items || []).reduce(
+          (n, item) => n + Number(item.quantity || 0),
+          0
+        ),
+      0
+    )
+    const awaiting = orders.filter(
+      (order) => order.status !== 'Cancelled' && Number(order.balanceDue || 0) > 0
+    )
+    const awaitingAmount = awaiting.reduce(
+      (sumVal, order) => sumVal + Number(order.balanceDue || 0),
+      0
+    )
     const completed = orders.filter((order) => order.status === 'Completed').length
     const closeable = orders.filter((order) => order.status !== 'Cancelled').length
     return {
       todaySales,
       todayCount: todays.length,
       avgOrder: todays.length ? todaySales / todays.length : 0,
-      salesDelta: yestSales ? Math.round(((todaySales - yestSales) / yestSales) * 100) : null,
+      salesDelta: yestSales
+        ? Math.round(((todaySales - yestSales) / yestSales) * 100)
+        : null,
       inFulfilment: inFulfilment.length,
       fulfilUnits,
       awaitingAmount,
@@ -180,13 +335,28 @@ function SalesOrders({ business, creditSales = false, section = 'Credit Sales' }
     return result
   }, [orders])
 
+  const tabsConfig = useMemo(
+    () =>
+      TABS.map((t) => ({
+        id: t.id,
+        label: t.label,
+        count: tabCounts[t.id] ?? 0,
+      })),
+    [tabCounts]
+  )
+
   const channels = [
     { id: 'all', label: 'All channels' },
     { id: 'pos', label: 'Retail POS counter' },
     { id: 'wholesale', label: 'Wholesale orders' },
     { id: 'order', label: 'Retail sales desk' },
   ]
-  const channelOf = (order) => order.channel === 'POS' ? 'pos' : order.billingType === 'wholesale' ? 'wholesale' : 'order'
+  const channelOf = (order) =>
+    order.channel === 'POS'
+      ? 'pos'
+      : order.billingType === 'wholesale'
+        ? 'wholesale'
+        : 'order'
 
   const visibleOrders = useMemo(() => {
     const query = search.trim().toLowerCase()
@@ -195,7 +365,13 @@ function SalesOrders({ business, creditSales = false, section = 'Credit Sales' }
       if (!matchTab(order)) return false
       if (channelFilter !== 'all' && channelOf(order) !== channelFilter) return false
       if (statusFilter !== 'all' && order.status !== statusFilter) return false
-      if (query && !`${order.orderNumber} ${order.invoiceNumber} ${order.customerName} ${order.status} ${order.items.map((item) => item.productName).join(' ')}`.toLowerCase().includes(query)) return false
+      if (
+        query &&
+        !`${order.orderNumber} ${order.invoiceNumber || ''} ${order.customerName || ''} ${order.status} ${(order.items || []).map((item) => item.productName || item.name || '').join(' ')}`
+          .toLowerCase()
+          .includes(query)
+      )
+        return false
       return true
     })
   }, [orders, tab, channelFilter, statusFilter, search])
@@ -207,16 +383,48 @@ function SalesOrders({ business, creditSales = false, section = 'Credit Sales' }
       return `"${safe.replaceAll('"', '""')}"`
     }
     const rows = [
-      ['Order', 'Invoice', 'Date', 'Customer', 'Channel', 'Items', 'Units', 'Grand Total', 'GST', 'Payment', 'Status'],
+      [
+        'Order',
+        'Invoice',
+        'Date',
+        'Customer',
+        'Channel',
+        'Items',
+        'Units',
+        'Grand Total',
+        'GST',
+        'Payment',
+        'Status',
+      ],
       ...visibleOrders.map((order) => [
-        order.orderNumber, order.invoiceNumber, new Date(order.createdAt).toLocaleString('en-GB'), order.customerName,
-        channelOf(order) === 'pos' ? 'Retail POS' : channelOf(order) === 'wholesale' ? 'Wholesale' : 'Retail order',
-        order.items.length, order.items.reduce((sum, item) => sum + Number(item.quantity || 0), 0),
-        order.totalAmount, Number(order.cgst || 0) + Number(order.sgst || 0) + Number(order.igst || 0) || order.tax,
-        order.paymentStatus, order.status,
+        order.orderNumber,
+        order.invoiceNumber,
+        new Date(order.createdAt).toLocaleString('en-GB'),
+        order.customerName,
+        channelOf(order) === 'pos'
+          ? 'Retail POS'
+          : channelOf(order) === 'wholesale'
+            ? 'Wholesale'
+            : 'Retail order',
+        order.items?.length || 0,
+        (order.items || []).reduce(
+          (sumVal, item) => sumVal + Number(item.quantity || 0),
+          0
+        ),
+        order.totalAmount,
+        Number(order.cgst || 0) +
+          Number(order.sgst || 0) +
+          Number(order.igst || 0) ||
+          order.tax,
+        order.paymentStatus,
+        order.status,
       ]),
     ]
-    const url = URL.createObjectURL(new Blob([rows.map((row) => row.map(escapeCell).join(',')).join('\r\n')], { type: 'text/csv;charset=utf-8' }))
+    const url = URL.createObjectURL(
+      new Blob([rows.map((row) => row.map(escapeCell).join(',')).join('\r\n')], {
+        type: 'text/csv;charset=utf-8',
+      })
+    )
     const link = document.createElement('a')
     link.href = url
     link.download = `sales-orders-${new Date().toISOString().slice(0, 10)}.csv`
@@ -228,198 +436,600 @@ function SalesOrders({ business, creditSales = false, section = 'Credit Sales' }
 
   const settlement = (order) => {
     const method = order.paymentSummary?.[0]?.method
-    if (order.paymentStatus === 'Paid') return { label: method ? `Paid · ${method}` : 'Paid', tone: 'green' }
-    if (order.paymentStatus === 'Partially Paid') return { label: 'Part-paid', tone: 'amber' }
+    if (order.paymentStatus === 'Paid')
+      return { label: method ? `Paid · ${method}` : 'Paid', tone: 'success' }
+    if (order.paymentStatus === 'Partially Paid')
+      return { label: 'Part-paid', tone: 'warning' }
     const terms = customerById.get(order.customerId)?.paymentTerms
-    if (terms && terms !== 'Due on receipt') return { label: `Credit · ${terms}`, tone: 'amber' }
-    return { label: 'Unpaid', tone: 'rose' }
+    if (terms && terms !== 'Due on receipt')
+      return { label: `Credit · ${terms}`, tone: 'warning' }
+    return { label: 'Unpaid', tone: 'danger' }
   }
+
+  const columns = [
+    {
+      key: 'orderNumber',
+      header: 'Order & Date',
+      priority: 'high',
+      mobileLabel: 'Order',
+      render: (order) => {
+        const channel = channelOf(order)
+        return (
+          <div className="ord-cell-primary">
+            <strong className="ord-num">
+              {order.invoiceNumber || order.orderNumber}
+            </strong>
+            <small className="ord-cell-sub">
+              {new Date(order.createdAt).toLocaleString('en-GB', {
+                day: '2-digit',
+                month: 'short',
+                hour: '2-digit',
+                minute: '2-digit',
+              })}{' '}
+              · {order.cashierName || (channel === 'pos' ? 'POS counter' : 'Sales desk')}
+            </small>
+          </div>
+        )
+      },
+    },
+    {
+      key: 'customerName',
+      header: 'Customer',
+      priority: 'high',
+      mobileLabel: 'Customer',
+      render: (order) => {
+        const customer = customerById.get(order.customerId)
+        const gstin = customer?.gstin || order.customerSnapshot?.gstin
+        return (
+          <div className="credit-customer-cell">
+            <strong>
+              {order.customerName || 'Walk-in customer'}
+              {order.billingType === 'wholesale' && <span className="ord-b2b">B2B</span>}
+            </strong>
+            <small className="ord-cell-sub">
+              {customer?.phone ||
+                order.customerSnapshot?.phone ||
+                (gstin ? `GSTIN ${gstin}` : 'No contact logged')}
+            </small>
+          </div>
+        )
+      },
+    },
+    {
+      key: 'channel',
+      header: 'Channel',
+      priority: 'medium',
+      mobileLabel: 'Channel',
+      render: (order) => {
+        const channel = channelOf(order)
+        const tone = channel === 'wholesale' ? 'warning' : 'info'
+        const label =
+          channel === 'pos'
+            ? 'Retail POS'
+            : channel === 'wholesale'
+              ? 'Wholesale order'
+              : 'Retail order'
+        return <Badge tone={tone}>{label}</Badge>
+      },
+    },
+    {
+      key: 'items',
+      header: 'Purchased Items',
+      priority: 'medium',
+      mobileLabel: 'Items',
+      render: (order) => {
+        const units = (order.items || []).reduce(
+          (sumVal, item) => sumVal + Number(item.quantity || 0),
+          0
+        )
+        const skuNames = (order.items || [])
+          .map((item) => item.productName || item.name)
+          .filter(Boolean)
+          .slice(0, 2)
+          .join(', ')
+        return (
+          <div className="ord-cell-primary">
+            <strong>
+              {order.items?.length || 0} item{order.items?.length === 1 ? '' : 's'} ·{' '}
+              {units} units
+            </strong>
+            <small className="ord-cell-sub">
+              {skuNames || 'Line items on invoice'}
+            </small>
+          </div>
+        )
+      },
+    },
+    {
+      key: 'totalAmount',
+      header: 'Grand Total',
+      priority: 'high',
+      align: 'right',
+      mobileLabel: 'Total',
+      render: (order) => {
+        const gst =
+          Number(order.cgst || 0) +
+            Number(order.sgst || 0) +
+            Number(order.igst || 0) || Number(order.tax || 0)
+        return (
+          <div className="ord-amount-cell">
+            <strong>{money(order.totalAmount)}</strong>
+            <small className="ord-cell-sub">
+              {gst > 0 ? `Incl. ${money(gst)} GST` : 'GST exempt'}
+            </small>
+          </div>
+        )
+      },
+    },
+    {
+      key: 'paymentStatus',
+      header: 'Payment Status',
+      priority: 'high',
+      mobileLabel: 'Payment',
+      render: (order) => {
+        const pay = settlement(order)
+        return (
+          <Badge tone={pay.tone} dot>
+            {pay.label}
+          </Badge>
+        )
+      },
+    },
+    {
+      key: 'fulfillment',
+      header: 'Fulfilment',
+      priority: 'medium',
+      mobileLabel: 'Fulfilment',
+      render: (order) => {
+        const fulfil = FULFILLMENT(order)
+        return <Badge tone={fulfil.tone}>{fulfil.label}</Badge>
+      },
+    },
+    {
+      key: 'actions',
+      header: 'Actions',
+      priority: 'high',
+      align: 'right',
+      mobileLabel: 'Actions',
+      render: (order) => (
+        <div className="ord-actions-cell" onClick={(e) => e.stopPropagation()}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setViewingOrder(order)}
+            title="View Invoice"
+          >
+            Invoice
+          </Button>
+          {order.status !== 'Completed' && order.status !== 'Cancelled' && (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => openForm(order)}
+                title="Edit Order"
+              >
+                Edit
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => completeOrder(order)}
+                title="Complete & Deliver"
+              >
+                Complete
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={() => cancelOrder(order)}
+                title="Cancel Order"
+              >
+                Cancel
+              </Button>
+            </>
+          )}
+        </div>
+      ),
+    },
+  ]
 
   if (creditSales) {
-    return <section className="sales-orders-page">
-      <CreditSalesList section={section} orders={orders} business={business} loading={loading} error={error} refetch={refetch} onCreate={() => openForm()} onView={setViewingOrder} onEdit={openForm} onComplete={completeOrder} onCancel={cancelOrder} />
-      {message && <p className={`form-status ${message.type}`}>{message.text}</p>}
-      {formOpen && <OrderFormModal {...{ creditSales, editingOrder, customers, products, items, setItems, emptyItem, updateItem, itemTotal, totals, business, saving, handleSubmit, onClose: () => setFormOpen(false) }} />}
-      {viewingOrder && <OrderDetails order={viewingOrder} business={business} onClose={() => setViewingOrder(null)} />}
-    </section>
+    return (
+      <section className="sales-orders-unified">
+        <CreditSalesList
+          section={section}
+          orders={orders}
+          business={business}
+          loading={loading}
+          error={error}
+          refetch={refetch}
+          onCreate={() => openForm()}
+          onView={setViewingOrder}
+          onEdit={openForm}
+          onComplete={completeOrder}
+          onCancel={cancelOrder}
+        />
+        {message && (
+          <p className={`form-status ${message.type}`}>{message.text}</p>
+        )}
+        <OrderFormModal
+          isOpen={formOpen}
+          creditSales={creditSales}
+          editingOrder={editingOrder}
+          customers={customers}
+          products={products}
+          items={items}
+          setItems={setItems}
+          emptyItem={emptyItem}
+          updateItem={updateItem}
+          itemTotal={itemTotal}
+          totals={totals}
+          business={business}
+          saving={saving}
+          handleSubmit={handleSubmit}
+          onClose={() => setFormOpen(false)}
+        />
+        {viewingOrder && (
+          <OrderDetails
+            order={viewingOrder}
+            business={business}
+            onClose={() => setViewingOrder(null)}
+          />
+        )}
+      </section>
+    )
   }
 
-  return <section className="ord-page" aria-labelledby="ord-title">
-    <header className="ord-heading">
-      <div>
-        <div className="ord-title-line">
-          <h1 id="ord-title">Orders</h1>
-          <span className="ord-scope">{business.name} · {business.industry || 'Retail'}</span>
+  const pageActions = [
+    {
+      label: 'Print Slips',
+      variant: 'secondary',
+      onClick: () => window.print(),
+    },
+    {
+      label: 'Export CSV',
+      variant: 'secondary',
+      onClick: exportCsv,
+      disabled: loading || !!error || !orders.length,
+    },
+    {
+      label: 'Create Order',
+      variant: 'primary',
+      onClick: () => openForm(),
+    },
+  ]
+
+  return (
+    <section className="sales-orders-unified" aria-labelledby="ord-title">
+      <PageHeader
+        kicker={`${business?.name || 'Store'} · ${business?.industry || 'Retail'}`}
+        title={section || 'Orders'}
+        description="Manage customer sales, dispatch statuses, invoices, and point-of-sale receipts."
+        scope={`${stats.todayCount} sales registered today`}
+        actions={pageActions}
+      />
+
+      {message && (
+        <div
+          className={`form-status ${message.type}`}
+          role={message.type === 'error' ? 'alert' : 'status'}
+        >
+          {message.text}
         </div>
-        <p>Manage customer sales, dispatch statuses, invoices, and point-of-sale receipts.</p>
-        <p className="ord-note"><b>{stats.todayCount}</b> sales order{stats.todayCount === 1 ? '' : 's'} registered today</p>
-      </div>
-      <div className="ord-heading-actions">
-        <button type="button" onClick={() => window.print()}><OrdIcon name="print" />Print slips</button>
-        <button type="button" onClick={exportCsv} disabled={loading || !!error || !orders.length}><OrdIcon name="export" />Export CSV</button>
-        <button type="button" className="primary" onClick={() => openForm()}><OrdIcon name="plus" />Create order<kbd>Alt 0</kbd></button>
-      </div>
-    </header>
+      )}
 
-    {message && <p className={`ord-message ${message.type}`} role={message.type === 'error' ? 'alert' : 'status'}>{message.text}</p>}
+      <StatGrid>
+        <StatCard
+          label="Today's Sales"
+          value={loading || error ? '—' : money(stats.todaySales)}
+          delta={stats.salesDelta !== null ? `${stats.salesDelta >= 0 ? '+' : ''}${stats.salesDelta}%` : undefined}
+          deltaType={stats.salesDelta !== null && stats.salesDelta >= 0 ? 'up' : 'down'}
+          subtext={`${stats.todayCount} orders today · Avg ${money(stats.avgOrder, 0)}`}
+          tone="primary"
+        />
+        <StatCard
+          label="In Fulfilment / Dispatch"
+          value={loading || error ? '—' : `${stats.inFulfilment} orders`}
+          subtext={`${stats.fulfilUnits} units waiting to be packed & dispatched`}
+          tone="blue"
+        />
+        <StatCard
+          label="Awaiting Payment"
+          value={loading || error ? '—' : money(stats.awaitingAmount)}
+          subtext={`${stats.awaitingCount} open credit orders with unpaid balances`}
+          tone={stats.awaitingCount > 0 ? 'amber' : 'neutral'}
+        />
+        <StatCard
+          label="Fulfilment Rate"
+          value={loading || error ? '—' : `${stats.fulfilRate}%`}
+          subtext={`${stats.completed} delivered out of non-cancelled orders`}
+          tone="emerald"
+        />
+      </StatGrid>
 
-    <div className="ord-kpis" aria-busy={loading}>
-      <article className="ord-kpi">
-        <span>Today's total sales {stats.salesDelta !== null && <b className={stats.salesDelta >= 0 ? 'up' : 'down'}>{stats.salesDelta >= 0 ? '+' : ''}{stats.salesDelta}%</b>}</span>
-        <strong className="ord-money">{loading || error ? '—' : money(stats.todaySales)}<em>{stats.todayCount} orders</em></strong>
-        <p>Avg order value {money(stats.avgOrder, 0)}</p>
-      </article>
-      <article className="ord-kpi">
-        <span>In fulfilment / dispatch <i className="blue">Active line</i></span>
-        <strong>{loading || error ? '—' : stats.inFulfilment} <small>orders · {stats.fulfilUnits} units</small></strong>
-        <p>Paid orders waiting to be packed &amp; dispatched</p>
-      </article>
-      <article className={`ord-kpi${stats.awaitingCount > 0 ? ' ord-kpi-alert' : ''}`}>
-        <span>Awaiting payment {stats.awaitingCount > 0 && <i className="amber">Action req.</i>}</span>
-        <strong className="ord-money">{loading || error ? '—' : money(stats.awaitingAmount)}<em>{stats.awaitingCount} orders</em></strong>
-        <p>Unpaid balances across open credit invoices</p>
-      </article>
-      <article className="ord-kpi">
-        <span>Fulfilment rate <i className="green">Target 95%</i></span>
-        <strong className="ord-good">{loading || error ? '—' : `${stats.fulfilRate}%`} <small>{stats.completed} delivered</small></strong>
-        <p>Completed orders as a share of all non-cancelled</p>
-      </article>
-    </div>
-
-    <div className="ord-workflow">
-      <span className="ord-workflow-mark"><OrdIcon name="check" /></span>
-      <div>
-        <strong>Sales pipeline</strong>
-        <p>Orders reserve warehouse stock as soon as they're created. Completing an order deducts stock and generates the customer invoice.</p>
-        <div className="ord-workflow-legend">
-          <span><i className="green" />Completed = paid &amp; handed over</span>
-          <span><i className="blue" />Processing = packing / dispatch</span>
-          <span><i className="amber" />Pending = unpaid / on credit</span>
+      <div className="ord-pipeline-banner">
+        <div className="ord-pipeline-icon">✓</div>
+        <div className="ord-pipeline-content">
+          <div className="ord-pipeline-title">Sales Pipeline &amp; Inventory Sync</div>
+          <div className="ord-pipeline-desc">
+            Orders reserve warehouse stock as soon as they're created. Completing an
+            order deducts stock and generates the customer invoice.
+          </div>
+          <div className="ord-pipeline-legend">
+            <span className="ord-legend-item">
+              <span className="ord-legend-dot green" />
+              Completed = paid &amp; handed over
+            </span>
+            <span className="ord-legend-item">
+              <span className="ord-legend-dot blue" />
+              Processing = packing / dispatch
+            </span>
+            <span className="ord-legend-item">
+              <span className="ord-legend-dot amber" />
+              Pending = unpaid / on credit
+            </span>
+          </div>
         </div>
       </div>
-    </div>
 
-    <div className="ord-toolbar">
-      <div className="ord-tabs" role="tablist">
-        {TABS.map((option) => (
-          <button type="button" key={option.id} role="tab" aria-selected={tab === option.id} className={tab === option.id ? 'active' : ''} onClick={() => setTab(option.id)}>
-            {option.label}<b>{tabCounts[option.id]}</b>
-          </button>
-        ))}
-      </div>
-      <div className="ord-toolbar-right">
-        <button type="button" onClick={refetch}><OrdIcon name="refresh" />Refresh</button>
-        <button type="button" onClick={exportCsv} disabled={!orders.length}><OrdIcon name="export" />Export CSV</button>
-      </div>
-    </div>
+      <Toolbar
+        searchValue={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search order, invoice, customer, or item (Ctrl+K)"
+        filters={
+          <div className="ord-toolbar-filters">
+            <Tabs tabs={tabsConfig} activeTab={tab} onChange={setTab} />
+            <select
+              className="ord-select"
+              value={channelFilter}
+              onChange={(e) => setChannelFilter(e.target.value)}
+              aria-label="Filter by channel"
+            >
+              {channels.map((channel) => (
+                <option key={channel.id} value={channel.id}>
+                  {channel.label}
+                </option>
+              ))}
+            </select>
+            <select
+              className="ord-select"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              aria-label="Filter by status"
+            >
+              <option value="all">All statuses</option>
+              {['Pending', 'Completed', 'Cancelled'].map((status) => (
+                <option key={status} value={status}>
+                  {status}
+                </option>
+              ))}
+            </select>
+          </div>
+        }
+        actions={
+          <Button variant="secondary" size="sm" onClick={refetch} disabled={loading}>
+            Refresh
+          </Button>
+        }
+      />
 
-    <div className="ord-filters">
-      <label className="ord-search">
-        <OrdIcon name="search" />
-        <input ref={searchRef} value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search order, invoice, customer, or item" aria-label="Search orders" />
-        <kbd>Ctrl K</kbd>
-      </label>
-      <select value={channelFilter} onChange={(event) => setChannelFilter(event.target.value)} aria-label="Filter by channel">
-        {channels.map((channel) => <option key={channel.id} value={channel.id}>{channel.label}</option>)}
-      </select>
-      <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} aria-label="Filter by status">
-        <option value="all">All statuses</option>
-        {['Pending', 'Completed', 'Cancelled'].map((status) => <option key={status} value={status}>{status}</option>)}
-      </select>
-      <div className="ord-today"><OrdIcon name="calendar" />{new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
-    </div>
+      <DataTable
+        columns={columns}
+        data={visibleOrders}
+        keyField="orderId"
+        loading={loading}
+        error={error}
+        onRetry={refetch}
+        emptyMessage={
+          orders.length
+            ? 'No orders match these filters.'
+            : 'No sales orders yet. Create one or ring up a sale at the POS.'
+        }
+        pagination
+        pageSize={10}
+        onRowClick={(order) => setViewingOrder(order)}
+      />
 
-    {formOpen && <OrderFormModal {...{ creditSales, editingOrder, customers, products, items, setItems, emptyItem, updateItem, itemTotal, totals, business, saving, handleSubmit, onClose: () => setFormOpen(false) }} />}
+      <OrderFormModal
+        isOpen={formOpen}
+        creditSales={creditSales}
+        editingOrder={editingOrder}
+        customers={customers}
+        products={products}
+        items={items}
+        setItems={setItems}
+        emptyItem={emptyItem}
+        updateItem={updateItem}
+        itemTotal={itemTotal}
+        totals={totals}
+        business={business}
+        saving={saving}
+        handleSubmit={handleSubmit}
+        onClose={() => setFormOpen(false)}
+      />
 
-    <AsyncBoundary loading={loading} error={error} onRetry={refetch} isEmpty={!visibleOrders.length} emptyText={orders.length ? 'No orders match these filters.' : 'No sales orders yet. Create one or ring up a sale at the POS.'}>
-      <div className="ord-table-wrap">
-        <div className="ord-table-scroll" tabIndex={0} role="region" aria-label="Sales orders">
-          <table className="ord-table">
-            <thead><tr>
-              <th>Order # &amp; date</th><th>Customer &amp; contact</th><th>Sales channel</th><th>Purchased items</th>
-              <th className="num">Grand total</th><th>Payment status</th><th>Fulfilment</th><th className="num">Actions</th>
-            </tr></thead>
-            <tbody>
-              {visibleOrders.map((order) => {
-                const customer = customerById.get(order.customerId)
-                const units = order.items.reduce((sum, item) => sum + Number(item.quantity || 0), 0)
-                const gst = Number(order.cgst || 0) + Number(order.sgst || 0) + Number(order.igst || 0) || Number(order.tax || 0)
-                const skuNames = order.items.map((item) => item.productName).filter(Boolean).slice(0, 2).join(', ')
-                const channel = channelOf(order)
-                const pay = settlement(order)
-                const fulfil = FULFILLMENT(order)
-                const gstin = customer?.gstin || order.customerSnapshot?.gstin
-                return <tr key={order.orderId} onClick={() => setViewingOrder(order)}>
-                  <td>
-                    <strong className="ord-num">{order.invoiceNumber || order.orderNumber}</strong>
-                    <small>{new Date(order.createdAt).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })} · {order.cashierName || (channel === 'pos' ? 'POS counter' : 'Sales desk')}</small>
-                  </td>
-                  <td>
-                    <strong>{order.customerName || 'Walk-in customer'}{order.billingType === 'wholesale' && <span className="ord-b2b">B2B</span>}</strong>
-                    <small>{customer?.phone || order.customerSnapshot?.phone || (gstin ? `GSTIN ${gstin}` : 'No contact logged')}</small>
-                  </td>
-                  <td><span className={`ord-badge ${channel === 'wholesale' ? 'amber' : 'blue'}`}>{channel === 'pos' ? 'Retail POS' : channel === 'wholesale' ? 'Wholesale order' : 'Retail order'}</span></td>
-                  <td>
-                    <strong>{order.items.length} item{order.items.length === 1 ? '' : 's'} · {units} units</strong>
-                    <small>{skuNames || 'Line items on invoice'}</small>
-                  </td>
-                  <td className="num ord-value">
-                    <strong>{money(order.totalAmount)}</strong>
-                    <small>{gst > 0 ? `Incl. ${money(gst)} GST` : 'GST exempt'}</small>
-                  </td>
-                  <td><span className={`ord-badge ${pay.tone}`}><i />{pay.label}</span></td>
-                  <td><span className={`ord-badge ${fulfil.tone}`}>{fulfil.label}</span></td>
-                  <td className="num" onClick={(event) => event.stopPropagation()}>
-                    <button type="button" className="ord-menu-btn" aria-label={`Actions for ${order.orderNumber}`} aria-expanded={menu?.id === order.orderId} onClick={(event) => {
-                      const rect = event.currentTarget.getBoundingClientRect()
-                      setMenu((current) => current?.id === order.orderId ? null : { id: order.orderId, order, x: rect.right, y: rect.bottom + 4 })
-                    }}>⋮</button>
-                  </td>
-                </tr>
-              })}
-            </tbody>
-          </table>
-        </div>
-        <footer className="ord-pagination">
-          <span>Showing {visibleOrders.length} of {orders.length} sales orders · sorted by newest</span>
-          <span className="ord-pagination-suite">Stockroom Sales &amp; OMS</span>
-        </footer>
-      </div>
-    </AsyncBoundary>
-
-    {menu && <>
-      <div className="ord-menu-backdrop" role="presentation" onClick={() => setMenu(null)} />
-      <div className="ord-menu" role="menu" style={{ top: menu.y, left: menu.x, transform: 'translateX(-100%)' }}>
-        <button type="button" role="menuitem" onClick={() => { setViewingOrder(menu.order); setMenu(null) }}>View invoice</button>
-        {menu.order.status !== 'Completed' && menu.order.status !== 'Cancelled' && <>
-          <button type="button" role="menuitem" onClick={() => openForm(menu.order)}>Edit order</button>
-          <button type="button" role="menuitem" onClick={() => completeOrder(menu.order)}>Complete &amp; invoice</button>
-          <button type="button" role="menuitem" className="danger" onClick={() => cancelOrder(menu.order)}>Cancel order</button>
-        </>}
-      </div>
-    </>}
-
-    {viewingOrder && <OrderDetails order={viewingOrder} business={business} onClose={() => setViewingOrder(null)} />}
-  </section>
+      {viewingOrder && (
+        <OrderDetails
+          order={viewingOrder}
+          business={business}
+          onClose={() => setViewingOrder(null)}
+        />
+      )}
+    </section>
+  )
 }
 
-function OrderFormModal({ creditSales, editingOrder, customers, products, items, setItems, emptyItem, updateItem, itemTotal, totals, business, saving, handleSubmit, onClose }) {
-  return <div className={creditSales ? 'credit-form-backdrop' : 'ord-form-backdrop'} role="presentation" onClick={creditSales ? undefined : onClose}>
-    <form role="dialog" aria-modal="true" aria-label="Sales order form" className={`purchase-order-form${creditSales ? '' : ' ord-form'}`} onClick={(event) => event.stopPropagation()} onSubmit={handleSubmit}>
-      <div className="product-form-heading">
-        <div><p className="dashboard-kicker">{editingOrder ? 'Update order' : 'New sales order'}</p><h3>{editingOrder ? `Edit ${editingOrder.orderNumber}` : 'Create sales order'}</h3></div>
-        <button type="button" className="close-button" onClick={onClose} aria-label="Close form">×</button>
-      </div>
-      <div className="purchase-order-fields">
-        <div><label htmlFor="order-customer">Customer *</label><select id="order-customer" name="customerId" defaultValue={editingOrder?.customerId || ''} required><option value="" disabled>Select customer</option>{customers.map((customer) => <option key={customer.customerId} value={customer.customerId}>{customer.name}</option>)}</select></div>
-        <div className="field-wide"><label htmlFor="order-notes">Notes</label><input id="order-notes" name="notes" defaultValue={editingOrder?.notes || ''} placeholder="Order notes" /></div>
-      </div>
-      <div className="order-items-heading"><h4>Order items</h4><button type="button" className="outline-button" onClick={() => setItems([...items, emptyItem()])}>Add item <span>+</span></button></div>
-      <div className="order-items">{items.map((item, index) => <div className="order-item-row" key={item.id}><select aria-label="Select product" value={item.productId} onChange={(event) => updateItem(index, 'productId', event.target.value)} required><option value="">Select product</option>{products.map((product) => <option key={product.productId} value={product.productId}>{product.name} ({product.sku})</option>)}</select><input aria-label="Quantity" type="number" min="1" value={item.quantity} onChange={(event) => updateItem(index, 'quantity', event.target.value)} required /><input aria-label="Selling price" type="number" min="0" step="0.01" value={item.sellingPrice} onChange={(event) => updateItem(index, 'sellingPrice', event.target.value)} required /><input aria-label="Discount" type="number" min="0" value={item.discount} onChange={(event) => updateItem(index, 'discount', event.target.value)} /><input aria-label="Tax" type="number" min="0" value={item.tax} onChange={(event) => updateItem(index, 'tax', event.target.value)} /><strong>{business.currency} {itemTotal(item).toFixed(2)}</strong>{items.length > 1 && <button type="button" className="remove-item" onClick={() => setItems(items.filter((_, itemIndex) => itemIndex !== index))}>×</button>}</div>)}</div>
-      <p className="order-total">Total: <strong>{business.currency} {totals.totalAmount.toFixed(2)}</strong></p>
-      <div className="product-form-actions"><button type="button" className="outline-button" onClick={onClose}>Cancel</button><button className="submit-button" type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save order'} <span>→</span></button></div>
-    </form>
-  </div>
+function OrderFormModal({
+  isOpen,
+  editingOrder,
+  customers = [],
+  products = [],
+  items = [],
+  setItems,
+  emptyItem: makeEmptyItem,
+  updateItem,
+  itemTotal,
+  totals,
+  business,
+  saving,
+  handleSubmit,
+  onClose,
+}) {
+  const currency = business?.currency || 'INR'
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={editingOrder ? `Edit ${editingOrder.orderNumber}` : 'Create Sales Order'}
+      kicker={editingOrder ? 'Update Order' : 'New Sales Order'}
+      size="lg"
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose} disabled={saving}>
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
+            type="submit"
+            form="order-form-modal"
+            loading={saving}
+          >
+            {saving ? 'Saving…' : 'Save Order'}
+          </Button>
+        </>
+      }
+    >
+      <form id="order-form-modal" onSubmit={handleSubmit} className="ord-form-container">
+        <div className="ord-form-grid">
+          <Field label="Customer *" htmlFor="order-customer" required>
+            <Select
+              id="order-customer"
+              name="customerId"
+              defaultValue={editingOrder?.customerId || ''}
+              required
+            >
+              <option value="" disabled>
+                Select customer
+              </option>
+              {customers.map((c) => (
+                <option key={c.customerId} value={c.customerId}>
+                  {c.name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+
+          <Field label="Notes" htmlFor="order-notes">
+            <Input
+              id="order-notes"
+              name="notes"
+              defaultValue={editingOrder?.notes || ''}
+              placeholder="Internal order notes, delivery instructions…"
+            />
+          </Field>
+        </div>
+
+        <div className="ord-items-section">
+          <div className="ord-items-header">
+            <h4>Order Items ({items.length})</h4>
+            <Button
+              variant="secondary"
+              size="sm"
+              type="button"
+              onClick={() => setItems([...items, makeEmptyItem()])}
+            >
+              Add Item +
+            </Button>
+          </div>
+
+          <div className="ord-items-list">
+            {items.map((item, index) => (
+              <div className="ord-item-row" key={item.id}>
+                <Select
+                  aria-label="Select product"
+                  value={item.productId}
+                  onChange={(e) => updateItem(index, 'productId', e.target.value)}
+                  required
+                >
+                  <option value="">Select product</option>
+                  {products.map((p) => (
+                    <option key={p.productId} value={p.productId}>
+                      {p.name} ({p.sku})
+                    </option>
+                  ))}
+                </Select>
+
+                <Input
+                  aria-label="Quantity"
+                  type="number"
+                  min="1"
+                  placeholder="Qty"
+                  value={item.quantity}
+                  onChange={(e) => updateItem(index, 'quantity', e.target.value)}
+                  required
+                />
+
+                <Input
+                  aria-label="Selling price"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="Price"
+                  value={item.sellingPrice}
+                  onChange={(e) => updateItem(index, 'sellingPrice', e.target.value)}
+                  required
+                />
+
+                <Input
+                  aria-label="Discount"
+                  type="number"
+                  min="0"
+                  placeholder="Disc"
+                  value={item.discount}
+                  onChange={(e) => updateItem(index, 'discount', e.target.value)}
+                />
+
+                <Input
+                  aria-label="Tax"
+                  type="number"
+                  min="0"
+                  placeholder="Tax"
+                  value={item.tax}
+                  onChange={(e) => updateItem(index, 'tax', e.target.value)}
+                />
+
+                <div className="ord-item-total">
+                  {currency} {itemTotal(item).toFixed(2)}
+                </div>
+
+                {items.length > 1 && (
+                  <button
+                    type="button"
+                    className="ord-remove-item"
+                    onClick={() =>
+                      setItems(items.filter((_, itemIndex) => itemIndex !== index))
+                    }
+                    aria-label="Remove item"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div className="ord-total-bar">
+            <span>Total Payable:</span>
+            <strong>
+              {currency} {totals.totalAmount.toFixed(2)}
+            </strong>
+          </div>
+        </div>
+      </form>
+    </Modal>
+  )
 }
 
 export default SalesOrders

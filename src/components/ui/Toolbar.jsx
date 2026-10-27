@@ -3,7 +3,9 @@ import './Toolbar.css'
 
 export function Toolbar({
   children,
+  filters = null,
   search = null,
+  searchValue = null,
   onSearchChange = null,
   searchPlaceholder = 'Search...',
   searchLabel = 'Search list',
@@ -11,6 +13,8 @@ export function Toolbar({
   className = '',
   ...props
 }) {
+  const activeSearch = search ?? searchValue
+
   return (
     <div className={`ui-toolbar invoice-controls-row ${className}`} {...props}>
       <div className="ui-toolbar-left invoice-controls-left">
@@ -22,13 +26,14 @@ export function Toolbar({
             <input
               type="text"
               className="ui-search-input invoice-search-input"
-              value={search ?? ''}
+              value={activeSearch ?? ''}
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder={searchPlaceholder}
               aria-label={searchLabel}
             />
           </div>
         )}
+        {filters}
         {children}
       </div>
       {actions && (

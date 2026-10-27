@@ -44,6 +44,9 @@ export function StatCard({
   value,
   subtitle = null,
   helpText = null,
+  subtext = null,
+  delta = null,
+  deltaType = null,
   icon = null,
   tone = 'blue',
   onClick = null,
@@ -56,7 +59,7 @@ export function StatCard({
   const componentProps = href ? { href } : isClickable ? { type: 'button', onClick } : {}
 
   const displayTitle = title || label
-  const displaySubtitle = subtitle || helpText
+  const displaySubtitle = subtitle || helpText || subtext
 
   const classes = [
     'ui-stat-card',
@@ -72,7 +75,14 @@ export function StatCard({
     <Component className={classes} {...componentProps} {...props}>
       <div className="ui-stat-texts modern-kpi-texts">
         <span className="ui-stat-title modern-kpi-title">{displayTitle}</span>
-        <span className="ui-stat-value modern-kpi-value">{value}</span>
+        <span className="ui-stat-value modern-kpi-value">
+          {value}
+          {delta && (
+            <span className={`ui-stat-delta delta-${deltaType || 'neutral'}`}>
+              {delta}
+            </span>
+          )}
+        </span>
         {displaySubtitle && <span className="ui-stat-subtitle">{displaySubtitle}</span>}
       </div>
       {icon && (

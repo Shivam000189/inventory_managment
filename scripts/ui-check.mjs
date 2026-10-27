@@ -269,8 +269,8 @@ const MOCK_SALES_ORDERS = [
     totalAmount: 9450,
     createdAt: new Date().toISOString(),
     items: [
-      { productId: 'prod_1', name: 'Paracetamol 500mg', quantity: 150, unitPrice: 24.0 },
-      { productId: 'prod_4', name: 'Cetirizine 10mg Tablets', quantity: 200, unitPrice: 18.0 },
+      { productId: 'prod_1', name: 'Paracetamol 500mg', productName: 'Paracetamol 500mg', quantity: 150, unitPrice: 24.0, sellingPrice: 24.0, total: 3600 },
+      { productId: 'prod_4', name: 'Cetirizine 10mg Tablets', productName: 'Cetirizine 10mg Tablets', quantity: 200, unitPrice: 18.0, sellingPrice: 18.0, total: 3600 },
     ],
   },
   {
@@ -283,7 +283,7 @@ const MOCK_SALES_ORDERS = [
     totalAmount: 32000,
     createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
     items: [
-      { productId: 'prod_5', name: 'Vitamin C 500mg Chewable', quantity: 200, unitPrice: 160.0 },
+      { productId: 'prod_5', name: 'Vitamin C 500mg Chewable', productName: 'Vitamin C 500mg Chewable', quantity: 200, unitPrice: 160.0, sellingPrice: 160.0, total: 32000 },
     ],
   },
 ];
