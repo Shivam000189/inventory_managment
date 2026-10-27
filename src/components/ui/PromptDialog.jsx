@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
+import { Modal } from './Modal.jsx'
+import { Button } from './Button.jsx'
+import { Input } from './FormControls.jsx'
 
-function PromptDialogContent({
+export function PromptDialog({
+  isOpen,
   title,
   message,
   defaultValue = '',
@@ -15,19 +19,10 @@ function PromptDialogContent({
   const inputRef = useRef(null)
 
   useEffect(() => {
-    inputRef.current?.focus()
-  }, [])
-
-  useEffect(() => {
-    const handleKeyDown = (event) => {
-      if (event.key === 'Escape') {
-        event.stopPropagation()
-        onCancel?.()
-      }
+    if (isOpen) {
+      setTimeout(() => inputRef.current?.focus(), 50)
     }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [onCancel])
+  }, [isOpen])
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -35,77 +30,39 @@ function PromptDialogContent({
   }
 
   return (
-    <div
-      className="supplier-modal-backdrop ui-dialog-backdrop"
-      role="presentation"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onCancel?.()
-      }}
+    <Modal
+      isOpen={isOpen}
+      onClose={onCancel}
+      title={title}
+      kicker="Prompt"
+      size="sm"
+      footer={
+        <>
+          <Button variant="secondary" onClick={onCancel}>
+            {cancelText}
+          </Button>
+          <Button variant="primary" type="submit" onClick={handleSubmit}>
+            {confirmText}
+          </Button>
+        </>
+      }
     >
-      <div
-        className="supplier-modal ui-dialog-box"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="ui-prompt-dialog-title"
-        aria-describedby="ui-prompt-dialog-desc"
-      >
-        <form onSubmit={handleSubmit}>
-          <div className="product-form-heading">
-            <div>
-              <p className="dashboard-kicker">Prompt</p>
-              <h3 id="ui-prompt-dialog-title">{title}</h3>
-            </div>
-            <button
-              type="button"
-              className="close-button"
-              onClick={onCancel}
-              aria-label="Close dialog"
-            >
-              ×
-            </button>
-          </div>
-
-          {message && (
-            <p id="ui-prompt-dialog-desc" className="ui-dialog-message">
-              {message}
-            </p>
-          )}
-
-          <div style={{ marginTop: '12px' }}>
-            <input
-              ref={inputRef}
-              type={inputType}
-              className="text-input"
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              placeholder={placeholder}
-              required
-              style={{ width: '100%', boxSizing: 'border-box' }}
-            />
-          </div>
-
-          <div className="product-form-actions ui-dialog-actions" style={{ marginTop: '16px' }}>
-            <button
-              type="button"
-              className="outline-button"
-              onClick={onCancel}
-            >
-              {cancelText}
-            </button>
-            <button
-              type="submit"
-              className="submit-button"
-            >
-              {confirmText}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        {message && (
+          <p style={{ margin: 0, color: 'var(--text)', fontSize: 'var(--fs-md)', lineHeight: 'var(--lh)' }}>
+            {message}
+          </p>
+        )}
+        <Input
+          ref={inputRef}
+          type={inputType}
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder={placeholder}
+          required
+        />
+      </form>
+    </Modal>
   )
 }
-
-export function PromptDialog({ isOpen, ...props }) {
-  if (!isOpen) return null
-  return <PromptDialogContent {...props} />
-}
+export default PromptDialog

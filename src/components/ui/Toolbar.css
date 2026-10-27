@@ -1,0 +1,106 @@
+.ui-toolbar,
+.invoice-controls-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-5);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.ui-toolbar-left,
+.invoice-controls-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.ui-toolbar-right,
+.invoice-controls-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+/* Search input with leading icon */
+.ui-search-wrap,
+.invoice-search-wrap {
+  position: relative;
+  min-width: 180px;
+  max-width: 340px;
+  flex: 1 1 220px;
+}
+
+.ui-search-input,
+.invoice-search-input {
+  width: 100%;
+  min-height: var(--control-h);
+  padding-left: 38px;
+  padding-right: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 16px;
+  box-sizing: border-box;
+  transition: all 0.18s var(--sr-ease);
+}
+
+@media (min-width: 768px) {
+  .ui-search-input,
+  .invoice-search-input {
+    font-size: var(--fs-md);
+  }
+}
+
+.ui-search-input:focus,
+.invoice-search-input:focus {
+  border-color: var(--orange);
+  box-shadow: var(--sr-focus);
+  outline: none;
+}
+
+.ui-search-icon,
+.invoice-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Responsive collapse on small mobile */
+@media (max-width: 640px) {
+  .ui-toolbar-left,
+  .invoice-controls-left {
+    width: 100%;
+  }
+
+  .ui-search-wrap,
+  .invoice-search-wrap {
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .ui-toolbar-right,
+  .invoice-controls-right {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .ui-toolbar-right > *,
+  .invoice-controls-right > * {
+    flex: 1 1 auto;
+  }
+}

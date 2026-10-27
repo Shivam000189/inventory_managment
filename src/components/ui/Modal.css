@@ -1,0 +1,151 @@
+/* --- Modal & Dialog System --- */
+.ui-modal-backdrop,
+.supplier-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: var(--surface-overlay);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: var(--z-modal-backdrop);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  box-sizing: border-box;
+  animation: ui-modal-fade 0.18s ease-out;
+}
+
+@keyframes ui-modal-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.ui-modal-dialog,
+.supplier-modal {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  width: 100%;
+  max-width: 600px;
+  max-height: min(90svh, 850px);
+  overflow-y: auto;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  color: var(--text);
+  animation: ui-modal-scale 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  outline: none;
+}
+
+.ui-modal-dialog-lg {
+  max-width: 860px;
+}
+
+.ui-modal-dialog-sm {
+  max-width: 440px;
+}
+
+@keyframes ui-modal-scale {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.ui-modal-header,
+.product-form-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+  z-index: 2;
+}
+
+.ui-modal-title {
+  font-size: var(--fs-xl);
+  font-weight: 800;
+  color: var(--ink);
+  margin: 0;
+  line-height: 1.25;
+}
+
+.ui-modal-close-btn,
+.close-button {
+  background: none;
+  border: none;
+  color: var(--muted);
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 1;
+  transition: all 0.15s ease;
+  margin-left: auto;
+}
+
+.ui-modal-close-btn:hover,
+.close-button:hover {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.ui-modal-body {
+  padding: 20px 24px;
+  overflow-y: auto;
+  flex: 1 1 auto;
+}
+
+.ui-modal-footer,
+.product-form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  padding: 16px 24px;
+  border-top: 1px solid var(--line);
+  position: sticky;
+  bottom: 0;
+  background: var(--surface);
+  z-index: 2;
+}
+
+/* Mobile: full-screen sheet on phones (<= 640px) */
+@media (max-width: 640px) {
+  .ui-modal-backdrop,
+  .supplier-modal-backdrop {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .ui-modal-dialog,
+  .supplier-modal {
+    max-width: 100% !important;
+    width: 100% !important;
+    max-height: 94dvh !important;
+    height: 94dvh;
+    border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
+    border-bottom: none;
+  }
+
+  .ui-modal-footer,
+  .product-form-actions {
+    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0));
+  }
+}

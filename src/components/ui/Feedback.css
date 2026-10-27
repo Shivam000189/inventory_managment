@@ -1,0 +1,91 @@
+/* --- Feedback, Status, EmptyState, Spinners --- */
+.ui-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 48px 24px;
+  gap: var(--space-3);
+  box-sizing: border-box;
+}
+
+.ui-empty-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-full);
+  background: var(--surface-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+}
+
+.ui-empty-title {
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0;
+}
+
+.ui-empty-desc {
+  font-size: var(--fs-md);
+  color: var(--text-soft);
+  max-width: 440px;
+  margin: 0;
+  line-height: var(--lh);
+}
+
+/* FormStatus Banner */
+.ui-form-status,
+.form-status {
+  padding: 12px 16px;
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  line-height: 1.4;
+  margin-bottom: var(--space-4);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  border: 1px solid transparent;
+}
+
+.ui-form-status-success,
+.form-status:not(.error):not(.warning) {
+  color: var(--success);
+  background: var(--success-soft);
+  border-color: color-mix(in srgb, var(--success) 30%, transparent);
+}
+
+.ui-form-status-error,
+.form-status.error,
+.setup-error {
+  color: var(--danger);
+  background: var(--danger-soft);
+  border-color: color-mix(in srgb, var(--danger) 30%, transparent);
+}
+
+.ui-form-status-warning,
+.form-status.warning {
+  color: var(--warning);
+  background: var(--warning-soft);
+  border-color: color-mix(in srgb, var(--warning) 30%, transparent);
+}
+
+/* Spinner */
+.ui-spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid var(--line-strong);
+  border-top-color: var(--orange);
+  border-radius: var(--radius-full);
+  animation: ui-spin 0.75s linear infinite;
+  display: inline-block;
+}
+
+@keyframes ui-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

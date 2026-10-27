@@ -1,0 +1,146 @@
+/* --- Form Controls --- */
+.ui-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.ui-field-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text-soft);
+}
+
+.ui-field-required {
+  color: var(--danger);
+}
+
+.ui-field-hint {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+
+.ui-field-error {
+  font-size: var(--fs-xs);
+  color: var(--danger);
+  font-weight: 500;
+}
+
+/* Inputs, Selects, Textareas */
+.ui-input,
+.ui-select,
+.ui-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: var(--font-sans);
+  font-size: 16px; /* 16px prevents mobile iOS automatic zoom */
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 0 var(--space-3);
+  transition: border-color 0.18s var(--sr-ease), box-shadow 0.18s var(--sr-ease);
+  min-height: var(--control-h);
+}
+
+@media (min-width: 768px) {
+  .ui-input,
+  .ui-select,
+  .ui-textarea {
+    font-size: var(--fs-md);
+  }
+}
+
+.ui-input:hover:not(:disabled),
+.ui-select:hover:not(:disabled),
+.ui-textarea:hover:not(:disabled) {
+  border-color: var(--line-strong);
+}
+
+.ui-input:focus,
+.ui-select:focus,
+.ui-textarea:focus {
+  border-color: var(--orange);
+  box-shadow: var(--sr-focus);
+  outline: none;
+}
+
+.ui-input-invalid,
+.ui-select-invalid,
+.ui-textarea-invalid {
+  border-color: var(--danger) !important;
+}
+
+.ui-input-invalid:focus,
+.ui-select-invalid:focus,
+.ui-textarea-invalid:focus {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 25%, transparent) !important;
+}
+
+.ui-textarea {
+  min-height: 96px;
+  padding: var(--space-3);
+  resize: vertical;
+  line-height: var(--lh);
+}
+
+/* Select arrow custom styling */
+.ui-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238f8175' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+  padding-right: 36px;
+}
+
+/* Checkbox */
+.ui-checkbox-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+  user-select: none;
+  font-size: var(--fs-md);
+  color: var(--text);
+  min-height: var(--control-h);
+}
+
+.ui-checkbox {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: 1px solid var(--line-strong);
+  accent-color: var(--orange);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* Form Grids */
+.ui-form-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-4);
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .ui-form-grid-2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .ui-form-grid-3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .ui-field-span-2 {
+    grid-column: span 2;
+  }
+  .ui-field-span-full {
+    grid-column: 1 / -1;
+  }
+}

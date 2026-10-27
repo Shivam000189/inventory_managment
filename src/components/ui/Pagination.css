@@ -1,0 +1,27 @@
+.ui-pagination,
+.overview-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  background: var(--surface-soft);
+  border-top: 1px solid var(--line);
+  font-size: var(--fs-sm);
+  color: var(--muted);
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  box-sizing: border-box;
+}
+
+.ui-pagination-info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-soft);
+}
+
+.ui-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}

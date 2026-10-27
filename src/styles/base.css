@@ -1,0 +1,126 @@
+/**
+ * Base CSS: Resets, standard typography, smooth scrolling, touch handling,
+ * accessibility, and reduced motion.
+ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  line-height: var(--lh);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  min-width: 320px;
+  min-height: 100dvh;
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: inherit;
+  line-height: inherit;
+  overflow-x: hidden;
+  padding-top: env(safe-area-inset-top, 0);
+  padding-bottom: env(safe-area-inset-bottom, 0);
+  padding-left: env(safe-area-inset-left, 0);
+  padding-right: env(safe-area-inset-right, 0);
+}
+
+/* Typography elements */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-weight: 700;
+  line-height: 1.25;
+  margin: 0;
+}
+
+p {
+  margin: 0;
+  color: var(--text-soft);
+}
+
+small {
+  font-size: var(--fs-xs);
+}
+
+code, kbd, pre, samp {
+  font-family: var(--font-mono);
+}
+
+/* Interactive elements */
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: var(--fs-md);
+  color: var(--text);
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+}
+
+button:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+/* Focus visible styles */
+:where(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline: 0;
+  box-shadow: var(--sr-focus);
+}
+
+/* Selection */
+::selection {
+  color: #ffffff;
+  background: var(--orange);
+}
+
+/* Scrollbars */
+* {
+  scrollbar-color: var(--line-strong) transparent;
+  scrollbar-width: thin;
+}
+
+*::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+*::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: var(--radius-full);
+  background: var(--line-strong);
+  background-clip: padding-box;
+}
+
+/* Global media accessibility */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

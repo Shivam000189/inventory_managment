@@ -1,0 +1,191 @@
+/**
+ * Design Tokens — Single Source of Truth
+ * Derived from the redesigned Dashboard Overview.
+ *
+ * Breakpoints Specification:
+ * - 480px  : Compact Phone (XS)
+ * - 768px  : Mobile Drawer threshold (< 768px uses off-canvas drawer & backdrop)
+ * - 1024px : Tablet / Desktop threshold (< 1024px collapsible rail; >= 1024px persistent sidebar)
+ * - 1280px : Standard Desktop
+ * - 1536px : Wide Desktop (2K / High-DPI screens)
+ */
+
+:root {
+  color-scheme: light;
+
+  /* --- Color Palette: Light Mode --- */
+  --bg: #f6ede1;
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-soft: #f7f2ec;
+  --surface-muted: #efe3d3;
+  --surface-overlay: rgba(42, 31, 22, 0.5);
+
+  --ink: #2a1f16;
+  --text: #2a221c;
+  --text-soft: #6b5d4f;
+  --muted: #8f8175;
+  --text-faint: #ad9c8c;
+
+  --line: #e9ddd0;
+  --line-strong: #ddc9b3;
+
+  --orange: #5b371f;
+  --orange-hover: #3d2414;
+  --orange-soft: #f2ece3;
+
+  --auth-brand: #5b371f;
+  --auth-brand-light: #8b5a34;
+  --auth-brand-deep: #3d2414;
+
+  --success: #227a4e;
+  --success-soft: #e2f5e9;
+  --warning: #92640a;
+  --warning-soft: #fbeed7;
+  --danger: #b3402f;
+  --danger-soft: #fbe6e1;
+  --info: #2f6f8a;
+  --info-soft: #e3f1f5;
+  --purple: #6b4c8a;
+  --purple-soft: #f3eef8;
+
+  /* --- Typography --- */
+  --font-sans: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+
+  /* Backwards compatibility aliases */
+  --sr-font: var(--font-sans);
+  --sr-mono: var(--font-mono);
+
+  /* --- Type Scale (11.5px to 32px) --- */
+  --fs-xs: 11.5px;
+  --fs-sm: 13px;
+  --fs-md: 14px;
+  --fs-base: 14.5px;
+  --fs-lg: 16px;
+  --fs-xl: 18px;
+  --fs-2xl: 22px;
+  --fs-3xl: 28px;
+  --lh: 1.55;
+
+  /* Backwards compatibility aliases */
+  --sr-fs-micro: var(--fs-xs);
+  --sr-fs-caption: 12px;
+  --sr-fs-body: var(--fs-md);
+  --sr-fs-body-lg: 15px;
+  --sr-lh: var(--lh);
+
+  /* --- Spacing Scale (4px to 40px) --- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 40px;
+
+  /* Backwards compatibility aliases */
+  --sr-space-1: var(--space-1);
+  --sr-space-2: var(--space-2);
+  --sr-space-3: var(--space-3);
+  --sr-space-4: var(--space-4);
+  --sr-space-5: var(--space-5);
+  --sr-space-6: 28px;
+
+  /* --- Border Radius Scale --- */
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-2xl: 22px;
+  --radius-full: 9999px;
+
+  /* Backwards compatibility aliases */
+  --sr-radius-xs: var(--radius-xs);
+  --sr-radius: var(--radius-md);
+  --sr-radius-lg: var(--radius-xl);
+  --sr-radius-xl: var(--radius-2xl);
+
+  /* --- Control Heights & Touch Targets --- */
+  --control-h-sm: 36px;
+  --control-h: 44px;
+  --control-h-lg: 48px;
+
+  /* Backwards compatibility aliases */
+  --sr-control-h: var(--control-h);
+  --sr-control-h-sm: 38px;
+
+  /* --- Shadows & Focus --- */
+  --sr-focus: 0 0 0 3px rgba(91, 55, 31, 0.22);
+  --shadow-sm: 0 4px 14px -2px rgba(45, 30, 20, 0.035), 0 2px 6px -1px rgba(45, 30, 20, 0.02);
+  --shadow-md: 0 10px 28px -4px rgba(45, 30, 20, 0.045), 0 4px 12px -2px rgba(45, 30, 20, 0.02);
+  --shadow-lg: 0 20px 45px -6px rgba(45, 30, 20, 0.08), 0 8px 18px -3px rgba(45, 30, 20, 0.03);
+  --shadow-glow: 0 10px 25px rgba(91, 55, 31, 0.28);
+  --sr-shadow-sm: var(--shadow-sm);
+  --sr-shadow-md: var(--shadow-md);
+  --sr-shadow-lg: var(--shadow-lg);
+  --sr-shadow-glow: var(--shadow-glow);
+  --sr-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* --- Z-Index Scale --- */
+  --z-dropdown: 1000;
+  --z-sticky: 1020;
+  --z-drawer: 1040;
+  --z-modal-backdrop: 1050;
+  --z-modal: 1060;
+  --z-popover: 1070;
+  --z-toast: 1080;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* --- Color Palette: Dark Mode --- */
+  --bg: #17110b;
+  --surface: #201810;
+  --surface-raised: #261d13;
+  --surface-soft: #2a2014;
+  --surface-muted: #33271a;
+  --surface-overlay: rgba(10, 6, 3, 0.72);
+
+  --ink: #f5ece0;
+  --text: #f0e6d8;
+  --text-soft: #c9b8a3;
+  --muted: #ab9482;
+  --text-faint: #8a7461;
+
+  --line: #43331f;
+  --line-strong: #5c4530;
+
+  --orange: #caa06c;
+  --orange-hover: #dab27e;
+  --orange-soft: rgba(202, 160, 108, 0.14);
+
+  --auth-brand: #caa06c;
+  --auth-brand-light: #dab27e;
+  --auth-brand-deep: #8b5a34;
+
+  --success: #3fbd82;
+  --success-soft: rgba(63, 189, 130, 0.12);
+  --warning: #f0b94a;
+  --warning-soft: rgba(240, 185, 74, 0.12);
+  --danger: #ea8c78;
+  --danger-soft: rgba(234, 140, 120, 0.12);
+  --info: #7cc3db;
+  --info-soft: rgba(124, 195, 219, 0.12);
+  --purple: #c7aee0;
+  --purple-soft: rgba(199, 174, 224, 0.12);
+
+  /* --- Shadows & Focus: Dark Mode --- */
+  --sr-focus: 0 0 0 3px rgba(202, 160, 108, 0.3);
+  --shadow-sm: 0 4px 14px -2px rgba(0, 0, 0, 0.35), 0 2px 6px -1px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 10px 28px -4px rgba(0, 0, 0, 0.45), 0 4px 12px -2px rgba(0, 0, 0, 0.25);
+  --shadow-lg: 0 22px 50px -6px rgba(0, 0, 0, 0.6), 0 8px 20px -3px rgba(0, 0, 0, 0.35);
+  --shadow-glow: 0 10px 28px rgba(202, 160, 108, 0.24);
+  --sr-shadow-sm: var(--shadow-sm);
+  --sr-shadow-md: var(--shadow-md);
+  --sr-shadow-lg: var(--shadow-lg);
+  --sr-shadow-glow: var(--shadow-glow);
+}
