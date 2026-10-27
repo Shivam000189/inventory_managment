@@ -1,18 +1,44 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { returnApi } from '../../api/returnApi.js'
 import { useResource } from '../../hooks/useResource.js'
-import AsyncBoundary from '../../components/feedback/AsyncBoundary.jsx'
-import '../../styles/returns.css'
+import { PageHeader } from '../../components/ui/PageHeader.jsx'
+import { StatGrid, StatCard, Card } from '../../components/ui/Card.jsx'
+import { DataTable } from '../../components/ui/DataTable.jsx'
+import { Button } from '../../components/ui/Button.jsx'
+import { Field, Input, Select } from '../../components/ui/FormControls.jsx'
+import { Badge } from '../../components/ui/Badge.jsx'
+import { Modal } from '../../components/ui/Modal.jsx'
+import './ReturnsPage.css'
 
-const reasons = ['Damaged product', 'Defective product', 'Incorrect product', 'Customer changed mind', 'Size/Fit issue', 'Other']
+const reasons = [
+  'Damaged product',
+  'Defective product',
+  'Incorrect product',
+  'Customer changed mind',
+  'Size/Fit issue',
+  'Other',
+]
 const conditions = ['Sellable', 'Damaged', 'Defective', 'Opened / Used', 'Other']
-const refundMethods = ['Original Payment Method', 'Cash', 'UPI', 'Card', 'Bank transfer', 'Store Credit', 'Customer Balance/Credit', 'Other']
-const money = (currency, value) => `${currency} ${Number(value || 0).toFixed(2)}`
+const refundMethods = [
+  'Original Payment Method',
+  'Cash',
+  'UPI',
+  'Card',
+  'Bank transfer',
+  'Store Credit',
+  'Customer Balance/Credit',
+  'Other',
+]
+const money = (currency = 'INR', value) => `${currency} ${Number(value || 0).toFixed(2)}`
 
-export default function SalesReturns({ business, account }) {
-  const load = useCallback(() => Promise.all([returnApi.list({ type: 'sale' }), returnApi.eligibleOrders()]), [])
+export default function SalesReturnsPage({ business = {}, account = {} }) {
+  const load = useCallback(
+    () => Promise.all([returnApi.list({ type: 'sale' }), returnApi.eligibleOrders()]),
+    []
+  )
   const { data, loading, error, refetch } = useResource(load, [], [[], []])
-  const [returns, orders] = data
+  const [returns = [], orders = []] = data
+
   const [orderSearch, setOrderSearch] = useState('')
   const [orderId, setOrderId] = useState('')
   const [productId, setProductId] = useState('')
@@ -27,7 +53,17 @@ export default function SalesReturns({ business, account }) {
   const [selectedReturn, setSelectedReturn] = useState(null)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState(null)
-  const [filters, setFilters] = useState({ search: '', status: 'all', refundStatus: 'all', reason: 'all', condition: 'all', refundMethod: 'all', dateFrom: '', dateTo: '' })
+  const [filters, setFilters] = useState({
+    search: '',
+    status: 'all',
+    refundStatus: 'all',
+    reason: 'all',
+    condition: 'all',
+    refundMethod: 'all',
+    dateFrom: '',
+    dateTo: '',
+  })
+
   const idempotencyKey = useRef('')
   const permissions = account.permissions || []
   const owner = account.role === 'owner'
@@ -35,47 +71,120 @@ export default function SalesReturns({ business, account }) {
   const canRefund = owner || permissions.includes('process_refunds')
   const canAdjustRefund = owner || permissions.includes('adjust_refunds')
 
-  useEffect(() => {
-    if (!confirming && !selectedReturn) return undefined
-    document.body.classList.add('return-modal-open')
-    return () => document.body.classList.remove('return-modal-open')
-  }, [confirming, selectedReturn])
-
-  const visibleOrders = orders.filter((order) => `${order.orderNumber} ${order.invoiceNumber} ${order.customerName}`.toLowerCase().includes(orderSearch.toLowerCase()))
-  const order = orders.find((item) => item.orderId === orderId)
-  const item = order?.items.find((line) => line.productId === productId)
-  const returnValue = item && quantity > 0 ? Math.round(((item.total || (item.quantity * item.sellingPrice - item.discount + item.tax)) * quantity / item.quantity + Number.EPSILON) * 100) / 100 : 0
+  const visibleOrders = orders.filter((o) =>
+    `${o.orderNumber || ''} ${o.invoiceNumber || ''} ${o.customerName || ''}`
+      .toLowerCase()
+      .includes(orderSearch.toLowerCase())
+  )
+  const order = orders.find((entry) => entry.orderId === orderId)
+  const item = order?.items?.find((line) => line.productId === productId)
+  const returnValue =
+    item && quantity > 0
+      ? Math.round(
+          (((item.total || item.quantity * item.sellingPrice - (item.discount || 0) + (item.tax || 0)) *
+            quantity) /
+            item.quantity +
+            Number.EPSILON) *
+            100
+        ) / 100
+      : 0
   const outstandingAdjustment = Math.min(returnValue, order?.outstandingActual || 0)
   const refundRequired = Math.max(0, Math.round((returnValue - outstandingAdjustment) * 100) / 100)
   const desiredRefund = refundAmount === '' ? refundRequired : Number(refundAmount)
-  const invalidQuantity = !item || quantity <= 0 || quantity > item.returnableQuantity || (!['kg', 'gram', 'litre'].includes(item.unit) && !Number.isInteger(Number(quantity)))
-  const filteredReturns = useMemo(() => returns.filter((record) => {
-    const term = filters.search.toLowerCase()
-    return (!term || `${record.returnId} ${record.orderNumber} ${record.productName} ${record.productSku} ${record.customerName}`.toLowerCase().includes(term)) &&
-      (filters.status === 'all' || record.status === filters.status) && (filters.refundStatus === 'all' || record.refundStatus === filters.refundStatus) &&
-      (filters.reason === 'all' || record.reason === filters.reason) && (filters.condition === 'all' || record.condition === filters.condition) &&
-      (filters.refundMethod === 'all' || record.refundMethod?.includes(filters.refundMethod)) &&
-      (!filters.dateFrom || new Date(record.createdAt) >= new Date(filters.dateFrom)) && (!filters.dateTo || new Date(record.createdAt) <= new Date(`${filters.dateTo}T23:59:59`))
-  }), [returns, filters])
+  const invalidQuantity =
+    !item ||
+    quantity <= 0 ||
+    quantity > (item.returnableQuantity || item.quantity) ||
+    (!['kg', 'gram', 'litre'].includes(item.unit) && !Number.isInteger(Number(quantity)))
 
-  const selectOrder = (value) => { setOrderId(value); setProductId(''); setQuantity(1); setRefundAmount(''); setMessage(null) }
+  const filteredReturns = useMemo(() => {
+    return returns.filter((record) => {
+      const term = filters.search.toLowerCase()
+      const matchesSearch =
+        !term ||
+        `${record.returnId || ''} ${record.orderNumber || ''} ${record.productName || ''} ${record.productSku || ''} ${record.customerName || ''}`
+          .toLowerCase()
+          .includes(term)
+      const matchesStatus = filters.status === 'all' || record.status === filters.status
+      const matchesRefund = filters.refundStatus === 'all' || record.refundStatus === filters.refundStatus
+      const matchesReason = filters.reason === 'all' || record.reason === filters.reason
+      const matchesCondition = filters.condition === 'all' || record.condition === filters.condition
+      const matchesMethod =
+        filters.refundMethod === 'all' || record.refundMethod?.includes(filters.refundMethod)
+      const matchesDateFrom =
+        !filters.dateFrom || new Date(record.createdAt) >= new Date(filters.dateFrom)
+      const matchesDateTo =
+        !filters.dateTo || new Date(record.createdAt) <= new Date(`${filters.dateTo}T23:59:59`)
+
+      return (
+        matchesSearch &&
+        matchesStatus &&
+        matchesRefund &&
+        matchesReason &&
+        matchesCondition &&
+        matchesMethod &&
+        matchesDateFrom &&
+        matchesDateTo
+      )
+    })
+  }, [returns, filters])
+
+  const selectOrder = (value) => {
+    setOrderId(value)
+    setProductId('')
+    setQuantity(1)
+    setRefundAmount('')
+    setMessage(null)
+  }
+
   const askConfirmation = (event) => {
     event.preventDefault()
-    if (!order || invalidQuantity || (reason === 'Other' && !reasonDetails.trim())) { setMessage({ type: 'error', text: 'Complete the order, product, quantity, reason and condition steps.' }); return }
-    if (desiredRefund < 0 || desiredRefund > refundRequired || (!canAdjustRefund && desiredRefund !== refundRequired)) { setMessage({ type: 'error', text: 'Refund amount is outside your allowed refundable amount.' }); return }
+    if (!order || invalidQuantity || (reason === 'Other' && !reasonDetails.trim())) {
+      setMessage({
+        type: 'error',
+        text: 'Complete the order, product, quantity, reason and condition steps.',
+      })
+      return
+    }
+    if (
+      desiredRefund < 0 ||
+      desiredRefund > refundRequired ||
+      (!canAdjustRefund && desiredRefund !== refundRequired)
+    ) {
+      setMessage({
+        type: 'error',
+        text: 'Refund amount is outside your allowed refundable amount.',
+      })
+      return
+    }
     idempotencyKey.current ||= globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`
     setConfirming(true)
   }
+
   const confirm = async () => {
     if (saving) return
-    setSaving(true); setMessage(null)
+    setSaving(true)
+    setMessage(null)
     try {
-      const record = await returnApi.create({ type: 'sale', orderId, productId, quantity: Number(quantity), reason, reasonDetails, condition, idempotencyKey: idempotencyKey.current })
+      const record = await returnApi.create({
+        type: 'sale',
+        orderId,
+        productId,
+        quantity: Number(quantity),
+        reason,
+        reasonDetails,
+        condition,
+        idempotencyKey: idempotencyKey.current,
+      })
       let refundPending = record.refundRequired > 0
       let refundFailure = ''
       if (record.refundRequired > 0 && canRefund && desiredRefund > 0) {
         try {
-          await returnApi.refund(record.returnId, { amount: desiredRefund, method: refundMethod, status: refundState })
+          await returnApi.refund(record.returnId, {
+            amount: desiredRefund,
+            method: refundMethod,
+            status: refundState,
+          })
           refundPending = refundState !== 'Refunded' || desiredRefund < record.refundRequired
         } catch (refundError) {
           refundFailure = refundError.message
@@ -83,684 +192,803 @@ export default function SalesReturns({ business, account }) {
         }
       }
       await refetch()
-      setMessage({ type: refundPending ? 'error' : 'success', text: refundFailure ? `${record.returnId} completed, but its refund remains pending: ${refundFailure}` : refundPending ? `${record.returnId} completed. Refund follow-up is still required.` : `${record.returnId} completed and financially settled.` })
-      setConfirming(false); setOrderId(''); setProductId(''); setQuantity(1); setRefundAmount(''); idempotencyKey.current = ''
-    } catch (caught) { setMessage({ type: 'error', text: caught.message || 'Could not complete the return.' }); setConfirming(false) }
-    finally { setSaving(false) }
+      setMessage({
+        type: refundPending ? 'error' : 'success',
+        text: refundFailure
+          ? `${record.returnId} completed, but its refund remains pending: ${refundFailure}`
+          : refundPending
+            ? `${record.returnId} completed. Refund follow-up is still required.`
+            : `${record.returnId} completed and financially settled.`,
+      })
+      setConfirming(false)
+      setOrderId('')
+      setProductId('')
+      setQuantity(1)
+      setRefundAmount('')
+      idempotencyKey.current = ''
+    } catch (caught) {
+      setMessage({ type: 'error', text: caught.message || 'Could not complete the return.' })
+      setConfirming(false)
+    } finally {
+      setSaving(false)
+    }
   }
 
   const updateFilter = (key, value) => setFilters((current) => ({ ...current, [key]: value }))
-  const refreshReturn = async (returnId) => {
+
+  const refreshReturn = async (retId) => {
     await refetch()
-    setSelectedReturn(await returnApi.get(returnId))
+    setSelectedReturn(await returnApi.get(retId))
   }
+
   const updateRefundStatus = async (refund, status) => {
     if (saving) return
-    setSaving(true); setMessage(null)
+    setSaving(true)
+    setMessage(null)
     try {
       await returnApi.updateRefund(selectedReturn.returnId, refund.refundId, { status })
       await refreshReturn(selectedReturn.returnId)
       setMessage({ type: 'success', text: `Refund marked ${status.toLowerCase()}.` })
-    } catch (caught) { setMessage({ type: 'error', text: caught.message || 'Could not update the refund.' }) }
-    finally { setSaving(false) }
+    } catch (caught) {
+      setMessage({ type: 'error', text: caught.message || 'Could not update the refund.' })
+    } finally {
+      setSaving(false)
+    }
   }
+
   const recordRemainingRefund = async () => {
     if (saving || !selectedReturn?.remainingRefund) return
-    setSaving(true); setMessage(null)
+    setSaving(true)
+    setMessage(null)
     try {
-      await returnApi.refund(selectedReturn.returnId, { amount: selectedReturn.remainingRefund, method: refundMethod, status: refundState })
+      await returnApi.refund(selectedReturn.returnId, {
+        amount: selectedReturn.remainingRefund,
+        method: refundMethod,
+        status: refundState,
+      })
       await refreshReturn(selectedReturn.returnId)
       setMessage({ type: 'success', text: 'Refund transaction recorded.' })
-    } catch (caught) { setMessage({ type: 'error', text: caught.message || 'Could not record the refund.' }) }
-    finally { setSaving(false) }
+    } catch (caught) {
+      setMessage({ type: 'error', text: caught.message || 'Could not record the refund.' })
+    } finally {
+      setSaving(false)
+    }
   }
-  const today = new Date(); today.setHours(0, 0, 0, 0)
-  const returnsToday = returns.filter((record) => new Date(record.createdAt) >= today)
-  const pendingInspection = returns.filter((record) => record.status === 'Pending').length
-  const restockedItems = returns.filter((record) => record.status === 'Completed' && (record.condition === 'Sellable' || record.inventoryAction === 'sellable')).reduce((sum, record) => sum + Number(record.quantity || 0), 0)
-  const refundedCount = returns.filter((record) => record.refundStatus === 'Refunded').length
-  const creditCount = returns.filter((record) => /credit|balance/i.test(record.refundMethod || '')).length
-  const upiShare = refundedCount + creditCount > 0 ? Math.round((refundedCount / (refundedCount + creditCount)) * 100) : 0
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const returnsToday = returns.filter((r) => new Date(r.createdAt) >= today)
+  const pendingInspection = returns.filter((r) => r.status === 'Pending').length
+  const restockedItems = returns
+    .filter(
+      (r) =>
+        r.status === 'Completed' &&
+        (r.condition === 'Sellable' || r.inventoryAction === 'sellable')
+    )
+    .reduce((sum, r) => sum + Number(r.quantity || 0), 0)
+  const refundedCount = returns.filter((r) => r.refundStatus === 'Refunded').length
+  const creditCount = returns.filter((r) => /credit|balance/i.test(r.refundMethod || '')).length
+  const upiShare =
+    refundedCount + creditCount > 0
+      ? Math.round((refundedCount / (refundedCount + creditCount)) * 100)
+      : 0
   const currentStep = !orderId ? 1 : !item || invalidQuantity ? 2 : 3
-  const STEPS = [['Select sales order', orderId ? 'completed' : 'active'], ['Choose item & reason', !orderId ? 'todo' : currentStep === 2 ? 'active' : 'completed'], ['Refund method & restock', currentStep === 3 ? 'active' : 'todo']]
+  const STEPS = [
+    ['Select sales order', orderId ? 'completed' : 'active'],
+    ['Choose item & reason', !orderId ? 'todo' : currentStep === 2 ? 'active' : 'completed'],
+    ['Refund method & restock', currentStep === 3 ? 'active' : 'todo'],
+  ]
 
-  return <section className="returns-page sales-returns-page ret-page">
-    <header className="ret-heading">
-      <div>
-        <p className="ret-kicker">Manage your returns <span>•</span> QA &amp; refund control</p>
-        <div className="ret-title-line"><h1>Returns &amp; Refund Management</h1><span className="ret-live">Live terminal</span></div>
-        <p>Guided customer returns processing, QA inspection, inventory restocking, and refund payout for {business.name}.</p>
+  const columns = [
+    {
+      key: 'returnId',
+      header: 'Return ID & Customer',
+      render: (record) => (
+        <div>
+          <span className="font-semibold text-main">{record.returnId}</span>
+          <small className="block text-muted">
+            {record.orderNumber} · {record.customerName || 'Walk-in Customer'}
+          </small>
+        </div>
+      ),
+      mobileLabel: 'Return ID',
+    },
+    {
+      key: 'product',
+      header: 'Product & Units',
+      render: (record) => (
+        <div>
+          <span className="font-medium text-main">{record.productName}</span>
+          <small className="block text-muted">
+            {record.productSku || 'No SKU'} · {record.quantity} units
+          </small>
+        </div>
+      ),
+      mobileLabel: 'Product',
+    },
+    {
+      key: 'value',
+      header: 'Value & Condition',
+      render: (record) => (
+        <div>
+          <span className="font-medium text-main">
+            {money(business.currency, record.returnValue || record.refundAmount)}
+          </span>
+          <small className="block text-muted">
+            {record.reason} · {record.condition || 'Legacy return'}
+          </small>
+        </div>
+      ),
+      mobileLabel: 'Value',
+    },
+    {
+      key: 'refundStatus',
+      header: 'Refund Status',
+      render: (record) => (
+        <Badge
+          tone={
+            record.refundStatus === 'Refunded'
+              ? 'success'
+              : record.refundStatus === 'Failed'
+                ? 'danger'
+                : 'warning'
+          }
+        >
+          {record.refundStatus || 'Not Required'}
+        </Badge>
+      ),
+      mobileLabel: 'Refund',
+    },
+    {
+      key: 'date',
+      header: 'Date',
+      render: (record) => (
+        <span className="text-soft text-sm">
+          {new Date(record.createdAt).toLocaleDateString()}
+        </span>
+      ),
+      mobileLabel: 'Date',
+    },
+    {
+      key: 'actions',
+      header: '',
+      align: 'right',
+      render: (record) => (
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => setSelectedReturn(record)}
+        >
+          View Details
+        </Button>
+      ),
+      mobileLabel: 'Actions',
+    },
+  ]
+
+  return (
+    <div className="returns-page returns-container">
+      <PageHeader
+        kicker="Manage your returns • QA & refund control"
+        title="Returns & Refund Management"
+        badge="Live terminal"
+        description={`Guided customer returns processing, QA inspection, inventory restocking, and refund payout for ${business.name || 'your business'}.`}
+        actions={
+          canCreate ? (
+            <Button
+              variant="primary"
+              onClick={() => document.getElementById('return-order-search')?.focus()}
+              icon="plus"
+            >
+              Create walk-in return
+            </Button>
+          ) : null
+        }
+      />
+
+      {message && (
+        <div className={`return-alert-box ${message.type === 'error' ? 'return-alert-error' : 'return-alert-success'}`}>
+          {message.text}
+        </div>
+      )}
+
+      <StatGrid columns={4}>
+        <StatCard
+          title="Total returns today"
+          value={`${returnsToday.length} returns`}
+          subtext={`${money(business.currency, returnsToday.reduce((sum, r) => sum + Number(r.returnValue || r.refundAmount || 0), 0))} return value`}
+          icon="arrow-path"
+        />
+        <StatCard
+          title="Pending inspection"
+          value={`${pendingInspection} items`}
+          subtext="Awaiting QA check before refund release"
+          deltaType={pendingInspection ? 'warning' : 'neutral'}
+          icon="clock"
+        />
+        <StatCard
+          title="Approved & restocked"
+          value={`${restockedItems} units`}
+          subtext="Sellable stock returned to ledger"
+          deltaType="positive"
+          icon="box"
+        />
+        <StatCard
+          title="Refund method split"
+          value={`${upiShare}% refunded`}
+          subtext={`${100 - upiShare}% settled as store credit`}
+          icon="chart"
+        />
+      </StatGrid>
+
+      {/* Progress chips */}
+      <div className="ret-progress-bar">
+        {STEPS.map(([label, state], idx) => (
+          <div className={`ret-step-chip ${state}`} key={label}>
+            <div className="ret-step-chip-number">
+              {state === 'completed' ? '✓' : idx + 1}
+            </div>
+            <div className="ret-step-chip-label">
+              <small>Step {idx + 1} · {state === 'completed' ? 'completed' : state === 'active' ? 'in progress' : 'next'}</small>
+              <strong>{label}</strong>
+            </div>
+          </div>
+        ))}
       </div>
-      <div className="ret-heading-actions">
-        <button type="button" className="primary" onClick={() => document.getElementById('return-order-search')?.focus()}>＋ Create walk-in return</button>
-      </div>
-    </header>
-    {message && <p className={`form-status ret-message ${message.type}`} role="status">{message.text}</p>}
 
-    <div className="ret-kpis">
-      <article className="ret-kpi">
-        <span>Total returns today</span>
-        <strong>{returnsToday.length} <small>returns</small></strong>
-        <p>{money(business.currency, returnsToday.reduce((sum, record) => sum + Number(record.returnValue || record.refundAmount || 0), 0))} return value</p>
-      </article>
-      <article className={`ret-kpi${pendingInspection ? ' ret-kpi-alert' : ''}`}>
-        <span>Pending inspection</span>
-        <strong>{pendingInspection} <small>items</small></strong>
-        <p>Awaiting QA check before refund release</p>
-      </article>
-      <article className="ret-kpi">
-        <span>Approved &amp; restocked</span>
-        <strong className="ret-good">{restockedItems} <small>units</small></strong>
-        <p>Sellable stock returned to the warehouse ledger</p>
-      </article>
-      <article className="ret-kpi">
-        <span>Refund method split <i>This month</i></span>
-        <strong className="ret-good">{upiShare}% <small>refunded</small></strong>
-        <p>{100 - upiShare}% settled as store credit / balance</p>
-        <div className="ret-meter"><i style={{ width: `${upiShare}%` }} /></div>
-      </article>
-    </div>
+      {canCreate && (
+        <Card title="Process Customer Return" subtitle="Follow the 5 steps to verify order, product, reason and financial treatment">
+          <form className="return-workflow-grid" onSubmit={askConfirmation}>
+            {/* Step 1 */}
+            <div className="return-step-section">
+              <div className="return-step-header">
+                <div className="return-step-badge">1</div>
+                <div className="return-step-header-text">
+                  <small>Step 1 · Order Lookup</small>
+                  <h3>Original Sales Order</h3>
+                </div>
+              </div>
+              <div className="returns-form-grid">
+                <Field label="Search Orders" htmlFor="return-order-search">
+                  <Input
+                    id="return-order-search"
+                    value={orderSearch}
+                    onChange={(e) => setOrderSearch(e.target.value)}
+                    placeholder="Order number, invoice or customer..."
+                  />
+                </Field>
+                <Field label="Completed Order" required htmlFor="return-order">
+                  <Select
+                    id="return-order"
+                    value={orderId}
+                    onChange={(e) => selectOrder(e.target.value)}
+                    required
+                  >
+                    <option value="">Select order</option>
+                    {visibleOrders.map((entry) => (
+                      <option key={entry.orderId} value={entry.orderId}>
+                        {entry.orderNumber} · {entry.customerName}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+              </div>
 
-    <div className="ret-progress">
-      {STEPS.map(([label, state], index) => (
-        <div className={`ret-step-chip ${state}`} key={label}>
-          <span>{state === 'completed' ? '✓' : index + 1}</span>
-          <div>
-            <small>
-              Step {index + 1} · {state === 'completed' ? 'completed' : state === 'active' ? 'in progress' : 'next'}
-            </small>
-            <strong>{label}</strong>
+              {order && (
+                <div className="return-info-pill-grid">
+                  <div className="return-info-pill">
+                    <small>Order Number</small>
+                    <strong>{order.orderNumber}</strong>
+                  </div>
+                  <div className="return-info-pill">
+                    <small>Customer</small>
+                    <strong>{order.customerName}</strong>
+                  </div>
+                  <div className="return-info-pill">
+                    <small>Date</small>
+                    <strong>{new Date(order.createdAt).toLocaleDateString()}</strong>
+                  </div>
+                  <div className="return-info-pill">
+                    <small>Total</small>
+                    <strong>{money(business.currency, order.totalAmount)}</strong>
+                  </div>
+                  <div className="return-info-pill">
+                    <small>Payment</small>
+                    <strong>{order.paymentStatus}</strong>
+                  </div>
+                  <div className="return-info-pill">
+                    <small>Paid</small>
+                    <strong>{money(business.currency, order.amountPaidActual)}</strong>
+                  </div>
+                  <div className="return-info-pill">
+                    <small>Outstanding</small>
+                    <strong>{money(business.currency, order.outstandingActual)}</strong>
+                  </div>
+                  <div className="return-info-pill">
+                    <small>Method</small>
+                    <strong>{order.originalPaymentMethods?.join(', ') || 'None'}</strong>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Step 2 */}
+            <div className={`return-step-section ${!order ? 'disabled-step' : ''}`}>
+              <div className="return-step-header">
+                <div className="return-step-badge">2</div>
+                <div className="return-step-header-text">
+                  <small>Step 2 · Item Selection</small>
+                  <h3>Sold Product</h3>
+                </div>
+              </div>
+              <div className="returns-form-grid">
+                <Field label="Select Product Line" required htmlFor="return-product">
+                  <Select
+                    id="return-product"
+                    value={productId}
+                    onChange={(e) => {
+                      setProductId(e.target.value)
+                      setQuantity(1)
+                      setRefundAmount('')
+                    }}
+                    disabled={!order}
+                    required
+                  >
+                    <option value="">Select sold product</option>
+                    {order?.items
+                      ?.filter((line) => (line.returnableQuantity ?? line.quantity) > 0)
+                      .map((line) => (
+                        <option key={line.productId} value={line.productId}>
+                          {line.productName} ({line.sku || 'No SKU'})
+                        </option>
+                      ))}
+                  </Select>
+                </Field>
+              </div>
+
+              {item && (
+                <div className="return-selected-product-card">
+                  <strong>{item.productName}</strong>
+                  <small>
+                    {item.sku || 'No SKU'}
+                    {item.size ? ` · Size ${item.size}` : ''}
+                    {item.color ? ` · ${item.color}` : ''}
+                  </small>
+                  <p>
+                    Sold: {item.quantity} | Already returned: {item.alreadyReturned || 0} | Returnable: {item.returnableQuantity ?? item.quantity}
+                  </p>
+                  <p>
+                    Unit: {money(business.currency, item.sellingPrice)} · Discount: {money(business.currency, item.discount || 0)} · Tax: {money(business.currency, item.tax || 0)}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Step 3 */}
+            <div className={`return-step-section ${!item ? 'disabled-step' : ''}`}>
+              <div className="return-step-header">
+                <div className="return-step-badge">3</div>
+                <div className="return-step-header-text">
+                  <small>Step 3 · Details & Inspection</small>
+                  <h3>Quantity, Reason and Condition</h3>
+                </div>
+              </div>
+              <div className="returns-form-grid">
+                <Field label="Quantity to Return" required htmlFor="return-quantity">
+                  <Input
+                    id="return-quantity"
+                    type="number"
+                    min={item && ['kg', 'gram', 'litre'].includes(item.unit) ? 0.001 : 1}
+                    step={item && ['kg', 'gram', 'litre'].includes(item.unit) ? 0.001 : 1}
+                    max={item?.returnableQuantity || item?.quantity || 1}
+                    value={quantity}
+                    onChange={(e) => {
+                      setQuantity(Number(e.target.value))
+                      setRefundAmount('')
+                    }}
+                    disabled={!item}
+                    required
+                  />
+                </Field>
+
+                <Field label="Return Reason" required htmlFor="return-reason">
+                  <Select
+                    id="return-reason"
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    disabled={!item}
+                  >
+                    {reasons.map((r) => (
+                      <option key={r} value={r}>{r}</option>
+                    ))}
+                  </Select>
+                </Field>
+
+                <Field label="Condition Assessment" required htmlFor="return-condition">
+                  <Select
+                    id="return-condition"
+                    value={condition}
+                    onChange={(e) => setCondition(e.target.value)}
+                    disabled={!item}
+                  >
+                    {conditions.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </Select>
+                </Field>
+              </div>
+
+              {reason === 'Other' && (
+                <Field label="Specify Reason Details" required htmlFor="return-reason-details">
+                  <Input
+                    id="return-reason-details"
+                    value={reasonDetails}
+                    onChange={(e) => setReasonDetails(e.target.value)}
+                    placeholder="Enter reason..."
+                    required
+                  />
+                </Field>
+              )}
+
+              {invalidQuantity && item && (
+                <div className="return-alert-box return-alert-error">
+                  Quantity must be positive and cannot exceed {item.returnableQuantity || item.quantity}.
+                </div>
+              )}
+            </div>
+
+            {/* Step 4 */}
+            <div className={`return-step-section ${!item || invalidQuantity ? 'disabled-step' : ''}`}>
+              <div className="return-step-header">
+                <div className="return-step-badge">4</div>
+                <div className="return-step-header-text">
+                  <small>Step 4 · Financials</small>
+                  <h3>Financial Treatment</h3>
+                </div>
+              </div>
+
+              <div className="return-info-pill-grid">
+                <div className="return-info-pill">
+                  <small>Order Total</small>
+                  <strong>{money(business.currency, order?.totalAmount)}</strong>
+                </div>
+                <div className="return-info-pill">
+                  <small>Originally Paid</small>
+                  <strong>{money(business.currency, order?.amountPaidActual)}</strong>
+                </div>
+                <div className="return-info-pill">
+                  <small>Outstanding Before</small>
+                  <strong>{money(business.currency, order?.outstandingActual)}</strong>
+                </div>
+                <div className="return-info-pill">
+                  <small>Return Value</small>
+                  <strong>{money(business.currency, returnValue)}</strong>
+                </div>
+                <div className="return-info-pill">
+                  <small>Balance Adjustment</small>
+                  <strong>{money(business.currency, outstandingAdjustment)}</strong>
+                </div>
+                <div className="return-info-pill highlight-due">
+                  <small>Refund Required</small>
+                  <strong>{money(business.currency, refundRequired)}</strong>
+                </div>
+              </div>
+
+              {refundRequired > 0 && canRefund && (
+                <div className="returns-form-grid" style={{ marginTop: 'var(--space-3)' }}>
+                  <Field label="Refund Method" htmlFor="refund-method">
+                    <Select
+                      id="refund-method"
+                      value={refundMethod}
+                      onChange={(e) => setRefundMethod(e.target.value)}
+                    >
+                      {refundMethods.map((m) => (
+                        <option key={m} value={m}>{m}</option>
+                      ))}
+                    </Select>
+                  </Field>
+
+                  <Field label="Refund Amount" htmlFor="refund-amount">
+                    <Input
+                      id="refund-amount"
+                      type="number"
+                      min="0.01"
+                      max={refundRequired}
+                      step="0.01"
+                      value={refundAmount === '' ? refundRequired : refundAmount}
+                      readOnly={!canAdjustRefund}
+                      onChange={(e) => setRefundAmount(e.target.value)}
+                    />
+                  </Field>
+
+                  <Field label="Initial Status" htmlFor="refund-state">
+                    <Select
+                      id="refund-state"
+                      value={refundState}
+                      onChange={(e) => setRefundState(e.target.value)}
+                    >
+                      <option value="Pending">Pending</option>
+                      <option value="Refunded">Refunded</option>
+                      <option value="Failed">Failed</option>
+                    </Select>
+                  </Field>
+                </div>
+              )}
+            </div>
+
+            {/* Step 5 */}
+            <div className={`return-step-section ${!item || invalidQuantity ? 'disabled-step' : ''}`}>
+              <div className="return-step-header">
+                <div className="return-step-badge">5</div>
+                <div className="return-step-header-text">
+                  <small>Step 5 · Confirmation</small>
+                  <h3>Review & Confirm</h3>
+                </div>
+              </div>
+
+              {item && (
+                <div className="return-info-pill-grid">
+                  <div className="return-info-pill">
+                    <small>Order / Customer</small>
+                    <strong>{order?.orderNumber} · {order?.customerName}</strong>
+                  </div>
+                  <div className="return-info-pill">
+                    <small>Product / Qty</small>
+                    <strong>{item.productName} · {quantity}</strong>
+                  </div>
+                  <div className="return-info-pill">
+                    <small>Reason / Condition</small>
+                    <strong>{reason} · {condition}</strong>
+                  </div>
+                  <div className="return-info-pill">
+                    <small>Financial Impact</small>
+                    <strong>{money(business.currency, outstandingAdjustment)} adj · {money(business.currency, refundRequired)} refund</strong>
+                  </div>
+                </div>
+              )}
+
+              <div className="returns-form-actions">
+                <Button
+                  variant="primary"
+                  type="submit"
+                  disabled={!item || invalidQuantity || saving}
+                  loading={saving}
+                  icon="arrow-path"
+                >
+                  Review Return
+                </Button>
+              </div>
+            </div>
+          </form>
+        </Card>
+      )}
+
+      {/* Audit History */}
+      <Card title="Sales Returns Audit Log" subtitle="Search and filter through historical sales returns and refund settlements">
+        <div className="returns-filter-bar">
+          <Input
+            aria-label="Search returns"
+            value={filters.search}
+            onChange={(e) => updateFilter('search', e.target.value)}
+            placeholder="Search return ID, order, customer, product..."
+          />
+          <Select
+            aria-label="Return status"
+            value={filters.status}
+            onChange={(e) => updateFilter('status', e.target.value)}
+          >
+            <option value="all">All statuses</option>
+            <option value="Pending">Pending</option>
+            <option value="Completed">Completed</option>
+            <option value="Cancelled">Cancelled</option>
+          </Select>
+          <Select
+            aria-label="Refund status"
+            value={filters.refundStatus}
+            onChange={(e) => updateFilter('refundStatus', e.target.value)}
+          >
+            <option value="all">All refund statuses</option>
+            <option value="Not Required">Not Required</option>
+            <option value="Pending">Pending</option>
+            <option value="Partially Refunded">Partially Refunded</option>
+            <option value="Refunded">Refunded</option>
+            <option value="Failed">Failed</option>
+          </Select>
+          <Select
+            aria-label="Filter reason"
+            value={filters.reason}
+            onChange={(e) => updateFilter('reason', e.target.value)}
+          >
+            <option value="all">All reasons</option>
+            {reasons.map((r) => (
+              <option key={r} value={r}>{r}</option>
+            ))}
+          </Select>
+          <Select
+            aria-label="Filter condition"
+            value={filters.condition}
+            onChange={(e) => updateFilter('condition', e.target.value)}
+          >
+            <option value="all">All conditions</option>
+            {conditions.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </Select>
+        </div>
+
+        <DataTable
+          columns={columns}
+          data={filteredReturns}
+          loading={loading}
+          error={error}
+          onRetry={refetch}
+          emptyTitle="No returns found"
+          emptyDescription={returns.length ? 'No returns match these filters.' : 'No sales returns recorded yet.'}
+        />
+      </Card>
+
+      {/* Confirmation Modal */}
+      <Modal
+        isOpen={confirming}
+        onClose={() => setConfirming(false)}
+        title="Complete this return?"
+        kicker="Final Confirmation"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setConfirming(false)} disabled={saving}>
+              Cancel
+            </Button>
+            <Button variant="primary" onClick={confirm} loading={saving} disabled={saving} icon="arrow-path">
+              Confirm return
+            </Button>
+          </>
+        }
+      >
+        <p className="text-soft text-sm" style={{ marginBottom: 'var(--space-3)' }}>
+          {quantity} × {item?.productName} will be recorded as {condition.toLowerCase()}.
+        </p>
+        <div className="return-info-pill-grid" style={{ marginBottom: 'var(--space-3)' }}>
+          <div className="return-info-pill">
+            <small>Inventory Action</small>
+            <strong>{condition === 'Sellable' ? 'Restock Available' : 'Quarantine / Damaged'}</strong>
+          </div>
+          <div className="return-info-pill">
+            <small>Balance Adjustment</small>
+            <strong>{money(business.currency, outstandingAdjustment)}</strong>
+          </div>
+          <div className="return-info-pill highlight-due">
+            <small>Refund Required</small>
+            <strong>{money(business.currency, refundRequired)}</strong>
           </div>
         </div>
-      ))}
-    </div>
+        <p className="text-muted text-xs">
+          Refund records are internal workflow records. No payment gateway will be contacted.
+        </p>
+      </Modal>
 
-    {canCreate && (
-      <form className="return-workflow" onSubmit={askConfirmation}>
-        <section className="return-step">
-          <header>
-            <b>1</b>
-            <div>
-              <small>Select order</small>
-              <h3>Original sales order</h3>
-            </div>
-          </header>
-          <label htmlFor="return-order-search">Search orders</label>
-          <input
-            id="return-order-search"
-            value={orderSearch}
-            onChange={(event) => setOrderSearch(event.target.value)}
-            placeholder="Order number, invoice or customer"
-          />
-          <label htmlFor="return-order">Completed order *</label>
-          <select
-            id="return-order"
-            value={orderId}
-            onChange={(event) => selectOrder(event.target.value)}
-            required
-          >
-            <option value="">Select order</option>
-            {visibleOrders.map((entry) => (
-              <option key={entry.orderId} value={entry.orderId}>
-                {entry.orderNumber} · {entry.customerName}
-              </option>
-            ))}
-          </select>
-          {order && (
-            <div className="return-info-grid">
-              <span>
-                <small>Order</small>
-                <strong>{order.orderNumber}</strong>
-              </span>
-              <span>
-                <small>Customer</small>
-                <strong>{order.customerName}</strong>
-              </span>
-              <span>
-                <small>Date</small>
-                <strong>{new Date(order.createdAt).toLocaleDateString()}</strong>
-              </span>
-              <span>
-                <small>Total</small>
-                <strong>{money(business.currency, order.totalAmount)}</strong>
-              </span>
-              <span>
-                <small>Payment</small>
-                <strong>{order.paymentStatus}</strong>
-              </span>
-              <span>
-                <small>Paid</small>
-                <strong>{money(business.currency, order.amountPaidActual)}</strong>
-              </span>
-              <span>
-                <small>Outstanding</small>
-                <strong>{money(business.currency, order.outstandingActual)}</strong>
-              </span>
-              <span>
-                <small>Method</small>
-                <strong>{order.originalPaymentMethods.join(', ') || 'None'}</strong>
-              </span>
-            </div>
-          )}
-        </section>
-
-        <section className={`return-step ${!order ? 'disabled-step' : ''}`}>
-          <header>
-            <b>2</b>
-            <div>
-              <small>Select product</small>
-              <h3>Sold item</h3>
-            </div>
-          </header>
-          <label htmlFor="return-product">Product *</label>
-          <select
-            id="return-product"
-            value={productId}
-            onChange={(event) => {
-              setProductId(event.target.value);
-              setQuantity(1);
-              setRefundAmount('');
-            }}
-            disabled={!order}
-            required
-          >
-            <option value="">Select sold product</option>
-            {order?.items
-              .filter((line) => line.returnableQuantity > 0)
-              .map((line) => (
-                <option key={line.productId} value={line.productId}>
-                  {line.productName} ({line.sku})
-                </option>
+      {/* Selected Return Details Modal */}
+      <Modal
+        isOpen={Boolean(selectedReturn)}
+        onClose={() => setSelectedReturn(null)}
+        title={selectedReturn?.returnId || 'Return Details'}
+        kicker="Return Record"
+        size="lg"
+        footer={
+          <Button variant="secondary" onClick={() => setSelectedReturn(null)}>
+            Close
+          </Button>
+        }
+      >
+        {selectedReturn && (
+          <div>
+            <div className="return-detail-fields-grid">
+              {[
+                ['Order Number', selectedReturn.orderNumber],
+                ['Customer', selectedReturn.customerName],
+                ['Product', `${selectedReturn.productName} (${selectedReturn.productSku || 'No SKU'})`],
+                ['Quantity', selectedReturn.quantity],
+                ['Return Value', money(business.currency, selectedReturn.returnValue || selectedReturn.refundAmount)],
+                ['Reason', `${selectedReturn.reason}${selectedReturn.reasonDetails ? ` — ${selectedReturn.reasonDetails}` : ''}`],
+                ['Condition', selectedReturn.condition || 'Legacy return'],
+                ['Inventory Action', selectedReturn.inventoryAction || 'sellable'],
+                ['Outstanding Adjusted', money(business.currency, selectedReturn.outstandingAdjustment)],
+                ['Refunded', money(business.currency, selectedReturn.refundAmount)],
+                ['Remaining Refund', money(business.currency, selectedReturn.remainingRefund)],
+                ['Refund Status', selectedReturn.refundStatus || 'Not Required'],
+                ['Return Status', selectedReturn.status],
+                ['Processed By', selectedReturn.processedBy || 'System Admin'],
+                ['Date', new Date(selectedReturn.createdAt).toLocaleString()],
+              ].map(([label, value]) => (
+                <div className="return-info-pill" key={label}>
+                  <small>{label}</small>
+                  <strong>{value}</strong>
+                </div>
               ))}
-          </select>
-          {item && (
-            <div className="return-selected-product">
-              <strong>{item.productName}</strong>
-              <small>
-                {item.sku}
-                {item.size ? ` · Size ${item.size}` : ''}
-                {item.color ? ` · ${item.color}` : ''}
-              </small>
-              <p>
-                Sold: {item.quantity} | Already returned: {item.alreadyReturned} | Returnable: {item.returnableQuantity}
-              </p>
-              <p>
-                Unit {money(business.currency, item.sellingPrice)} · Discount {money(business.currency, item.discount)} · Tax {money(business.currency, item.tax)}
-              </p>
             </div>
-          )}
-        </section>
 
-        <section className={`return-step ${!item ? 'disabled-step' : ''}`}>
-          <header>
-            <b>3</b>
-            <div>
-              <small>Return details</small>
-              <h3>Quantity, reason and condition</h3>
-            </div>
-          </header>
-          <div className="return-fields">
-            <div>
-              <label htmlFor="return-quantity">Quantity *</label>
-              <input
-                id="return-quantity"
-                type="number"
-                min={item && ['kg', 'gram', 'litre'].includes(item.unit) ? 0.001 : 1}
-                step={item && ['kg', 'gram', 'litre'].includes(item.unit) ? 0.001 : 1}
-                max={item?.returnableQuantity || 1}
-                value={quantity}
-                onChange={(event) => {
-                  setQuantity(Number(event.target.value));
-                  setRefundAmount('');
-                }}
-                disabled={!item}
-                required
-              />
-            </div>
-            <div>
-              <label htmlFor="return-reason">Reason *</label>
-              <select
-                id="return-reason"
-                value={reason}
-                onChange={(event) => setReason(event.target.value)}
-                disabled={!item}
-              >
-                {reasons.map((value) => (
-                  <option key={value}>{value}</option>
+            {selectedReturn.refunds?.length > 0 && (
+              <div style={{ marginTop: 'var(--space-4)' }}>
+                <h4 style={{ color: 'var(--text)', fontSize: 'var(--fs-sm)', marginBottom: 'var(--space-2)' }}>
+                  Refund Transactions
+                </h4>
+                {selectedReturn.refunds.map((refund) => (
+                  <div className="refund-tx-card" key={refund.refundId}>
+                    <div>
+                      <strong className="text-main">{money(business.currency, refund.amount)}</strong>
+                      <small className="block text-muted">{refund.resolvedMethod || refund.method}</small>
+                    </div>
+                    <Badge tone={refund.status === 'Refunded' ? 'success' : 'warning'}>
+                      {refund.status}
+                    </Badge>
+                    {canRefund && ['Pending', 'Failed'].includes(refund.status) && (
+                      <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          disabled={saving}
+                          onClick={() => updateRefundStatus(refund, 'Refunded')}
+                        >
+                          Mark Refunded
+                        </Button>
+                        {refund.status === 'Pending' && (
+                          <Button
+                            variant="danger"
+                            size="sm"
+                            disabled={saving}
+                            onClick={() => updateRefundStatus(refund, 'Failed')}
+                          >
+                            Mark Failed
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 ))}
-              </select>
-            </div>
-            {reason === 'Other' && (
-              <div className="field-wide">
-                <label htmlFor="return-reason-details">Enter return reason *</label>
-                <input
-                  id="return-reason-details"
-                  value={reasonDetails}
-                  onChange={(event) => setReasonDetails(event.target.value)}
-                  required
-                />
               </div>
             )}
-            <div>
-              <label htmlFor="return-condition">Condition *</label>
-              <select
-                id="return-condition"
-                value={condition}
-                onChange={(event) => setCondition(event.target.value)}
-                disabled={!item}
-              >
-                {conditions.map((value) => (
-                  <option key={value}>{value}</option>
-                ))}
-              </select>
-            </div>
+
+            {canRefund && selectedReturn.remainingRefund > 0 && !selectedReturn.refunds?.some((r) => r.status === 'Pending') && (
+              <div style={{ marginTop: 'var(--space-4)', padding: 'var(--space-3)', background: 'var(--surface-soft)', borderRadius: 'var(--sr-radius-md)' }}>
+                <h4 style={{ color: 'var(--text)', fontSize: 'var(--fs-sm)', marginBottom: 'var(--space-2)' }}>
+                  Process Remaining Refund ({money(business.currency, selectedReturn.remainingRefund)})
+                </h4>
+                <div className="returns-form-grid">
+                  <Field label="Refund Method">
+                    <Select
+                      value={refundMethod}
+                      onChange={(e) => setRefundMethod(e.target.value)}
+                    >
+                      {refundMethods.map((m) => (
+                        <option key={m} value={m}>{m}</option>
+                      ))}
+                    </Select>
+                  </Field>
+                  <Field label="Status">
+                    <Select
+                      value={refundState}
+                      onChange={(e) => setRefundState(e.target.value)}
+                    >
+                      <option value="Pending">Pending</option>
+                      <option value="Refunded">Refunded</option>
+                      <option value="Failed">Failed</option>
+                    </Select>
+                  </Field>
+                </div>
+                <div style={{ marginTop: 'var(--space-3)' }}>
+                  <Button
+                    variant="primary"
+                    disabled={saving}
+                    loading={saving}
+                    onClick={recordRemainingRefund}
+                  >
+                    Record {money(business.currency, selectedReturn.remainingRefund)}
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
-          {invalidQuantity && item && (
-            <p className="setup-error">Quantity must be positive and cannot exceed {item.returnableQuantity}.</p>
-          )}
-        </section>
-
-        <section className={`return-step ${!item || invalidQuantity ? 'disabled-step' : ''}`}>
-          <header>
-            <b>4</b>
-            <div>
-              <small>Refund / payment adjustment</small>
-              <h3>Financial treatment</h3>
-            </div>
-          </header>
-          <div className="return-financial-grid">
-            <span>
-              <small>Order total</small>
-              <strong>{money(business.currency, order?.totalAmount)}</strong>
-            </span>
-            <span>
-              <small>Originally paid</small>
-              <strong>{money(business.currency, order?.amountPaidActual)}</strong>
-            </span>
-            <span>
-              <small>Outstanding before</small>
-              <strong>{money(business.currency, order?.outstandingActual)}</strong>
-            </span>
-            <span>
-              <small>Return value</small>
-              <strong>{money(business.currency, returnValue)}</strong>
-            </span>
-            <span>
-              <small>Outstanding adjustment</small>
-              <strong>{money(business.currency, outstandingAdjustment)}</strong>
-            </span>
-            <span className="refund-due">
-              <small>Refund required</small>
-              <strong>{money(business.currency, refundRequired)}</strong>
-            </span>
-          </div>
-          {refundRequired > 0 && canRefund && (
-            <div className="return-fields">
-              <div>
-                <label htmlFor="refund-method">Refund method</label>
-                <select
-                  id="refund-method"
-                  value={refundMethod}
-                  onChange={(event) => setRefundMethod(event.target.value)}
-                >
-                  {refundMethods.map((value) => (
-                    <option key={value}>{value}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label htmlFor="refund-amount">Amount</label>
-                <input
-                  id="refund-amount"
-                  type="number"
-                  min="0.01"
-                  max={refundRequired}
-                  step="0.01"
-                  value={refundAmount === '' ? refundRequired : refundAmount}
-                  readOnly={!canAdjustRefund}
-                  onChange={(event) => setRefundAmount(event.target.value)}
-                />
-              </div>
-              <div>
-                <label htmlFor="refund-state">Initial status</label>
-                <select
-                  id="refund-state"
-                  value={refundState}
-                  onChange={(event) => setRefundState(event.target.value)}
-                >
-                  <option>Pending</option>
-                  <option>Refunded</option>
-                  <option>Failed</option>
-                </select>
-              </div>
-            </div>
-          )}
-          {refundRequired > 0 && !canRefund && (
-            <p className="return-notice">
-              The physical return can be completed, but an authorized user must process the pending refund.
-            </p>
-          )}
-        </section>
-
-        <section className={`return-step return-review ${!item || invalidQuantity ? 'disabled-step' : ''}`}>
-          <header>
-            <b>5</b>
-            <div>
-              <small>Review & confirm</small>
-              <h3>Return summary</h3>
-            </div>
-          </header>
-          {item && (
-            <div className="return-review-grid">
-              <div>
-                <small>Order / Customer</small>
-                <strong>{order.orderNumber} · {order.customerName}</strong>
-              </div>
-              <div>
-                <small>Product / Quantity</small>
-                <strong>{item.productName} · {quantity}</strong>
-              </div>
-              <div>
-                <small>Reason / Condition</small>
-                <strong>
-                  {reason}{reasonDetails ? ` — ${reasonDetails}` : ''} · {condition}
-                </strong>
-              </div>
-              <div>
-                <small>Payment adjustment</small>
-                <strong>
-                  {money(business.currency, outstandingAdjustment)} balance · {money(business.currency, refundRequired)} refund
-                </strong>
-              </div>
-              <div>
-                <small>Inventory action</small>
-                <strong>
-                  {condition === 'Sellable'
-                    ? `Return ${quantity} to available inventory`
-                    : `Move ${quantity} to ${condition.toLowerCase()} / non-sellable stock`}
-                </strong>
-              </div>
-            </div>
-          )}
-          <button
-            className="submit-button return-confirm-button"
-            type="submit"
-            disabled={!item || invalidQuantity || saving}
-          >
-            Review return <span>→</span>
-          </button>
-        </section>
-      </form>
-    )}
-
-    <div className="section-heading return-history-heading">
-      <div>
-        <p className="dashboard-kicker">Audit history</p>
-        <h2>Sales returns</h2>
-      </div>
+        )}
+      </Modal>
     </div>
-
-    <div className="return-filters">
-      <input
-        aria-label="Search returns"
-        value={filters.search}
-        onChange={(event) => updateFilter('search', event.target.value)}
-        placeholder="Return ID, order, product, SKU or customer"
-      />
-      <select
-        value={filters.status}
-        onChange={(event) => updateFilter('status', event.target.value)}
-      >
-        <option value="all">All return statuses</option>
-        <option>Pending</option>
-        <option>Completed</option>
-        <option>Cancelled</option>
-      </select>
-      <select
-        value={filters.refundStatus}
-        onChange={(event) => updateFilter('refundStatus', event.target.value)}
-      >
-        <option value="all">All refund statuses</option>
-        <option>Not Required</option>
-        <option>Pending</option>
-        <option>Partially Refunded</option>
-        <option>Refunded</option>
-        <option>Failed</option>
-        <option>Cancelled</option>
-      </select>
-      <select
-        value={filters.reason}
-        onChange={(event) => updateFilter('reason', event.target.value)}
-      >
-        <option value="all">All reasons</option>
-        {reasons.map((value) => (
-          <option key={value}>{value}</option>
-        ))}
-      </select>
-      <select
-        value={filters.condition}
-        onChange={(event) => updateFilter('condition', event.target.value)}
-      >
-        <option value="all">All conditions</option>
-        {conditions.map((value) => (
-          <option key={value}>{value}</option>
-        ))}
-      </select>
-      <select
-        value={filters.refundMethod}
-        onChange={(event) => updateFilter('refundMethod', event.target.value)}
-      >
-        <option value="all">All refund methods</option>
-        {refundMethods.map((value) => (
-          <option key={value}>{value}</option>
-        ))}
-      </select>
-      <input
-        type="date"
-        aria-label="Returns from date"
-        value={filters.dateFrom}
-        onChange={(event) => updateFilter('dateFrom', event.target.value)}
-      />
-      <input
-        type="date"
-        aria-label="Returns to date"
-        value={filters.dateTo}
-        onChange={(event) => updateFilter('dateTo', event.target.value)}
-      />
-    </div>
-
-    <AsyncBoundary
-      loading={loading}
-      error={error}
-      onRetry={refetch}
-      isEmpty={!filteredReturns.length}
-      emptyText={returns.length ? 'No returns match these filters.' : 'No sales returns recorded yet.'}
-    >
-      <div className="return-history-list">
-        {filteredReturns.map((record) => (
-          <button
-            type="button"
-            key={record.returnId}
-            onClick={() => setSelectedReturn(record)}
-          >
-            <span>
-              <strong>{record.returnId}</strong>
-              <small>{record.orderNumber} · {record.customerName}</small>
-            </span>
-            <span>
-              <strong>{record.productName}</strong>
-              <small>{record.productSku} · {record.quantity} units</small>
-            </span>
-            <span>
-              <strong>{money(business.currency, record.returnValue || record.refundAmount)}</strong>
-              <small>{record.reason} · {record.condition || 'Legacy return'}</small>
-            </span>
-            <span>
-              <em className={`status-badge ${record.refundStatus === 'Refunded' ? 'active' : 'inactive'}`}>
-                {record.refundStatus || 'Not Required'}
-              </em>
-              <small>{record.status} · {new Date(record.createdAt).toLocaleDateString()}</small>
-            </span>
-          </button>
-        ))}
-      </div>
-    </AsyncBoundary>
-
-    {confirming && (
-      <div className="supplier-modal-backdrop return-dialog-backdrop">
-        <div className="supplier-modal return-dialog" role="dialog" aria-modal="true" aria-labelledby="return-confirm-title">
-          <div className="product-form-heading">
-            <div>
-              <p className="dashboard-kicker">Final confirmation</p>
-              <h3 id="return-confirm-title">Complete this return?</h3>
-            </div>
-          </div>
-          <p>{quantity} × {item.productName} will be recorded as {condition.toLowerCase()}.</p>
-          <div className="return-dialog-impact">
-            <span>
-              Inventory
-              <strong>{condition === 'Sellable' ? 'Available stock increases' : 'Non-sellable stock increases'}</strong>
-            </span>
-            <span>
-              Outstanding adjustment
-              <strong>{money(business.currency, outstandingAdjustment)}</strong>
-            </span>
-            <span>
-              Refund required
-              <strong>{money(business.currency, refundRequired)}</strong>
-            </span>
-          </div>
-          <p className="return-notice">
-            Refund records are internal workflow records. No UPI, card, or bank gateway will be contacted.
-          </p>
-          <div className="product-form-actions">
-            <button
-              className="outline-button"
-              type="button"
-              disabled={saving}
-              onClick={() => setConfirming(false)}
-            >
-              Cancel
-            </button>
-            <button
-              className="submit-button"
-              type="button"
-              disabled={saving}
-              onClick={confirm}
-            >
-              {saving ? 'Processing…' : 'Confirm return'}
-            </button>
-          </div>
-        </div>
-      </div>
-    )}
-
-    {selectedReturn && (
-      <div
-        className="supplier-modal-backdrop return-dialog-backdrop"
-        onMouseDown={(event) => event.target === event.currentTarget && setSelectedReturn(null)}
-      >
-        <div className="supplier-modal return-detail-dialog" role="dialog" aria-modal="true">
-          <div className="product-form-heading">
-            <div>
-              <p className="dashboard-kicker">Return details</p>
-              <h3>{selectedReturn.returnId}</h3>
-            </div>
-            <button className="close-button" type="button" onClick={() => setSelectedReturn(null)}>
-              ×
-            </button>
-          </div>
-          <div className="return-detail-grid">
-            {[
-              ['Order', selectedReturn.orderNumber],
-              ['Customer', selectedReturn.customerName],
-              ['Product', `${selectedReturn.productName} (${selectedReturn.productSku || 'No SKU'})`],
-              ['Quantity', selectedReturn.quantity],
-              ['Return value', money(business.currency, selectedReturn.returnValue || selectedReturn.refundAmount)],
-              ['Reason', `${selectedReturn.reason}${selectedReturn.reasonDetails ? ` — ${selectedReturn.reasonDetails}` : ''}`],
-              ['Condition', selectedReturn.condition || 'Legacy return'],
-              ['Inventory', selectedReturn.inventoryAction || 'sellable'],
-              ['Outstanding adjusted', money(business.currency, selectedReturn.outstandingAdjustment)],
-              ['Refunded', money(business.currency, selectedReturn.refundAmount)],
-              ['Remaining refund', money(business.currency, selectedReturn.remainingRefund)],
-              ['Refund status', selectedReturn.refundStatus || 'Not Required'],
-              ['Return status', selectedReturn.status],
-              ['Processed by', selectedReturn.processedBy],
-              ['Date', new Date(selectedReturn.createdAt).toLocaleString()],
-            ].map(([label, value]) => (
-              <span key={label}>
-                <small>{label}</small>
-                <strong>{value}</strong>
-              </span>
-            ))}
-          </div>
-
-          {selectedReturn.refunds?.length > 0 && (
-            <div className="refund-history">
-              <h4>Refund transactions</h4>
-              {selectedReturn.refunds.map((refund) => (
-                <article key={refund.refundId}>
-                  <span>
-                    <strong>{money(business.currency, refund.amount)}</strong>
-                    <small>{refund.resolvedMethod || refund.method}</small>
-                  </span>
-                  <em>{refund.status}</em>
-                  {canRefund && ['Pending', 'Failed'].includes(refund.status) && (
-                    <span className="product-actions">
-                      <button
-                        type="button"
-                        disabled={saving}
-                        onClick={() => updateRefundStatus(refund, 'Refunded')}
-                      >
-                        {refund.status === 'Failed' ? 'Retry as refunded' : 'Mark refunded'}
-                      </button>
-                      {refund.status === 'Pending' && (
-                        <button
-                          type="button"
-                          disabled={saving}
-                          onClick={() => updateRefundStatus(refund, 'Failed')}
-                        >
-                          Mark failed
-                        </button>
-                      )}
-                    </span>
-                  )}
-                </article>
-              ))}
-            </div>
-          )}
-
-          {canRefund && selectedReturn.remainingRefund > 0 && !selectedReturn.refunds?.some((refund) => refund.status === 'Pending') && (
-            <div className="refund-followup">
-              <h4>Process remaining refund</h4>
-              <select
-                value={refundMethod}
-                onChange={(event) => setRefundMethod(event.target.value)}
-              >
-                {refundMethods.map((value) => (
-                  <option key={value}>{value}</option>
-                ))}
-              </select>
-              <select
-                value={refundState}
-                onChange={(event) => setRefundState(event.target.value)}
-              >
-                <option>Pending</option>
-                <option>Refunded</option>
-                <option>Failed</option>
-              </select>
-              <button
-                className="submit-button"
-                type="button"
-                disabled={saving}
-                onClick={recordRemainingRefund}
-              >
-                {saving ? 'Processing…' : `Record ${money(business.currency, selectedReturn.remainingRefund)}`}
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-    )}
-  </section>
+  )
 }

@@ -1,0 +1,285 @@
+/* ReturnsPage.css - Shared styling for Sales and Purchase Returns using Design Tokens */
+
+.returns-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.return-alert-box {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--sr-radius-md);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.return-alert-success {
+  background: rgba(47, 214, 168, 0.1);
+  color: var(--success);
+  border: 1px solid rgba(47, 214, 168, 0.25);
+}
+
+.return-alert-error {
+  background: rgba(255, 93, 124, 0.1);
+  color: var(--danger);
+  border: 1px solid rgba(255, 93, 124, 0.25);
+}
+
+/* Steps Progress Header */
+.ret-progress-bar {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--sr-radius-lg);
+  background: var(--surface);
+}
+
+.ret-step-chip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--sr-radius-md);
+  background: var(--surface-soft);
+  transition: all 0.2s ease;
+}
+
+.ret-step-chip.active {
+  border-color: var(--orange);
+  background: rgba(255, 106, 26, 0.08);
+}
+
+.ret-step-chip.completed {
+  border-color: rgba(47, 214, 168, 0.3);
+  background: rgba(47, 214, 168, 0.05);
+}
+
+.ret-step-chip-number {
+  display: grid;
+  place-items: center;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  color: var(--text-soft);
+  background: var(--surface);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+}
+
+.ret-step-chip.active .ret-step-chip-number {
+  color: #fff;
+  border-color: var(--orange);
+  background: var(--orange);
+}
+
+.ret-step-chip.completed .ret-step-chip-number {
+  color: var(--success);
+  border-color: rgba(47, 214, 168, 0.4);
+  background: rgba(47, 214, 168, 0.15);
+}
+
+.ret-step-chip-label small {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.ret-step-chip-label strong {
+  display: block;
+  margin-top: 2px;
+  color: var(--text);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
+
+/* Workflow Form Layout */
+.return-workflow-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.return-step-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.return-step-section.disabled-step {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.return-step-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+.return-step-badge {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--sr-radius-sm);
+  color: #fff;
+  background: var(--orange);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+}
+
+.return-step-header-text small {
+  color: var(--muted);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.return-step-header-text h3 {
+  margin: 2px 0 0;
+  color: var(--text);
+  font-size: var(--fs-md);
+  font-weight: 600;
+}
+
+.returns-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-4);
+}
+
+.return-info-pill-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.return-info-pill {
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--sr-radius-md);
+  background: var(--surface-soft);
+}
+
+.return-info-pill small {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.return-info-pill strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--text);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+
+.return-info-pill.highlight-due {
+  border-color: rgba(255, 194, 51, 0.35);
+  background: rgba(255, 194, 51, 0.08);
+}
+
+.return-info-pill.highlight-due strong {
+  color: var(--warning);
+}
+
+.return-selected-product-card {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--sr-radius-md);
+  background: var(--surface-soft);
+}
+
+.return-selected-product-card strong {
+  color: var(--text);
+  font-size: var(--fs-sm);
+}
+
+.return-selected-product-card small {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: var(--fs-xs);
+}
+
+.return-selected-product-card p {
+  margin: var(--space-2) 0 0;
+  color: var(--text-soft);
+  font-size: var(--fs-xs);
+}
+
+.returns-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+/* Detail modal grid */
+.return-detail-fields-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.refund-tx-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--sr-radius-md);
+  background: var(--surface-soft);
+  margin-bottom: var(--space-2);
+}
+
+.returns-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--sr-radius-md);
+  background: var(--surface-soft);
+}
+
+.returns-filter-bar > * {
+  flex: 1 1 150px;
+}
+
+@media (max-width: 1024px) {
+  .ret-progress-bar {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .returns-filter-bar {
+    flex-direction: column;
+  }
+  .returns-filter-bar > * {
+    width: 100%;
+    flex: auto;
+  }
+}

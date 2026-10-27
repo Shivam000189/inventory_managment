@@ -302,14 +302,32 @@ const MOCK_PAYMENTS = [
 
 const MOCK_RETURNS = [
   {
-    returnId: 'ret_1',
+    returnId: 'RET-2026-001',
     returnNumber: 'RET-001',
-    type: 'sales',
-    customerName: 'City Heart Clinic',
-    totalAmount: 1200,
-    status: 'Approved',
-    reason: 'Damaged packaging during transit',
+    type: 'sale',
+    orderId: 'so_501',
+    orderNumber: 'SO-8921',
+    customerId: 'cust_1',
+    customerName: 'City Heart Clinic & Daycare',
+    productId: 'prod_1',
+    productName: 'Paracetamol 500mg',
+    productSku: 'PCM-500',
+    quantity: 10,
+    returnValue: 240,
+    refundAmount: 240,
+    remainingRefund: 0,
+    outstandingAdjustment: 0,
+    refundStatus: 'Refunded',
+    refundMethod: 'UPI',
+    status: 'Completed',
+    condition: 'Sellable',
+    inventoryAction: 'sellable',
+    reason: 'Customer changed mind',
+    processedBy: 'Shivam Admin',
     createdAt: new Date().toISOString(),
+    refunds: [
+      { refundId: 'ref_1', amount: 240, method: 'UPI', status: 'Refunded' },
+    ],
   },
 ];
 
@@ -448,6 +466,25 @@ async function setupMocks(page) {
     }
     if (pathname.includes('/payments')) {
       return respond(MOCK_PAYMENTS);
+    }
+    if (pathname.includes('/returns/eligible-orders')) {
+      return respond(
+        MOCK_SALES_ORDERS.map((o) => ({
+          ...o,
+          invoiceNumber: 'INV-' + o.orderNumber,
+          outstandingActual: 0,
+          amountPaidActual: o.totalAmount,
+          originalPaymentMethods: ['Cash'],
+          items: o.items.map((it) => ({
+            ...it,
+            returnableQuantity: it.quantity,
+            alreadyReturned: 0,
+            discount: 0,
+            tax: 0,
+            sellingPrice: it.unitPrice || 20,
+          })),
+        }))
+      );
     }
     if (pathname.includes('/returns')) {
       return respond(MOCK_RETURNS);
