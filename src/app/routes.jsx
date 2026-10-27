@@ -41,25 +41,21 @@ export const ROUTE_TABLE = {
   Overview: {
     path: '/',
     requiredPermission: null,
-    shellClass: 'overview-dashboard',
     render: (ctx) => <DashboardOverview {...ctx.dashboardOverviewProps} />,
   },
   Products: {
     path: '/products',
     requiredPermission: 'view_inventory',
-    shellClass: 'overview-dashboard stock-ledger-shell products-shell',
     render: (ctx) => <ProductsPage business={ctx.business} account={ctx.account} />,
   },
   Medicines: {
     path: '/medicines',
     requiredPermission: 'view_inventory',
-    shellClass: 'overview-dashboard stock-ledger-shell products-shell',
     render: (ctx) => <ProductsPage business={ctx.business} account={ctx.account} />,
   },
   Categories: {
     path: '/categories',
     requiredPermission: 'view_inventory',
-    shellClass: 'overview-dashboard stock-ledger-shell category-shell',
     render: (ctx) => (
       <InventoryOperations
         section="Categories"
@@ -73,7 +69,6 @@ export const ROUTE_TABLE = {
   Stock: {
     path: '/stock',
     requiredPermission: 'view_inventory',
-    shellClass: 'overview-dashboard stock-ledger-shell',
     render: (ctx) => (
       <InventoryOperations
         section="Stock"
@@ -87,7 +82,6 @@ export const ROUTE_TABLE = {
   'Stock In': {
     path: '/stock-in',
     requiredPermission: 'stock_in',
-    shellClass: 'overview-dashboard stock-ledger-shell stock-in-shell',
     render: (ctx) => (
       <InventoryOperations
         section="Stock In"
@@ -101,7 +95,6 @@ export const ROUTE_TABLE = {
   'Stock Out': {
     path: '/stock-out',
     requiredPermission: 'stock_out',
-    shellClass: 'overview-dashboard stock-ledger-shell stock-in-shell stock-out-shell',
     render: (ctx) => (
       <InventoryOperations
         section="Stock Out"
@@ -115,7 +108,6 @@ export const ROUTE_TABLE = {
   Adjustments: {
     path: '/adjustments',
     requiredPermission: 'edit_product',
-    shellClass: 'overview-dashboard stock-ledger-shell stock-in-shell stock-adjustment-shell',
     render: (ctx) => (
       <InventoryOperations
         section="Adjustments"
@@ -129,7 +121,6 @@ export const ROUTE_TABLE = {
   'Stock History': {
     path: '/stock-history',
     requiredPermission: 'view_inventory',
-    shellClass: 'overview-dashboard stock-ledger-shell stock-audit-shell',
     render: (ctx) => (
       <InventoryOperations
         section="Stock History"
@@ -143,7 +134,6 @@ export const ROUTE_TABLE = {
   'Purchase Orders': {
     path: '/purchase-orders',
     requiredPermission: 'view_inventory',
-    shellClass: 'stock-ledger-shell po-shell',
     render: (ctx) => (
       <PurchaseOrdersPage
         business={ctx.business}
@@ -155,7 +145,6 @@ export const ROUTE_TABLE = {
   Receiving: {
     path: '/receiving',
     requiredPermission: 'stock_in',
-    shellClass: 'stock-ledger-shell grn-shell',
     render: (ctx) => (
       <ReceivingGrnPage
         business={ctx.business}
@@ -167,7 +156,6 @@ export const ROUTE_TABLE = {
   Suppliers: {
     path: '/suppliers',
     requiredPermission: 'view_inventory',
-    shellClass: 'stock-ledger-shell sup-shell',
     render: (ctx) => (
       <SuppliersPage
         business={ctx.business}
@@ -179,13 +167,11 @@ export const ROUTE_TABLE = {
   'POS / Billing': {
     path: '/pos',
     requiredPermission: 'process_pos_sale',
-    shellClass: 'pos-shell',
     render: (ctx) => <PosTerminalPage business={ctx.business} account={ctx.account} />,
   },
   Orders: {
     path: '/orders',
     requiredPermission: 'create_order',
-    shellClass: 'stock-ledger-shell ord-shell',
     render: (ctx) => (
       <SalesOrdersPage
         business={ctx.business}
@@ -198,31 +184,26 @@ export const ROUTE_TABLE = {
   Customers: {
     path: '/customers',
     requiredPermission: 'create_order',
-    shellClass: 'stock-ledger-shell cust-shell',
     render: (ctx) => <CustomersPage business={ctx.business} onNavigate={ctx.navigateTo} />,
   },
   Payments: {
     path: '/payments',
     requiredPermission: 'view_reports',
-    shellClass: 'stock-ledger-shell pay-shell',
     render: (ctx) => <PaymentsPage business={ctx.business} account={ctx.account} />,
   },
   Returns: {
     path: '/returns',
     requiredPermission: 'create_order',
-    shellClass: 'stock-ledger-shell ret-shell',
     render: (ctx) => <Returns business={ctx.business} account={ctx.account} purchase={false} />,
   },
   'Purchase Returns': {
     path: '/purchase-returns',
     requiredPermission: 'create_order',
-    shellClass: 'stock-ledger-shell ret-shell',
     render: (ctx) => <Returns business={ctx.business} account={ctx.account} purchase={true} />,
   },
   Users: {
     path: '/users',
     requiredPermission: 'manage_users',
-    shellClass: 'stock-ledger-shell um-shell',
     render: (ctx) => (
       <UserManagementPage section="Users" business={ctx.business} account={ctx.account} />
     ),
@@ -230,7 +211,6 @@ export const ROUTE_TABLE = {
   Roles: {
     path: '/roles',
     requiredPermission: 'manage_users',
-    shellClass: 'stock-ledger-shell um-shell',
     render: (ctx) => (
       <UserManagementPage section="Roles" business={ctx.business} account={ctx.account} />
     ),
@@ -238,7 +218,6 @@ export const ROUTE_TABLE = {
   Permissions: {
     path: '/permissions',
     requiredPermission: 'manage_users',
-    shellClass: 'stock-ledger-shell um-shell',
     render: (ctx) => (
       <UserManagementPage section="Permissions" business={ctx.business} account={ctx.account} />
     ),
@@ -246,13 +225,11 @@ export const ROUTE_TABLE = {
   Reports: {
     path: '/reports',
     requiredPermission: 'view_reports',
-    shellClass: 'stock-ledger-shell rep-shell',
     render: (ctx) => <ReportsPage business={ctx.business} />,
   },
   'Business Profile': {
     path: '/business-profile',
     requiredPermission: 'manage_users',
-    shellClass: 'stock-ledger-shell biz-shell',
     render: (ctx) => (
       <BusinessProfilePage
         business={ctx.business}
@@ -264,7 +241,6 @@ export const ROUTE_TABLE = {
   Industry: {
     path: '/industry',
     requiredPermission: 'manage_users',
-    shellClass: 'stock-ledger-shell biz-shell',
     render: (ctx) => (
       <BusinessProfilePage
         business={ctx.business}
@@ -276,7 +252,6 @@ export const ROUTE_TABLE = {
   Settings: {
     path: '/settings',
     requiredPermission: 'manage_users',
-    shellClass: 'stock-ledger-shell biz-shell',
     render: (ctx) => (
       <StoreSettingsPage business={ctx.business} onBusinessUpdate={ctx.updateBusiness} />
     ),
@@ -284,13 +259,11 @@ export const ROUTE_TABLE = {
   'Color Management': {
     path: '/colors',
     requiredPermission: 'view_inventory',
-    shellClass: 'stock-ledger-shell var-shell',
     render: (ctx) => <ColorManagementPage business={ctx.business} account={ctx.account} />,
   },
   'Size Management': {
     path: '/sizes',
     requiredPermission: 'view_inventory',
-    shellClass: 'stock-ledger-shell var-shell',
     render: (ctx) => (
       <IndustryModule section="Size Management" business={ctx.business} onNavigate={ctx.navigateTo} />
     ),
@@ -298,7 +271,6 @@ export const ROUTE_TABLE = {
   'Product Variants': {
     path: '/variants',
     requiredPermission: 'view_inventory',
-    shellClass: 'stock-ledger-shell var-shell',
     render: (ctx) => (
       <IndustryModule section="Product Variants" business={ctx.business} onNavigate={ctx.navigateTo} />
     ),
@@ -306,7 +278,6 @@ export const ROUTE_TABLE = {
   'Batch Management': {
     path: '/batches',
     requiredPermission: 'view_inventory',
-    shellClass: 'stock-ledger-shell var-shell',
     render: (ctx) => (
       <IndustryModule section="Batch Management" business={ctx.business} onNavigate={ctx.navigateTo} />
     ),
@@ -314,7 +285,6 @@ export const ROUTE_TABLE = {
   'Expiry Tracking': {
     path: '/expiry',
     requiredPermission: 'view_inventory',
-    shellClass: 'stock-ledger-shell var-shell',
     render: (ctx) => (
       <IndustryModule section="Expiry Tracking" business={ctx.business} onNavigate={ctx.navigateTo} />
     ),
@@ -322,7 +292,6 @@ export const ROUTE_TABLE = {
   'Prescription Management': {
     path: '/prescriptions',
     requiredPermission: 'create_order',
-    shellClass: '',
     render: (ctx) => (
       <IndustryModule section="Prescription Management" business={ctx.business} onNavigate={ctx.navigateTo} />
     ),
@@ -330,7 +299,6 @@ export const ROUTE_TABLE = {
   'Serial Numbers': {
     path: '/serial-numbers',
     requiredPermission: 'view_inventory',
-    shellClass: 'stock-ledger-shell var-shell',
     render: (ctx) => (
       <IndustryModule section="Serial Numbers" business={ctx.business} onNavigate={ctx.navigateTo} />
     ),
@@ -338,7 +306,6 @@ export const ROUTE_TABLE = {
   'Warranty Tracking': {
     path: '/warranties',
     requiredPermission: 'view_inventory',
-    shellClass: 'stock-ledger-shell var-shell',
     render: (ctx) => (
       <IndustryModule section="Warranty Tracking" business={ctx.business} onNavigate={ctx.navigateTo} />
     ),
@@ -346,7 +313,6 @@ export const ROUTE_TABLE = {
   'Offers / Discounts': {
     path: '/offers',
     requiredPermission: 'process_pos_sale',
-    shellClass: '',
     render: (ctx) => (
       <IndustryModule section="Offers / Discounts" business={ctx.business} onNavigate={ctx.navigateTo} />
     ),
@@ -354,7 +320,6 @@ export const ROUTE_TABLE = {
   'Bulk Orders': {
     path: '/bulk-orders',
     requiredPermission: 'create_order',
-    shellClass: 'stock-ledger-shell cs-shell',
     render: (ctx) => (
       <SalesOrdersPage
         business={ctx.business}
@@ -367,7 +332,6 @@ export const ROUTE_TABLE = {
   'Credit Sales': {
     path: '/credit-sales',
     requiredPermission: 'create_order',
-    shellClass: 'stock-ledger-shell cs-shell',
     render: (ctx) => (
       <SalesOrdersPage
         business={ctx.business}
@@ -380,13 +344,11 @@ export const ROUTE_TABLE = {
   'Bulk Pricing': {
     path: '/bulk-pricing',
     requiredPermission: 'edit_product',
-    shellClass: 'stock-ledger-shell cs-shell',
     render: (ctx) => <BulkPricingPage business={ctx.business} account={ctx.account} />,
   },
   'Variant Grid': {
     path: '/variant-grid',
     requiredPermission: 'view_variants',
-    shellClass: 'stock-ledger-shell cloth-shell',
     render: (ctx) => (
       <ClothingModule section="Variant Grid" business={ctx.business} account={ctx.account} />
     ),
@@ -394,7 +356,6 @@ export const ROUTE_TABLE = {
   Replenishment: {
     path: '/replenishment',
     requiredPermission: 'view_replenishment',
-    shellClass: 'stock-ledger-shell cloth-shell',
     render: (ctx) => (
       <ClothingModule section="Replenishment" business={ctx.business} account={ctx.account} />
     ),
@@ -402,7 +363,6 @@ export const ROUTE_TABLE = {
   Promotions: {
     path: '/promotions',
     requiredPermission: 'manage_promotions',
-    shellClass: 'stock-ledger-shell cloth-shell',
     render: (ctx) => (
       <ClothingModule section="Promotions" business={ctx.business} account={ctx.account} />
     ),
@@ -410,7 +370,6 @@ export const ROUTE_TABLE = {
   Loyalty: {
     path: '/loyalty',
     requiredPermission: 'manage_loyalty',
-    shellClass: 'stock-ledger-shell cloth-shell',
     render: (ctx) => (
       <ClothingModule section="Loyalty" business={ctx.business} account={ctx.account} />
     ),
@@ -418,7 +377,6 @@ export const ROUTE_TABLE = {
   Coupons: {
     path: '/coupons',
     requiredPermission: 'manage_coupons',
-    shellClass: 'stock-ledger-shell cloth-shell',
     render: (ctx) => (
       <ClothingModule section="Coupons" business={ctx.business} account={ctx.account} />
     ),
@@ -426,7 +384,6 @@ export const ROUTE_TABLE = {
   'Gift Cards': {
     path: '/gift-cards',
     requiredPermission: 'manage_gift_cards',
-    shellClass: 'stock-ledger-shell cloth-shell',
     render: (ctx) => (
       <ClothingModule section="Gift Cards" business={ctx.business} account={ctx.account} />
     ),
@@ -434,7 +391,6 @@ export const ROUTE_TABLE = {
   'Cashier Shifts': {
     path: '/cashier-shifts',
     requiredPermission: 'manage_cashier_shift',
-    shellClass: 'stock-ledger-shell cloth-shell',
     render: (ctx) => (
       <ClothingModule section="Cashier Shifts" business={ctx.business} account={ctx.account} />
     ),
@@ -442,7 +398,6 @@ export const ROUTE_TABLE = {
   'Clothing Reports': {
     path: '/clothing-reports',
     requiredPermission: 'view_clothing_reports',
-    shellClass: 'stock-ledger-shell cloth-shell',
     render: (ctx) => (
       <ClothingModule section="Clothing Reports" business={ctx.business} account={ctx.account} />
     ),
@@ -450,7 +405,6 @@ export const ROUTE_TABLE = {
   'Raw Materials': {
     path: '/raw-materials',
     requiredPermission: 'view_inventory',
-    shellClass: '',
     render: (ctx) => (
       <IndustryModule section="Raw Materials" business={ctx.business} onNavigate={ctx.navigateTo} />
     ),
@@ -458,7 +412,6 @@ export const ROUTE_TABLE = {
   'Bill of Materials': {
     path: '/bill-of-materials',
     requiredPermission: 'view_inventory',
-    shellClass: '',
     render: (ctx) => (
       <IndustryModule section="Bill of Materials" business={ctx.business} onNavigate={ctx.navigateTo} />
     ),
@@ -466,7 +419,6 @@ export const ROUTE_TABLE = {
   Production: {
     path: '/production',
     requiredPermission: 'stock_out',
-    shellClass: '',
     render: (ctx) => (
       <IndustryModule section="Production" business={ctx.business} onNavigate={ctx.navigateTo} />
     ),
@@ -474,7 +426,6 @@ export const ROUTE_TABLE = {
   'Finished Goods': {
     path: '/finished-goods',
     requiredPermission: 'view_inventory',
-    shellClass: '',
     render: (ctx) => (
       <IndustryModule section="Finished Goods" business={ctx.business} onNavigate={ctx.navigateTo} />
     ),
@@ -482,21 +433,14 @@ export const ROUTE_TABLE = {
   'Production Tracking': {
     path: '/production-tracking',
     requiredPermission: 'view_inventory',
-    shellClass: '',
     render: (ctx) => (
       <IndustryModule section="Production Tracking" business={ctx.business} onNavigate={ctx.navigateTo} />
     ),
   },
 }
 
-export function shellClassFor(routeOrLabel) {
-  if (!routeOrLabel) return ''
-  if (routeOrLabel.startsWith('/')) {
-    if (routeOrLabel === '/' || routeOrLabel === '/overview') return ROUTE_TABLE.Overview.shellClass
-    const entry = Object.values(ROUTE_TABLE).find((item) => item.path === routeOrLabel)
-    return entry ? entry.shellClass : ''
-  }
-  return ROUTE_TABLE[routeOrLabel]?.shellClass || ''
+export function shellClassFor(_routeOrLabel) {
+  return ''
 }
 
 export function navLabelForPath(pathname, productLabel = 'Products') {

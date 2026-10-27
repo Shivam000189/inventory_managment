@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { AnimatePresence, motion, MotionConfig } from "motion/react";
 import { authApi } from "../../api/authApi.js";
+import "./AuthPage.css";
 
 const AUTH_COPY = {
   signin: { title: "Login", subtitle: "Welcome to log in to your background management system.", submit: "LOGIN" },

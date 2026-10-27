@@ -19,7 +19,6 @@ import { getNavigation, resolveBusinessCapabilities } from "../../shared/industr
 import {
   ROUTE_TABLE,
   NotFoundPage,
-  shellClassFor,
   navLabelForPath,
   pathForNavLabel,
 } from "./routes.jsx";
@@ -172,11 +171,9 @@ function DashboardView() {
     },
   };
 
-  const currentShellClass = shellClassFor(activeNav);
-
   return (
     <main
-      className={`dashboard-shell modern-theme ${currentShellClass} industry-${String(business?.industry || "general")
+      className={`dashboard-shell modern-theme industry-${String(business?.industry || "general")
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "-")}${mobileNavOpen ? " nav-open" : ""}`}
     >
