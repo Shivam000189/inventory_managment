@@ -42,16 +42,18 @@ export function Skeleton({ width = '100%', height = 20, borderRadius = 'var(--ra
   )
 }
 
-export function FormStatus({ type = 'success', message, onClose = null, className = '' }) {
-  if (!message) return null
+export function FormStatus({ type = 'success', variant = type, message, children, onClose = null, className = '' }) {
+  const content = message || children
+  if (!content) return null
+  const statusType = variant || type
   return (
     <div
-      className={`ui-form-status ui-form-status-${type} form-status ${type === 'error' ? 'error' : ''} ${className}`}
-      role={type === 'error' ? 'alert' : 'status'}
+      className={`ui-form-status ui-form-status-${statusType} form-status ${statusType === 'error' ? 'error' : ''} ${className}`}
+      role={statusType === 'error' ? 'alert' : 'status'}
       aria-live="polite"
     >
-      <Icon name={type === 'error' ? 'alert-circle' : type === 'warning' ? 'warning' : 'check'} size={18} />
-      <span style={{ flex: '1 1 auto' }}>{message}</span>
+      <Icon name={statusType === 'error' ? 'alert-circle' : statusType === 'warning' ? 'warning' : 'check'} size={18} />
+      <span style={{ flex: '1 1 auto' }}>{content}</span>
       {onClose && (
         <button
           type="button"
@@ -67,3 +69,4 @@ export function FormStatus({ type = 'success', message, onClose = null, classNam
 }
 
 export const Toast = FormStatus
+export const Alert = FormStatus

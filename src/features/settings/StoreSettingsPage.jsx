@@ -1,6 +1,10 @@
 import { useState } from 'react'
 import { businessApi } from '../../api/businessApi.js'
-import '../../styles/business-settings.css'
+import { PageHeader } from '../../components/ui/PageHeader.jsx'
+import { Field, Input, Select } from '../../components/ui/FormControls.jsx'
+import { Button } from '../../components/ui/Button.jsx'
+import { Alert } from '../../components/ui/Feedback.jsx'
+import './SettingsPage.css'
 
 const DEFAULT_SETTINGS = {
   lowStockLimit: 10,
@@ -19,7 +23,8 @@ export default function StoreSettingsPage({ business, onBusinessUpdate }) {
   const [message, setMessage] = useState(null)
   const [saving, setSaving] = useState(false)
 
-  const updateSetting = (key, value) => setSettings({ ...settings, [key]: value })
+  const updateSetting = (key, value) => setSettings((prev) => ({ ...prev, [key]: value }))
+
   const offer = settings.paymentOffers?.[0] || {
     code: '',
     label: '',
@@ -30,12 +35,14 @@ export default function StoreSettingsPage({ business, onBusinessUpdate }) {
     maximumDiscount: 0,
     active: true,
   }
+
   const updateOffer = (key, value) => updateSetting('paymentOffers', [{ ...offer, [key]: value }])
 
   const save = async (event) => {
     event.preventDefault()
     if (saving) return
     setSaving(true)
+    setMessage(null)
     try {
       const updated = await businessApi.update({ settings })
       onBusinessUpdate?.(updated)
@@ -48,31 +55,34 @@ export default function StoreSettingsPage({ business, onBusinessUpdate }) {
   }
 
   return (
-    <section className="settings-page">
-      <div className="products-toolbar">
-        <div>
-          <p className="dashboard-kicker">Business / Settings</p>
-          <h2>Settings</h2>
-          <p className="products-count">Rules and defaults for {business?.name}</p>
-        </div>
-      </div>
+    <section className="settings-page" aria-label="Store Settings">
+      <PageHeader
+        title="Settings"
+        subtitle={`Rules and defaults for ${business?.name || 'this business'}`}
+        breadcrumbs={[
+          { label: 'Business', href: '#' },
+          { label: 'Settings' },
+        ]}
+      />
 
-      <form className="settings-form compact-settings" onSubmit={save}>
+      <form className="settings-card" onSubmit={save}>
+        <div className="settings-section-header">
+          <h3>Inventory & Invoicing Defaults</h3>
+        </div>
+
         <div className="settings-grid">
-          <div>
-            <label htmlFor="settings-low-stock">Low stock limit</label>
-            <input
+          <Field label="Low stock limit" id="settings-low-stock">
+            <Input
               id="settings-low-stock"
               type="number"
               min="0"
               value={settings.lowStockLimit}
               onChange={(event) => updateSetting('lowStockLimit', Number(event.target.value))}
             />
-          </div>
+          </Field>
 
-          <div>
-            <label htmlFor="settings-payment">Default payment method</label>
-            <select
+          <Field label="Default payment method" id="settings-payment">
+            <Select
               id="settings-payment"
               value={settings.defaultPaymentMethod}
               onChange={(event) => updateSetting('defaultPaymentMethod', event.target.value)}
@@ -83,21 +93,19 @@ export default function StoreSettingsPage({ business, onBusinessUpdate }) {
               <option>Bank transfer</option>
               <option>Credit</option>
               <option>Other</option>
-            </select>
-          </div>
+            </Select>
+          </Field>
 
-          <div>
-            <label htmlFor="settings-invoice">Invoice prefix</label>
-            <input
+          <Field label="Invoice prefix" id="settings-invoice">
+            <Input
               id="settings-invoice"
               value={settings.invoicePrefix}
               onChange={(event) => updateSetting('invoicePrefix', event.target.value.toUpperCase())}
             />
-          </div>
+          </Field>
 
-          <div>
-            <label htmlFor="settings-gst">Default GST rate %</label>
-            <input
+          <Field label="Default GST rate %" id="settings-gst">
+            <Input
               id="settings-gst"
               type="number"
               min="0"
@@ -106,19 +114,18 @@ export default function StoreSettingsPage({ business, onBusinessUpdate }) {
               value={settings.defaultGstRate}
               onChange={(event) => updateSetting('defaultGstRate', Number(event.target.value))}
             />
-          </div>
+          </Field>
 
-          <div>
-            <label htmlFor="settings-upi">Business UPI ID</label>
-            <input
+          <Field label="Business UPI ID" id="settings-upi">
+            <Input
               id="settings-upi"
               value={settings.upiId}
               onChange={(event) => updateSetting('upiId', event.target.value)}
               placeholder="merchant@bank"
             />
-          </div>
+          </Field>
 
-          <label className="settings-toggle">
+          <label className="settings-toggle-card">
             <input
               type="checkbox"
               checked={settings.allowPriceOverride}
@@ -127,21 +134,24 @@ export default function StoreSettingsPage({ business, onBusinessUpdate }) {
             Allow authorized POS price override
           </label>
 
-          <div className="field-wide pos-offer-settings">
-            <strong>POS payment offer</strong>
-            <input
+          <div className="pos-offer-box">
+            <div className="pos-offer-box-header">POS payment offer</div>
+            <Input
               value={offer.code}
               onChange={(event) => updateOffer('code', event.target.value.toUpperCase())}
               placeholder="Offer code"
+              aria-label="Offer code"
             />
-            <input
+            <Input
               value={offer.label}
               onChange={(event) => updateOffer('label', event.target.value)}
               placeholder="Offer label"
+              aria-label="Offer label"
             />
-            <select
+            <Select
               value={offer.paymentMethod}
               onChange={(event) => updateOffer('paymentMethod', event.target.value)}
+              aria-label="Payment method"
             >
               <option value="Any">Any payment method</option>
               <option>UPI</option>
@@ -152,38 +162,42 @@ export default function StoreSettingsPage({ business, onBusinessUpdate }) {
               <option>Cash</option>
               <option>Gift Card</option>
               <option>Store Credit</option>
-            </select>
-            <select
+            </Select>
+            <Select
               value={offer.discountType}
               onChange={(event) => updateOffer('discountType', event.target.value)}
+              aria-label="Discount type"
             >
               <option value="percent">Percent</option>
               <option value="fixed">Fixed</option>
-            </select>
-            <input
+            </Select>
+            <Input
               type="number"
               min="0"
               value={offer.value}
               onChange={(event) => updateOffer('value', Number(event.target.value))}
               placeholder="Discount value"
+              aria-label="Discount value"
             />
-            <input
+            <Input
               type="number"
               min="0"
               value={offer.minimumAmount}
               onChange={(event) => updateOffer('minimumAmount', Number(event.target.value))}
               placeholder="Minimum bill"
+              aria-label="Minimum bill"
             />
-            <input
+            <Input
               type="number"
               min="0"
               value={offer.maximumDiscount}
               onChange={(event) => updateOffer('maximumDiscount', Number(event.target.value))}
               placeholder="Max discount"
+              aria-label="Max discount"
             />
           </div>
 
-          <label className="settings-toggle">
+          <label className="settings-toggle-card">
             <input
               type="checkbox"
               checked={settings.taxEnabled}
@@ -192,7 +206,7 @@ export default function StoreSettingsPage({ business, onBusinessUpdate }) {
             Enable tax fields
           </label>
 
-          <label className="settings-toggle">
+          <label className="settings-toggle-card">
             <input
               type="checkbox"
               checked={settings.allowNegativeStock}
@@ -202,10 +216,17 @@ export default function StoreSettingsPage({ business, onBusinessUpdate }) {
           </label>
         </div>
 
-        <button className="submit-button settings-save-button" type="submit" disabled={saving}>
-          {saving ? 'Saving…' : 'Save settings'} <span>→</span>
-        </button>
-        {message && <p className={`form-status ${message.type}`} role="status">{message.text}</p>}
+        {message && (
+          <Alert variant={message.type === 'error' ? 'error' : 'success'}>
+            {message.text}
+          </Alert>
+        )}
+
+        <div className="settings-actions">
+          <Button type="submit" variant="primary" loading={saving} disabled={saving}>
+            {saving ? 'Saving…' : 'Save settings'}
+          </Button>
+        </div>
       </form>
     </section>
   )
