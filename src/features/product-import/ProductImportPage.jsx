@@ -1,8 +1,14 @@
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { productImportApi } from "../../api/productImportApi.js";
 import { supplierApi } from "../../api/supplierApi.js";
 import { useResource } from "../../hooks/useResource.js";
-import "../../styles/product-import.css";
+import { PageHeader } from "../../components/ui/PageHeader.jsx";
+import { StatGrid, StatCard, Card } from "../../components/ui/Card.jsx";
+import { DataTable } from "../../components/ui/DataTable.jsx";
+import { Button } from "../../components/ui/Button.jsx";
+import { Field, Input, Select, Checkbox } from "../../components/ui/FormControls.jsx";
+import { Badge } from "../../components/ui/Badge.jsx";
+import "./ProductImportPage.css";
 
 const COLUMNS = [
   ["name", "Product name"],
@@ -25,6 +31,7 @@ const COLUMNS = [
   ["targetStock", "Target stock"],
   ["reorderQuantity", "Reorder qty"],
 ];
+
 const NUMERIC = new Set([
   "quantity",
   "purchasePrice",
@@ -36,6 +43,7 @@ const NUMERIC = new Set([
   "targetStock",
   "reorderQuantity",
 ]);
+
 const REQUIRED_COLUMNS = new Set(["name", "sku", "category"]);
 const STATUS_LABEL = { completed: "Completed", partial: "Warnings", failed: "Failed" };
 const FILE_ICON = { csv: "▤", xlsx: "▦", pdf: "▥" };
@@ -84,10 +92,10 @@ function downloadSampleTemplate() {
 }
 
 export default function ProductImport({
-  business,
+  business = {},
   onImportSuccess,
   onClose,
-  isModal = false,
+  isModal: _isModal = false,
 }) {
   const load = useCallback(
     () =>
@@ -98,7 +106,7 @@ export default function ProductImport({
     [],
   );
   const { data, refetch } = useResource(load, [], [[], []]);
-  const [suppliers, history] = data;
+  const [suppliers = [], history = []] = data;
   const [preview, setPreview] = useState(null);
   const [supplierId, setSupplierId] = useState("");
   const [purchaseReference, setPurchaseReference] = useState("");
@@ -114,6 +122,7 @@ export default function ProductImport({
   const [expandedLog, setExpandedLog] = useState(null);
   const inputRef = useRef(null);
   const isClothing = String(business.industry || "").toLowerCase() === "clothing";
+
   const summary = useMemo(
     () =>
       preview
@@ -126,11 +135,15 @@ export default function ProductImport({
         : null,
     [preview],
   );
+
   const hasInvalidRows = Boolean(preview?.rows.some((row) => !row.valid));
   useEffect(() => {
     if (!hasInvalidRows) return;
-    requestAnimationFrame(() => document.querySelector('.import-table [data-invalid="true"]')?.focus({ preventScroll: true }));
+    requestAnimationFrame(() =>
+      document.querySelector('.import-preview-table [data-invalid="true"]')?.focus({ preventScroll: true })
+    );
   }, [preview?.fileName, hasInvalidRows]);
+
   const filteredHistory = useMemo(() => {
     const term = historySearch.trim().toLowerCase();
     return history.filter((item) => {
@@ -149,7 +162,10 @@ export default function ProductImport({
       const extracted = await productImportApi.extract(file);
       setPreview(
         updateExistingPrices
-          ? { ...extracted, rows: extracted.rows.map((row) => (row.duplicate ? { ...row, duplicateAction: "update" } : row)) }
+          ? {
+              ...extracted,
+              rows: extracted.rows.map((row) => (row.duplicate ? { ...row, duplicateAction: "update" } : row)),
+            }
           : extracted,
       );
     } catch (error) {
@@ -159,6 +175,7 @@ export default function ProductImport({
       if (inputRef.current) inputRef.current.value = "";
     }
   };
+
   const edit = (index, field, value) =>
     setPreview((current) => ({
       ...current,
@@ -171,6 +188,7 @@ export default function ProductImport({
           : row,
       ),
     }));
+
   const setAllDuplicates = (duplicateAction) =>
     setPreview((current) => ({
       ...current,
@@ -178,6 +196,7 @@ export default function ProductImport({
         row.duplicate ? { ...row, duplicateAction } : row,
       ),
     }));
+
   const confirm = async () => {
     if (working || !preview) return;
     setWorking(true);
@@ -208,448 +227,456 @@ export default function ProductImport({
     }
   };
 
-  return (
-    <section className="import-page">
-      <div className="products-toolbar import-hero-top">
+  const historyColumns = [
+    {
+      key: "file",
+      header: "File & Batch ID",
+      render: (item) => (
         <div>
-          <p className="dashboard-kicker">Inventory / Bulk Import</p>
-          <h2 id="bulk-import-modal-title">Import products</h2>
-          <p className="products-count">
-            Validated PDF invoices, CSV sheets and Excel catalog sync for{" "}
-            <b>{business.name}</b> {isClothing ? "clothing " : ""}workspace.
-          </p>
+          <span className="font-semibold text-main">
+            {FILE_ICON[item.fileType] || "▤"} {item.fileName}
+          </span>
+          <small className="block text-muted">
+            BATCH-{item.importId.slice(-8).toUpperCase()}
+          </small>
         </div>
-        <div className="import-hero-actions">
-          {!preview && (
-            <>
-              <button className="outline-button" type="button" onClick={downloadSampleTemplate}>
-                <span aria-hidden="true">⇩</span> Download sample (.csv)
-              </button>
-              <button className="outline-button" type="button" onClick={() => setShowGuidelines((current) => !current)} aria-expanded={showGuidelines}>
-                <span aria-hidden="true">ⓘ</span> Import guidelines
-              </button>
-            </>
-          )}
-          {preview && (
-            <button className="outline-button" type="button" onClick={() => setPreview(null)}>
-              Start over
-            </button>
-          )}
-          {onClose && (
-            <button
-              className="close-button import-modal-close"
-              type="button"
-              onClick={onClose}
-              aria-label="Close bulk import"
-              title="Close modal"
-            >
-              ×
-            </button>
-          )}
+      ),
+      mobileLabel: "File",
+    },
+    {
+      key: "date",
+      header: "Timestamp",
+      render: (item) => (
+        <span className="text-soft text-sm">
+          {new Date(item.createdAt).toLocaleString()}
+        </span>
+      ),
+      mobileLabel: "Date",
+    },
+    {
+      key: "operator",
+      header: "Operator",
+      render: (item) => (
+        <span className="text-main">{item.importedByName || "System"}</span>
+      ),
+      mobileLabel: "Operator",
+    },
+    {
+      key: "counts",
+      header: "Records Processed",
+      render: (item) => (
+        <div>
+          <span className="text-success text-sm font-semibold">{item.createdCount} created</span>
+          <small className="block text-muted">
+            {item.updatedCount + item.mergedCount} updated ·{" "}
+            <span className={item.failedCount ? "text-danger" : ""}>
+              {item.failedCount} errors
+            </span>
+          </small>
         </div>
-      </div>
+      ),
+      mobileLabel: "Records",
+    },
+    {
+      key: "status",
+      header: "Status",
+      render: (item) => (
+        <Badge
+          tone={
+            item.status === "completed"
+              ? "success"
+              : item.status === "failed"
+                ? "danger"
+                : "warning"
+          }
+        >
+          {STATUS_LABEL[item.status] || item.status}
+        </Badge>
+      ),
+      mobileLabel: "Status",
+    },
+    {
+      key: "actions",
+      header: "",
+      align: "right",
+      render: (item) => (
+        <Button
+          variant="secondary"
+          size="sm"
+          disabled={!item.failures?.length}
+          onClick={() =>
+            setExpandedLog((current) => (current === item.importId ? null : item.importId))
+          }
+        >
+          {item.failures?.length
+            ? expandedLog === item.importId
+              ? "Hide Log"
+              : "View Log"
+            : "No Issues"}
+        </Button>
+      ),
+      mobileLabel: "Actions",
+    },
+  ];
+
+  return (
+    <div className="import-page import-container">
+      <PageHeader
+        kicker="Inventory / Bulk Import"
+        title="Import Products"
+        badge={isClothing ? "Clothing Workspace" : "Universal Catalog"}
+        description={`Validated PDF invoices, CSV sheets and Excel catalog sync for ${business.name || "your business"}.`}
+        actions={
+          <div style={{ display: "flex", gap: "var(--space-2)" }}>
+            {!preview && (
+              <>
+                <Button
+                  variant="secondary"
+                  onClick={downloadSampleTemplate}
+                  icon="download"
+                >
+                  Download Sample (.csv)
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => setShowGuidelines((c) => !c)}
+                  aria-expanded={showGuidelines}
+                >
+                  Guidelines
+                </Button>
+              </>
+            )}
+            {preview && (
+              <Button variant="secondary" onClick={() => setPreview(null)}>
+                Start Over
+              </Button>
+            )}
+            {onClose && (
+              <Button variant="secondary" onClick={onClose} aria-label="Close bulk import">
+                Close
+              </Button>
+            )}
+          </div>
+        }
+      />
+
       {showGuidelines && !preview && (
-        <div className="import-guidelines-panel">
-          <strong>Recognized columns</strong>
-          <p>Column headers are matched automatically, in any order. Required columns are marked.</p>
-          <ul>
-            {COLUMNS.map(([field, label]) => (
-              <li key={field}>
-                {label}
-                {REQUIRED_COLUMNS.has(field) && <em> · required</em>}
-              </li>
-            ))}
-          </ul>
-          <button className="outline-button" type="button" onClick={() => setShowGuidelines(false)}>Close</button>
+        <Card title="Recognized Import Columns" subtitle="Column headers are matched automatically. Required columns are marked.">
+          <div className="import-guidelines-box">
+            <ul>
+              {COLUMNS.map(([field, label]) => (
+                <li key={field}>
+                  {label}
+                  {REQUIRED_COLUMNS.has(field) && <em> · required</em>}
+                </li>
+              ))}
+            </ul>
+            <div style={{ marginTop: "var(--space-3)" }}>
+              <Button variant="secondary" size="sm" onClick={() => setShowGuidelines(false)}>
+                Dismiss Guidelines
+              </Button>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {message && (
+        <div className={`import-alert-box ${message.type === "error" ? "import-alert-error" : "import-alert-success"}`}>
+          {message.text}
         </div>
       )}
-      {message && (
-        <p className={`form-status ${message.type}`}>{message.text}</p>
-      )}
+
       {lastResult?.failures?.length > 0 && (
-        <section className="import-failures">
-          <strong>Rows not imported</strong>
+        <div className="import-failures-box">
+          <strong>Rows not imported ({lastResult.failures.length})</strong>
           {lastResult.failures.map((failure, index) => (
             <p key={`${failure.rowNumber}-${failure.sku}-${index}`}>
-              <b>Row {failure.rowNumber}: {failure.sku || failure.name || "Unnamed product"}</b>
-              <span>{failure.reasons.join(" ")}</span>
+              <b>Row {failure.rowNumber}: {failure.sku || failure.name || "Unnamed product"}</b> - {failure.reasons.join(" ")}
             </p>
           ))}
-        </section>
+        </div>
       )}
+
       {!preview ? (
         <>
-          <button
-            className={`import-dropzone ${dragging ? "dragging" : ""}`}
-            type="button"
-            onClick={() => inputRef.current?.click()}
-            onDragOver={(event) => {
-              event.preventDefault();
-              setDragging(true);
-            }}
-            onDragLeave={() => setDragging(false)}
-            onDrop={(event) => {
-              event.preventDefault();
-              setDragging(false);
-              choose(event.dataTransfer.files[0]);
-            }}
-            disabled={working}
-          >
-            <span className="import-icon">⇧</span>
-            <strong>
-              {working
-                ? "Reading and validating file…"
-                : "Drop your product catalog or invoice file here"}
-            </strong>
-            <small className="import-browse-hint">
-              or <span className="import-browse-link">browse computer files</span> to upload
-            </small>
-            <div className="import-format-pills">
-              <span className="import-pill import-pill-csv">
-                <i aria-hidden="true">{FILE_ICON.csv}</i> .CSV Table
-              </span>
-              <span className="import-pill import-pill-xlsx">
-                <i aria-hidden="true">{FILE_ICON.xlsx}</i> .XLSX Excel
-              </span>
-              <span className="import-pill import-pill-pdf">
-                <i aria-hidden="true">{FILE_ICON.pdf}</i> .PDF Invoices (Auto OCR)
-              </span>
+          <Card title="Upload Catalog or Invoice" subtitle="Drag and drop or browse files to start bulk extraction">
+            <button
+              className={`import-dropzone ${dragging ? "dragging" : ""}`}
+              type="button"
+              onClick={() => inputRef.current?.click()}
+              onDragOver={(event) => {
+                event.preventDefault();
+                setDragging(true);
+              }}
+              onDragLeave={() => setDragging(false)}
+              onDrop={(event) => {
+                event.preventDefault();
+                setDragging(false);
+                choose(event.dataTransfer.files[0]);
+              }}
+              disabled={working}
+            >
+              <div className="import-icon-bubble">⇧</div>
+              <strong>
+                {working
+                  ? "Reading and validating file…"
+                  : "Drop your product catalog or invoice file here"}
+              </strong>
+              <small>
+                or <span className="import-browse-link">browse files</span> to upload
+              </small>
+              <div className="import-format-pills">
+                <span className="import-format-pill">▤ .CSV Table</span>
+                <span className="import-format-pill">▦ .XLSX Excel</span>
+                <span className="import-format-pill">▥ .PDF Invoices (OCR)</span>
+              </div>
+              <small style={{ marginTop: "var(--space-2)" }}>Maximum 15 MB · up to 5,000 rows</small>
+            </button>
+
+            <input
+              ref={inputRef}
+              className="import-file-input"
+              type="file"
+              accept=".pdf,.csv,.xlsx"
+              onChange={(event) => choose(event.target.files[0])}
+            />
+
+            <div className="import-preflight-row">
+              {isClothing && (
+                <Checkbox
+                  label="Auto-detect variant groupings (Size & Color)"
+                  checked={variantMode}
+                  onChange={(event) => setVariantMode(event.target.checked)}
+                />
+              )}
+              <Checkbox
+                label="Update prices on existing matching SKUs"
+                checked={updateExistingPrices}
+                onChange={(event) => setUpdateExistingPrices(event.target.checked)}
+              />
             </div>
-            <small className="import-limits">Maximum 15 MB · up to 5,000 rows</small>
-          </button>
-          <input
-            ref={inputRef}
-            className="import-file-input"
-            type="file"
-            accept=".pdf,.csv,.xlsx"
-            onChange={(event) => choose(event.target.files[0])}
-          />
-          <div className="import-preflight">
-            {isClothing && (
-              <label className="import-checkbox">
-                <input type="checkbox" checked={variantMode} onChange={(event) => setVariantMode(event.target.checked)} />
-                Auto-detect variant groupings (Size &amp; Color)
-              </label>
-            )}
-            <label className="import-checkbox">
-              <input type="checkbox" checked={updateExistingPrices} onChange={(event) => setUpdateExistingPrices(event.target.checked)} />
-              Update prices on existing matching SKUs
-            </label>
-          </div>
-          <div className="import-guide">
-            <article>
-              <b>1</b>
-              <strong>Recognizable headers</strong>
-              <p>
-                Use Product Name, SKU, Category, Quantity and Selling Price.
-                Other columns map automatically.
-              </p>
-            </article>
-            <article>
-              <b>2</b>
-              <strong>Review before saving</strong>
-              <p>
-                Nothing is added during extraction. Correct highlighted fields
-                and resolve duplicates.
-              </p>
-            </article>
-            <article>
-              <b>3</b>
-              <strong>Audited stock update</strong>
-              <p>
-                Confirmation creates products, stock movements and a
-                business-scoped audit record.
-              </p>
-            </article>
+          </Card>
+
+          <div className="import-guide-grid">
+            <div className="import-guide-card">
+              <div className="import-guide-number">1</div>
+              <strong>Recognizable Headers</strong>
+              <p>Use Product Name, SKU, Category, Quantity and Selling Price. Other columns map automatically.</p>
+            </div>
+            <div className="import-guide-card">
+              <div className="import-guide-number">2</div>
+              <strong>Review Before Saving</strong>
+              <p>Nothing is added during extraction. Correct highlighted fields and resolve duplicates in the preview.</p>
+            </div>
+            <div className="import-guide-card">
+              <div className="import-guide-number">3</div>
+              <strong>Audited Stock Update</strong>
+              <p>Confirmation creates products, records stock movements and logs an audited batch transaction.</p>
+            </div>
           </div>
         </>
       ) : (
         <>
-          <div className="import-summary">
-            <span>
-              <small>Rows</small>
-              <strong>{summary.total}</strong>
-            </span>
-            <span className="success">
-              <small>Valid</small>
-              <strong>{summary.valid}</strong>
-            </span>
-            <span className={summary.invalid ? "danger" : ""}>
-              <small>Invalid</small>
-              <strong>{summary.invalid}</strong>
-            </span>
-            <span>
-              <small>Duplicates</small>
-              <strong>{summary.duplicates}</strong>
-            </span>
-            <span>
-              <small>File</small>
-              <strong>{preview.fileName}</strong>
-            </span>
-          </div>
-          <div className="import-options">
-            {isClothing && <label className="settings-toggle">
-              <input type="checkbox" checked={variantMode} onChange={(event) => setVariantMode(event.target.checked)} />
-              Import rows as Size × Color variants
-              <small>Rows with the same Parent SKU—or the same product name/category—are grouped under one product.</small>
-            </label>}
-            <label>
-              Supplier
-              <select
-                value={supplierId}
-                onChange={(event) => setSupplierId(event.target.value)}
-              >
-                <option value="">Use supplier from each row</option>
-                {suppliers.map((supplier) => (
-                  <option key={supplier.supplierId} value={supplier.supplierId}>
-                    {supplier.supplierName}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Purchase reference
-              <input
-                value={purchaseReference}
-                onChange={(event) => setPurchaseReference(event.target.value)}
-                placeholder="PO / invoice number"
-              />
-            </label>
-            <div>
-              <small>All duplicates</small>
-              <button type="button" onClick={() => setAllDuplicates("skip")}>
-                Skip
-              </button>
-              <button type="button" onClick={() => setAllDuplicates("update")}>
-                Update
-              </button>
-              <button type="button" onClick={() => setAllDuplicates("merge")}>
-                Merge stock
-              </button>
-            </div>
-          </div>
-          <div className="import-table-wrap">
-            <table className="import-table">
-              <thead>
-                <tr>
-                  <th>Status</th>
-                  {COLUMNS.map(([, label]) => (
-                    <th key={label}>{label}</th>
+          <StatGrid columns={4}>
+            <StatCard title="Total Rows" value={summary.total} subtext={`File: ${preview.fileName}`} icon="document" />
+            <StatCard title="Valid Rows" value={summary.valid} subtext="Ready for import" deltaType="positive" icon="box" />
+            <StatCard title="Invalid Rows" value={summary.invalid} subtext="Requires correction" deltaType={summary.invalid ? "negative" : "neutral"} icon="clock" />
+            <StatCard title="Duplicates" value={summary.duplicates} subtext="Matching existing SKUs" icon="chart" />
+          </StatGrid>
+
+          <Card title="Extraction Preview & Configuration" subtitle="Review parsed rows, adjust duplicate rules, or correct invalid entries">
+            <div className="import-options-bar">
+              <Field label="Default Supplier">
+                <Select
+                  value={supplierId}
+                  onChange={(event) => setSupplierId(event.target.value)}
+                >
+                  <option value="">Use supplier from each row</option>
+                  {suppliers.map((supplier) => (
+                    <option key={supplier.supplierId} value={supplier.supplierId}>
+                      {supplier.supplierName}
+                    </option>
                   ))}
-                  <th>Duplicate action</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {preview.rows.map((row, index) => (
-                  <tr
-                    key={`${row.rowNumber}-${index}`}
-                    className={
-                      !row.valid ? "invalid" : row.duplicate ? "duplicate" : ""
-                    }
-                  >
-                    <td>
-                      <span className="import-status">
-                        {!row.valid
-                          ? "Fix"
-                          : row.duplicate
-                            ? "Duplicate"
-                            : row.warnings?.length
-                              ? "Review"
-                              : "Ready"}
-                      </span>
-                      {row.errors?.length > 0 && (
-                        <small title={row.errors.join("\n")}>
-                          {row.errors[0]}
-                        </small>
-                      )}
-                      {row.errors?.length === 0 && row.warnings?.length > 0 && (
-                        <small
-                          className="import-warning"
-                          title={row.warnings.join("\n")}
-                        >
-                          {row.warnings[0]}
-                        </small>
-                      )}
-                    </td>
-                    {COLUMNS.map(([field]) => (
-                      <td key={field}>
-                        <input
-                          aria-label={`${field} row ${index + 1}`}
-                          type={NUMERIC.has(field) ? "number" : "text"}
-                          min={NUMERIC.has(field) ? 0 : undefined}
-                          step={field === "quantity" ? 1 : "any"}
-                          max={field === "gstRate" ? 100 : undefined}
-                          data-invalid={row.invalidFields?.includes(field) ? "true" : undefined}
-                          aria-invalid={row.invalidFields?.includes(field) || undefined}
-                          value={row[field] ?? ""}
-                          onChange={(event) =>
-                            edit(index, field, event.target.value)
-                          }
-                        />
-                      </td>
+                </Select>
+              </Field>
+
+              <Field label="Purchase Reference">
+                <Input
+                  value={purchaseReference}
+                  onChange={(event) => setPurchaseReference(event.target.value)}
+                  placeholder="PO / invoice number..."
+                />
+              </Field>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
+                <span style={{ fontSize: "10px", color: "var(--muted)", textTransform: "uppercase" }}>
+                  Bulk Duplicate Actions
+                </span>
+                <div style={{ display: "flex", gap: "var(--space-1)" }}>
+                  <Button variant="secondary" size="sm" onClick={() => setAllDuplicates("skip")}>
+                    Skip All
+                  </Button>
+                  <Button variant="secondary" size="sm" onClick={() => setAllDuplicates("update")}>
+                    Update All
+                  </Button>
+                  <Button variant="secondary" size="sm" onClick={() => setAllDuplicates("merge")}>
+                    Merge All
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div className="import-table-container">
+              <table className="import-preview-table">
+                <thead>
+                  <tr>
+                    <th>Status</th>
+                    {COLUMNS.map(([, label]) => (
+                      <th key={label}>{label}</th>
                     ))}
-                    <td>
-                      {row.duplicate ? (
-                        <select
-                          value={row.duplicateAction}
-                          onChange={(event) =>
-                            edit(index, "duplicateAction", event.target.value)
-                          }
-                        >
+                    <th>Duplicate Action</th>
+                    <th />
+                  </tr>
+                </thead>
+                <tbody>
+                  {preview.rows.map((row, index) => (
+                    <tr
+                      key={`${row.rowNumber}-${index}`}
+                      className={!row.valid ? "invalid" : row.duplicate ? "duplicate" : ""}
+                    >
+                      <td>
+                        <Badge tone={!row.valid ? "danger" : row.duplicate ? "warning" : "success"}>
+                          {!row.valid ? "Fix" : row.duplicate ? "Duplicate" : "Ready"}
+                        </Badge>
+                        {row.errors?.length > 0 && (
+                          <small className="block text-danger" title={row.errors.join("\n")}>
+                            {row.errors[0]}
+                          </small>
+                        )}
+                      </td>
+                      {COLUMNS.map(([field]) => (
+                        <td key={field}>
+                          <input
+                            aria-label={`${field} row ${index + 1}`}
+                            type={NUMERIC.has(field) ? "number" : "text"}
+                            min={NUMERIC.has(field) ? 0 : undefined}
+                            step={field === "quantity" ? 1 : "any"}
+                            max={field === "gstRate" ? 100 : undefined}
+                            data-invalid={row.invalidFields?.includes(field) ? "true" : undefined}
+                            aria-invalid={row.invalidFields?.includes(field) || undefined}
+                            value={row[field] ?? ""}
+                            onChange={(event) => edit(index, field, event.target.value)}
+                          />
+                        </td>
+                      ))}
+                      <td>
+                        {row.duplicate ? (
+                          <select
+                            value={row.duplicateAction}
+                            onChange={(event) => edit(index, "duplicateAction", event.target.value)}
+                          >
                             <option value="merge">Merge / add stock</option>
                             <option value="update">Update / replace stock</option>
                             <option value="skip">Skip</option>
-                        </select>
-                      ) : (
-                        "New"
-                      )}
-                    </td>
-                    <td>
-                      <button
-                        type="button"
-                        className="import-remove"
-                        onClick={() =>
-                          setPreview((current) => ({
-                            ...current,
-                            rows: current.rows.filter((_, i) => i !== index),
-                          }))
-                        }
-                      >
-                        ×
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="import-confirm">
-            <p>
-              <strong>{summary.valid} valid rows will be processed.</strong>
-              <br />
-              Invalid rows will be skipped and recorded with failure reasons.
-            </p>
-            <button
-              className="submit-button"
-              type="button"
-              disabled={working || summary.valid === 0}
-              onClick={confirm}
-            >
-              {working ? "Importing…" : "Confirm inventory import"}{" "}
-              <span>→</span>
-            </button>
-          </div>
-        </>
-      )}
-      <section className="import-history">
-        <div className="section-heading import-history-head">
-          <div>
-            <p className="dashboard-kicker">Audit log</p>
-            <h2>Import history</h2>
-          </div>
-          {history.length > 0 && (
-            <div className="import-history-tools">
-              <div className="search-box">
-                <span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 4.5 4.5" /></svg></span>
-                <input
-                  value={historySearch}
-                  onChange={(event) => setHistorySearch(event.target.value)}
-                  placeholder="Filter batch or file name…"
-                  aria-label="Filter import history"
-                />
-              </div>
-              <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} aria-label="Filter by status">
-                <option value="">All statuses</option>
-                <option value="completed">Completed</option>
-                <option value="partial">Warnings</option>
-                <option value="failed">Failed</option>
-              </select>
-              <button type="button" className="outline-button import-refresh" onClick={refetch} aria-label="Refresh import history">
-                ↻
-              </button>
-            </div>
-          )}
-        </div>
-        {!history.length ? (
-          <p className="products-count">No completed imports yet.</p>
-        ) : !filteredHistory.length ? (
-          <p className="products-count">No imports match this filter.</p>
-        ) : (
-          <div className="import-history-table-wrap">
-            <table className="import-history-table">
-              <thead>
-                <tr>
-                  <th>File &amp; batch ID</th>
-                  <th>Timestamp</th>
-                  <th>Operator</th>
-                  <th>Records processed</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredHistory.map((item) => (
-                  <Fragment key={item.importId}>
-                    <tr>
-                      <td>
-                        <span className="import-history-file">
-                          <i className={`import-file-icon import-file-icon-${item.fileType}`} aria-hidden="true">
-                            {FILE_ICON[item.fileType] || "▤"}
-                          </i>
-                          <span>
-                            <strong>{item.fileName}</strong>
-                            <small>BATCH-{item.importId.slice(-8).toUpperCase()}</small>
-                          </span>
-                        </span>
-                      </td>
-                      <td>{new Date(item.createdAt).toLocaleString()}</td>
-                      <td>
-                        <span className="import-operator">
-                          <i aria-hidden="true" />
-                          {item.importedByName}
-                        </span>
-                      </td>
-                      <td>
-                        <span className="import-records">
-                          <b className="success">{item.createdCount} created</b>
-                          <span>{item.updatedCount + item.mergedCount} changed</span>
-                          <span className={item.failedCount ? "danger" : ""}>{item.failedCount} errors</span>
-                        </span>
-                      </td>
-                      <td>
-                        <em className={item.status}>{STATUS_LABEL[item.status] || item.status}</em>
+                          </select>
+                        ) : (
+                          <span className="text-muted">New</span>
+                        )}
                       </td>
                       <td>
                         <button
                           type="button"
-                          className="outline-button import-view-log"
-                          disabled={!item.failures?.length}
-                          onClick={() => setExpandedLog((current) => (current === item.importId ? null : item.importId))}
+                          className="import-remove-btn"
+                          title="Remove row"
+                          onClick={() =>
+                            setPreview((current) => ({
+                              ...current,
+                              rows: current.rows.filter((_, i) => i !== index),
+                            }))
+                          }
                         >
-                          {item.failures?.length ? (expandedLog === item.importId ? "Hide log" : "View log") : "No issues"}
+                          ×
                         </button>
                       </td>
                     </tr>
-                    {expandedLog === item.importId && item.failures?.length > 0 && (
-                      <tr className="import-history-detail-row">
-                        <td colSpan={6}>
-                          {item.failures.map((failure, index) => (
-                            <p key={`${item.importId}-${index}`}>
-                              <b>Row {failure.rowNumber}: {failure.sku || failure.name || "Unnamed product"}</b>
-                              <span>{failure.reasons.join(" ")}</span>
-                            </p>
-                          ))}
-                        </td>
-                      </tr>
-                    )}
-                  </Fragment>
-                ))}
-              </tbody>
-            </table>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="import-confirm-bar">
+              <div>
+                <strong className="text-main">{summary.valid} valid rows ready to import</strong>
+                <p className="text-muted text-xs" style={{ margin: 0 }}>
+                  Invalid rows will be skipped and logged in failure history.
+                </p>
+              </div>
+              <Button
+                variant="primary"
+                disabled={working || summary.valid === 0}
+                loading={working}
+                onClick={confirm}
+                icon="arrow-path"
+              >
+                {working ? "Importing…" : "Confirm Inventory Import"}
+              </Button>
+            </div>
+          </Card>
+        </>
+      )}
+
+      {/* Import History */}
+      <Card title="Import History & Audit Log" subtitle="Log of past bulk imports and sync operations">
+        {history.length > 0 && (
+          <div className="import-history-toolbar">
+            <Input
+              value={historySearch}
+              onChange={(event) => setHistorySearch(event.target.value)}
+              placeholder="Filter batch or file name…"
+              aria-label="Filter import history"
+            />
+            <Select
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value)}
+              aria-label="Filter by status"
+            >
+              <option value="">All statuses</option>
+              <option value="completed">Completed</option>
+              <option value="partial">Warnings</option>
+              <option value="failed">Failed</option>
+            </Select>
+            <div>
+              <Button variant="secondary" onClick={refetch} icon="arrow-path">
+                Refresh
+              </Button>
+            </div>
           </div>
         )}
-      </section>
-    </section>
+
+        <DataTable
+          columns={historyColumns}
+          data={filteredHistory}
+          emptyTitle="No completed imports"
+          emptyDescription={
+            history.length
+              ? "No imports match this filter."
+              : "No catalog or invoice imports recorded yet."
+          }
+        />
+
+        {expandedLog && (
+          <div className="import-log-detail-box">
+            <strong className="text-danger">Failure Log for Batch {expandedLog}</strong>
+            {history
+              .find((h) => h.importId === expandedLog)
+              ?.failures?.map((failure, index) => (
+                <p key={`${expandedLog}-${index}`}>
+                  <b>Row {failure.rowNumber}: {failure.sku || failure.name || "Unnamed"}</b> - {failure.reasons?.join(" ")}
+                </p>
+              ))}
+          </div>
+        )}
+      </Card>
+    </div>
   );
 }
