@@ -1,23 +1,26 @@
 /* oxlint-disable react/only-export-components */
-import DashboardOverview from '../features/dashboard/DashboardOverview.jsx'
-import ProductsPage from '../features/products/ProductsPage.jsx'
-import InventoryOperations from '../features/inventory/InventoryOperations.jsx'
-import PurchaseOrdersPage from '../features/purchasing/PurchaseOrdersPage.jsx'
-import ReceivingGrnPage from '../features/purchasing/ReceivingGrnPage.jsx'
-import SuppliersPage from '../features/purchasing/SuppliersPage.jsx'
-import PosTerminalPage from '../features/pos/PosTerminalPage.jsx'
-import SalesOrdersPage from '../features/sales/SalesOrdersPage.jsx'
-import CustomersPage from '../features/customers/CustomersPage.jsx'
-import PaymentsPage from '../features/payments/PaymentsPage.jsx'
-import UserManagementPage from '../features/team/UserManagementPage.jsx'
-import ReportsPage from '../features/reports/ReportsPage.jsx'
-import BusinessProfilePage from '../features/settings/BusinessProfilePage.jsx'
-import StoreSettingsPage from '../features/settings/StoreSettingsPage.jsx'
-import Returns from '../features/returns/ReturnsPage.jsx'
-import ClothingModule from '../features/industries/clothing/ClothingModule.jsx'
-import ColorManagementPage from '../features/industries/clothing/ColorManagementPage.jsx'
-import BulkPricingPage from '../features/industries/wholesale/BulkPricingPage.jsx'
-import IndustryModule from '../features/industries/generic/IndustryModule.jsx'
+import { lazy } from 'react'
+
+const DashboardOverview = lazy(() => import('../features/dashboard/DashboardOverview.jsx'))
+const ProductsPage = lazy(() => import('../features/products/ProductsPage.jsx'))
+const InventoryOperations = lazy(() => import('../features/inventory/InventoryOperations.jsx'))
+const PurchaseOrdersPage = lazy(() => import('../features/purchasing/PurchaseOrdersPage.jsx'))
+const ReceivingGrnPage = lazy(() => import('../features/purchasing/ReceivingGrnPage.jsx'))
+const SuppliersPage = lazy(() => import('../features/purchasing/SuppliersPage.jsx'))
+const PosTerminalPage = lazy(() => import('../features/pos/PosTerminalPage.jsx'))
+const SalesOrdersPage = lazy(() => import('../features/sales/SalesOrdersPage.jsx'))
+const CustomersPage = lazy(() => import('../features/customers/CustomersPage.jsx'))
+const PaymentsPage = lazy(() => import('../features/payments/PaymentsPage.jsx'))
+const UserManagementPage = lazy(() => import('../features/team/UserManagementPage.jsx'))
+const ReportsPage = lazy(() => import('../features/reports/ReportsPage.jsx'))
+const BusinessProfilePage = lazy(() => import('../features/settings/BusinessProfilePage.jsx'))
+const StoreSettingsPage = lazy(() => import('../features/settings/StoreSettingsPage.jsx'))
+const Returns = lazy(() => import('../features/returns/ReturnsPage.jsx'))
+const ClothingModule = lazy(() => import('../features/industries/clothing/ClothingModule.jsx'))
+const ColorManagementPage = lazy(() => import('../features/industries/clothing/ColorManagementPage.jsx'))
+const BulkPricingPage = lazy(() => import('../features/industries/wholesale/BulkPricingPage.jsx'))
+const IndustryModule = lazy(() => import('../features/industries/generic/IndustryModule.jsx'))
+
 
 export function NotFoundPage({ onNavigate }) {
   return (

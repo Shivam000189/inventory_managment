@@ -1,10 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import "../App.css";
 import "../styles/ui-system.css";
 import "../styles/app-chrome.css";
 import "../styles/modern-dashboard.css";
-import "../features/dashboard/overview-dashboard.css";
 
 // Layout & Context
 import AppSidebar from "../components/layout/AppSidebar.jsx";
@@ -23,9 +22,13 @@ import {
   pathForNavLabel,
 } from "./routes.jsx";
 
-// Auth & Setup
-import AuthPage from "../features/auth/AuthPage.jsx";
-import BusinessSetup from "../features/onboarding/BusinessSetup.jsx";
+// UI Components
+import { ErrorBoundary, PageSkeleton } from "../components/ui/index.js";
+
+// Auth & Setup (Lazy)
+const AuthPage = lazy(() => import("../features/auth/AuthPage.jsx"));
+const BusinessSetup = lazy(() => import("../features/onboarding/BusinessSetup.jsx"));
+
 
 // APIs & Hooks
 import { productApi } from "../api/productApi.js";
@@ -255,25 +258,29 @@ function DashboardView() {
           </header>
         )}
 
-        <Routes>
-          <Route path="/overview" element={<Navigate to="/" replace />} />
-          {Object.entries(ROUTE_TABLE).map(([label, config]) => {
-            const hasPermission =
-              !config.requiredPermission ||
-              (Array.isArray(config.requiredPermission)
-                ? config.requiredPermission.every(can)
-                : can(config.requiredPermission));
+        <ErrorBoundary>
+          <Suspense fallback={<PageSkeleton />}>
+            <Routes>
+              <Route path="/overview" element={<Navigate to="/" replace />} />
+              {Object.entries(ROUTE_TABLE).map(([label, config]) => {
+                const hasPermission =
+                  !config.requiredPermission ||
+                  (Array.isArray(config.requiredPermission)
+                    ? config.requiredPermission.every(can)
+                    : can(config.requiredPermission));
 
-            return (
-              <Route
-                key={label}
-                path={config.path}
-                element={hasPermission ? config.render(routeContext) : <Navigate to="/" replace />}
-              />
-            );
-          })}
-          <Route path="*" element={<NotFoundPage onNavigate={navigateTo} />} />
-        </Routes>
+                return (
+                  <Route
+                    key={label}
+                    path={config.path}
+                    element={hasPermission ? config.render(routeContext) : <Navigate to="/" replace />}
+                  />
+                );
+              })}
+              <Route path="*" element={<NotFoundPage onNavigate={navigateTo} />} />
+            </Routes>
+          </Suspense>
+        </ErrorBoundary>
       </section>
     </main>
   );
@@ -302,19 +309,21 @@ function MainApp() {
 
   if (session && (!session.business || needsOwnerOnboarding)) {
     return (
-      <BusinessSetup
-        account={session.user}
-        business={session.business}
-        onSession={(result) => {
-          updateSession(result);
-        }}
-        onComplete={(result) => {
-          updateSession(result);
-          if (result.initialNav) {
-            navigate(pathForNavLabel(result.initialNav));
-          }
-        }}
-      />
+      <Suspense fallback={<div className="app-loading">Loading workspace setup…</div>}>
+        <BusinessSetup
+          account={session.user}
+          business={session.business}
+          onSession={(result) => {
+            updateSession(result);
+          }}
+          onComplete={(result) => {
+            updateSession(result);
+            if (result.initialNav) {
+              navigate(pathForNavLabel(result.initialNav));
+            }
+          }}
+        />
+      </Suspense>
     );
   }
 
@@ -323,12 +332,14 @@ function MainApp() {
   }
 
   return (
-    <AuthPage
-      initialReset={initialReset}
-      onAuthenticated={(userSession) => {
-        updateSession(userSession);
-      }}
-    />
+    <Suspense fallback={<div className="app-loading">Loading…</div>}>
+      <AuthPage
+        initialReset={initialReset}
+        onAuthenticated={(userSession) => {
+          updateSession(userSession);
+        }}
+      />
+    </Suspense>
   );
 }
 

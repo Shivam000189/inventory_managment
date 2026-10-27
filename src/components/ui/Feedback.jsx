@@ -42,6 +42,33 @@ export function Skeleton({ width = '100%', height = 20, borderRadius = 'var(--ra
   )
 }
 
+export function PageSkeleton() {
+  return (
+    <div
+      className="ui-page-skeleton"
+      style={{ padding: '24px 0', display: 'flex', flexDirection: 'column', gap: '20px' }}
+      aria-busy="true"
+      aria-label="Loading page"
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <Skeleton width={180} height={28} borderRadius="8px" />
+          <Skeleton width={300} height={16} borderRadius="6px" />
+        </div>
+        <Skeleton width={130} height={38} borderRadius="10px" />
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+        <Skeleton height={90} borderRadius="16px" />
+        <Skeleton height={90} borderRadius="16px" />
+        <Skeleton height={90} borderRadius="16px" />
+        <Skeleton height={90} borderRadius="16px" />
+      </div>
+      <Skeleton height={320} borderRadius="16px" />
+    </div>
+  )
+}
+
+
 export function FormStatus({ type = 'success', variant = type, message, children, onClose = null, className = '' }) {
   const content = message || children
   if (!content) return null
