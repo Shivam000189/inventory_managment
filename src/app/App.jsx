@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import "../App.css";
 import "../styles/ui-system.css";
 import "../styles/app-chrome.css";
@@ -12,32 +13,20 @@ import { AuthProvider } from "../context/AuthProvider.jsx";
 import { ThemeProvider } from "../context/ThemeProvider.jsx";
 import { useAuth } from "../hooks/useAuth.js";
 import { useTheme } from "../hooks/useTheme.js";
-import { getNavigation } from "../../shared/industryConfig.js";
-import { resolveBusinessCapabilities } from "../../shared/industryConfig.js";
+import { getNavigation, resolveBusinessCapabilities } from "../../shared/industryConfig.js";
 
-// Feature modules
+// Routes & Shell Mapping
+import {
+  ROUTE_TABLE,
+  NotFoundPage,
+  shellClassFor,
+  navLabelForPath,
+  pathForNavLabel,
+} from "./routes.jsx";
+
+// Auth & Setup
 import AuthPage from "../features/auth/AuthPage.jsx";
 import BusinessSetup from "../features/onboarding/BusinessSetup.jsx";
-import DashboardOverview from "../features/dashboard/DashboardOverview.jsx";
-import ProductsPage from "../features/products/ProductsPage.jsx";
-import ProductImportPage from "../features/product-import/ProductImportPage.jsx";
-import InventoryOperations from "../features/inventory/InventoryOperations.jsx";
-import PurchaseOrdersPage from "../features/purchasing/PurchaseOrdersPage.jsx";
-import ReceivingGrnPage from "../features/purchasing/ReceivingGrnPage.jsx";
-import SuppliersPage from "../features/purchasing/SuppliersPage.jsx";
-import PosTerminalPage from "../features/pos/PosTerminalPage.jsx";
-import SalesOrdersPage from "../features/sales/SalesOrdersPage.jsx";
-import CustomersPage from "../features/customers/CustomersPage.jsx";
-import PaymentsPage from "../features/payments/PaymentsPage.jsx";
-import UserManagementPage from "../features/team/UserManagementPage.jsx";
-import ReportsPage from "../features/reports/ReportsPage.jsx";
-import BusinessProfilePage from "../features/settings/BusinessProfilePage.jsx";
-import StoreSettingsPage from "../features/settings/StoreSettingsPage.jsx";
-import Returns from "../features/returns/ReturnsPage.jsx";
-import ClothingModule from "../features/industries/clothing/ClothingModule.jsx";
-import ColorManagementPage from "../features/industries/clothing/ColorManagementPage.jsx";
-import BulkPricingPage from "../features/industries/wholesale/BulkPricingPage.jsx";
-import IndustryModule from "../features/industries/generic/IndustryModule.jsx";
 
 // APIs & Hooks
 import { productApi } from "../api/productApi.js";
@@ -47,14 +36,14 @@ import { userApi } from "../api/userApi.js";
 import { salesOrderApi } from "../api/salesOrderApi.js";
 import { useResource } from "../hooks/useResource.js";
 
-function DashboardView({ initialNav = "Overview" }) {
+function DashboardView() {
   const { account, business, logout, updateBusiness } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const location = useLocation();
+  const navigate = useNavigate();
 
-  const [activeNav, setActiveNav] = useState(initialNav);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [expandedNavSections, setExpandedNavSections] = useState(() => new Set(["Inventory"]));
   const [notif, setNotif] = useState({ items: [], unreadCount: 0 });
   const [gettingStarted, setGettingStarted] = useState(null);
   const [checklistDismissed, setChecklistDismissed] = useState(
@@ -64,6 +53,24 @@ function DashboardView({ initialNav = "Overview" }) {
   const permissions = account?.permissions || [];
   const canViewInventory = account?.role === "owner" || permissions.includes("view_inventory");
   const can = (permission) => account?.role === "owner" || permissions.includes(permission);
+
+  const capabilities = business?.capabilities || resolveBusinessCapabilities(business || {});
+  const visibleNavigation = getNavigation(business || {}, can);
+  const visiblePages = new Set(["Overview", ...visibleNavigation.flatMap(([, items]) => items)]);
+  const canOpen = (item) => visiblePages.has(item === "Products" ? capabilities.productLabel : item);
+
+  const activeNav = useMemo(
+    () => navLabelForPath(location.pathname, capabilities.productLabel) || "Overview",
+    [location.pathname, capabilities.productLabel]
+  );
+
+  const [expandedNavSections, setExpandedNavSections] = useState(() => {
+    const initial = new Set(["Inventory"]);
+    const currentNav = navLabelForPath(window.location.pathname, business?.capabilities?.productLabel);
+    const parent = currentNav ? visibleNavigation.find(([, items]) => items.includes(currentNav))?.[0] : null;
+    if (parent) initial.add(parent);
+    return initial;
+  });
 
   const loadProducts = useCallback(
     () => (canViewInventory ? productApi.list() : Promise.resolve([])),
@@ -84,11 +91,6 @@ function DashboardView({ initialNav = "Overview" }) {
     .filter((item) => ["inventory", "purchases", "payments"].includes(item.category))
     .slice(0, 6);
 
-  const capabilities = business?.capabilities || resolveBusinessCapabilities(business || {});
-  const visibleNavigation = getNavigation(business || {}, can);
-  const visiblePages = new Set(["Overview", ...visibleNavigation.flatMap(([, items]) => items)]);
-  const canOpen = (item) => visiblePages.has(item === "Products" ? capabilities.productLabel : item);
-
   const navigateTo = (navTo) => {
     const parentSection = visibleNavigation.find(([, items]) => items.includes(navTo))?.[0];
     if (parentSection) {
@@ -99,7 +101,11 @@ function DashboardView({ initialNav = "Overview" }) {
         return next;
       });
     }
-    setActiveNav(navTo);
+    if (typeof navTo === "string" && navTo.startsWith("/")) {
+      navigate(navTo);
+    } else {
+      navigate(pathForNavLabel(navTo));
+    }
     setMobileNavOpen(false);
   };
 
@@ -141,58 +147,37 @@ function DashboardView({ initialNav = "Overview" }) {
       .catch(() => {});
   }, [account?.role, checklistDismissed]);
 
+  const routeContext = {
+    business,
+    account,
+    navigateTo,
+    canOpen,
+    updateBusiness,
+    logout,
+    dashboardOverviewProps: {
+      business,
+      account,
+      products,
+      loading,
+      error,
+      refetch,
+      reportData,
+      capabilities,
+      navigateTo,
+      canOpen,
+      notifItems,
+      openNotification,
+      gettingStarted,
+      checklistDismissed,
+      setChecklistDismissed,
+    },
+  };
+
+  const currentShellClass = shellClassFor(activeNav);
+
   return (
     <main
-      className={`dashboard-shell modern-theme ${activeNav === "Overview" ? "overview-dashboard" : ""}${
-        ["Stock", "Stock In", "Stock Out", "Adjustments", "Stock History", "Categories", "Purchase Orders"].includes(
-          activeNav
-        )
-          ? " stock-ledger-shell"
-          : ""
-      }${["Stock In", "Stock Out", "Adjustments"].includes(activeNav) ? " stock-in-shell" : ""}${
-        activeNav === "Stock Out" ? " stock-out-shell" : ""
-      }${activeNav === "Adjustments" ? " stock-adjustment-shell" : ""}${
-        activeNav === "Stock History" ? " stock-audit-shell" : ""
-      }${activeNav === "Categories" ? " category-shell" : ""}${
-        activeNav === "Purchase Orders" ? " po-shell" : ""
-      }${activeNav === "POS / Billing" ? " pos-shell" : ""}${
-        activeNav === "Receiving" ? " stock-ledger-shell grn-shell" : ""
-      }${activeNav === "Suppliers" ? " stock-ledger-shell sup-shell" : ""}${
-        ["Products", "Medicines"].includes(activeNav) ? " stock-ledger-shell products-shell" : ""
-      }${activeNav === "Bulk Import" ? " stock-ledger-shell import-shell" : ""}${
-        activeNav === "Orders" ? " stock-ledger-shell ord-shell" : ""
-      }${activeNav === "Customers" ? " stock-ledger-shell cust-shell" : ""}${
-        activeNav === "Payments" ? " stock-ledger-shell pay-shell" : ""
-      }${activeNav === "Returns" ? " stock-ledger-shell ret-shell" : ""}${
-        ["Users", "Roles", "Permissions"].includes(activeNav) ? " stock-ledger-shell um-shell" : ""
-      }${activeNav === "Reports" ? " stock-ledger-shell rep-shell" : ""}${
-        ["Business Profile", "Industry", "Settings"].includes(activeNav) ? " stock-ledger-shell biz-shell" : ""
-      }${
-        [
-          "Color Management",
-          "Size Management",
-          "Product Variants",
-          "Batch Management",
-          "Expiry Tracking",
-          "Serial Numbers",
-          "Warranty Tracking",
-        ].includes(activeNav)
-          ? " stock-ledger-shell var-shell"
-          : ""
-      }${["Bulk Orders", "Credit Sales", "Bulk Pricing"].includes(activeNav) ? " stock-ledger-shell cs-shell" : ""}${
-        [
-          "Variant Grid",
-          "Replenishment",
-          "Promotions",
-          "Loyalty",
-          "Coupons",
-          "Gift Cards",
-          "Cashier Shifts",
-          "Clothing Reports",
-        ].includes(activeNav)
-          ? " stock-ledger-shell cloth-shell"
-          : ""
-      } industry-${String(business?.industry || "general")
+      className={`dashboard-shell modern-theme ${currentShellClass} industry-${String(business?.industry || "general")
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "-")}${mobileNavOpen ? " nav-open" : ""}${
         sidebarCollapsed ? " sidebar-collapsed" : ""
@@ -241,7 +226,7 @@ function DashboardView({ initialNav = "Overview" }) {
           onLogout={logout}
         />
 
-        {activeNav !== "Overview" && (
+        {activeNav && activeNav !== "Overview" && (
           <header className="dashboard-header">
             <div>
               <p className="dashboard-kicker">Manage your {activeNav.toLowerCase()}</p>
@@ -250,114 +235,25 @@ function DashboardView({ initialNav = "Overview" }) {
           </header>
         )}
 
-        {activeNav === "Overview" ? (
-          <DashboardOverview
-            business={business}
-            account={account}
-            products={products}
-            loading={loading}
-            error={error}
-            refetch={refetch}
-            reportData={reportData}
-            capabilities={capabilities}
-            navigateTo={navigateTo}
-            canOpen={canOpen}
-            notifItems={notifItems}
-            openNotification={openNotification}
-            gettingStarted={gettingStarted}
-            checklistDismissed={checklistDismissed}
-            setChecklistDismissed={setChecklistDismissed}
-          />
-        ) : activeNav === "Products" || activeNav === "Medicines" ? (
-          <ProductsPage business={business} account={account} />
-        ) : activeNav === "Bulk Import" ? (
-          <ProductImportPage business={business} />
-        ) : ["Categories", "Stock", "Stock In", "Stock Out", "Adjustments", "Stock History"].includes(activeNav) ? (
-          <InventoryOperations
-            section={activeNav}
-            business={business}
-            account={account}
-            onNavigate={navigateTo}
-            canNavigate={canOpen}
-          />
-        ) : ["Users", "Roles", "Permissions"].includes(activeNav) ? (
-          <UserManagementPage section={activeNav} business={business} account={account} />
-        ) : activeNav === "Suppliers" ? (
-          <SuppliersPage business={business} onNavigate={navigateTo} canNavigate={canOpen} />
-        ) : activeNav === "Customers" ? (
-          <CustomersPage business={business} onNavigate={navigateTo} />
-        ) : activeNav === "Purchase Orders" ? (
-          <PurchaseOrdersPage business={business} account={account} onNavigate={navigateTo} />
-        ) : activeNav === "Receiving" ? (
-          <ReceivingGrnPage business={business} account={account} onNavigate={navigateTo} />
-        ) : activeNav === "Orders" ? (
-          <SalesOrdersPage
-            business={business}
-            account={account}
-            creditSales={false}
-            section={activeNav}
-          />
-        ) : activeNav === "POS / Billing" ? (
-          <PosTerminalPage business={business} account={account} />
-        ) : activeNav === "Payments" ? (
-          <PaymentsPage business={business} account={account} />
-        ) : activeNav === "Business Profile" || activeNav === "Industry" ? (
-          <BusinessProfilePage
-            business={business}
-            onBusinessUpdate={updateBusiness}
-            onBusinessDeleted={logout}
-          />
-        ) : activeNav === "Settings" ? (
-          <StoreSettingsPage business={business} onBusinessUpdate={updateBusiness} />
-        ) : activeNav === "Reports" ? (
-          <ReportsPage business={business} />
-        ) : activeNav === "Returns" || activeNav === "Purchase Returns" ? (
-          <Returns business={business} account={account} purchase={activeNav === "Purchase Returns"} />
-        ) : activeNav === "Color Management" ? (
-          <ColorManagementPage business={business} account={account} />
-        ) : [
-            "Variant Grid",
-            "Replenishment",
-            "Promotions",
-            "Loyalty",
-            "Coupons",
-            "Gift Cards",
-            "Cashier Shifts",
-            "Clothing Reports",
-          ].includes(activeNav) ? (
-          <ClothingModule section={activeNav} business={business} account={account} />
-        ) : activeNav === "Bulk Pricing" ? (
-          <BulkPricingPage business={business} account={account} />
-        ) : [
-            "Batch Management",
-            "Expiry Tracking",
-            "Prescription Management",
-            "Size Management",
-            "Product Variants",
-            "Serial Numbers",
-            "Warranty Tracking",
-            "Offers / Discounts",
-            "Raw Materials",
-            "Bill of Materials",
-            "Production",
-            "Finished Goods",
-            "Production Tracking",
-          ].includes(activeNav) ? (
-          <IndustryModule section={activeNav} business={business} onNavigate={navigateTo} />
-        ) : activeNav === "Bulk Orders" || activeNav === "Credit Sales" ? (
-          <SalesOrdersPage
-            business={business}
-            account={account}
-            creditSales={false}
-            section={activeNav}
-          />
-        ) : (
-          <div className="empty-dashboard">
-            <span className="empty-dashboard-icon">◫</span>
-            <h2>{activeNav}</h2>
-            <p>This module is ready for the next step of your inventory workspace.</p>
-          </div>
-        )}
+        <Routes>
+          <Route path="/overview" element={<Navigate to="/" replace />} />
+          {Object.entries(ROUTE_TABLE).map(([label, config]) => {
+            const hasPermission =
+              !config.requiredPermission ||
+              (Array.isArray(config.requiredPermission)
+                ? config.requiredPermission.every(can)
+                : can(config.requiredPermission));
+
+            return (
+              <Route
+                key={label}
+                path={config.path}
+                element={hasPermission ? config.render(routeContext) : <Navigate to="/" replace />}
+              />
+            );
+          })}
+          <Route path="*" element={<NotFoundPage onNavigate={navigateTo} />} />
+        </Routes>
       </section>
     </main>
   );
@@ -365,7 +261,7 @@ function DashboardView({ initialNav = "Overview" }) {
 
 function MainApp() {
   const { session, loading, updateSession } = useAuth();
-  const [initialNav, setInitialNav] = useState("Overview");
+  const navigate = useNavigate();
 
   const [initialReset] = useState(() => {
     try {
@@ -393,15 +289,17 @@ function MainApp() {
           updateSession(result);
         }}
         onComplete={(result) => {
-          setInitialNav(result.initialNav || "Overview");
           updateSession(result);
+          if (result.initialNav) {
+            navigate(pathForNavLabel(result.initialNav));
+          }
         }}
       />
     );
   }
 
   if (session) {
-    return <DashboardView initialNav={initialNav} />;
+    return <DashboardView />;
   }
 
   return (
@@ -416,10 +314,12 @@ function MainApp() {
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <MainApp />
-      </AuthProvider>
-    </ThemeProvider>
+    <BrowserRouter>
+      <ThemeProvider>
+        <AuthProvider>
+          <MainApp />
+        </AuthProvider>
+      </ThemeProvider>
+    </BrowserRouter>
   );
 }
