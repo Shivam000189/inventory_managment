@@ -39,7 +39,7 @@ const flag = (raw, fallback) =>
 export const env = {
   nodeEnv,
   port: Number(process.env.PORT) || 4000,
-  mongoUri: required('MONGODB_URI', 'mongodb://127.0.0.1:27017/inventory_app'),
+  mongoUri: process.env.MONGODB_URI || '',
   jwtSecret,
   // Short-lived by design: the browser cookie is renewed on activity, and API
   // callers re-authenticate. Long tokens can't be revoked before they expire.
@@ -54,6 +54,13 @@ export const env = {
     secure: flag(process.env.SECURE_COOKIES, isProduction),
     sameSite: process.env.COOKIE_SAMESITE || 'lax',
     domain: process.env.COOKIE_DOMAIN || undefined,
+  },
+  databaseDriver: process.env.DATABASE_DRIVER || 'supabase', // defaults to 'supabase'
+  supabase: {
+    url: process.env.SUPABASE_URL || '',
+    anonKey: process.env.SUPABASE_ANON_KEY || '',
+    serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+    databaseUrl: process.env.DATABASE_URL || process.env.SUPABASE_DB_URL || '',
   },
 }
 

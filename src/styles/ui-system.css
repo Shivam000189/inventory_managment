@@ -10,8 +10,8 @@
   --sr-font: 'Manrope','Segoe UI',sans-serif; --sr-mono: 'sans-serif',Consolas,sans-serif;
   --sr-fs-micro: 11px; --sr-fs-caption: 12px; --sr-fs-body: 14px; --sr-fs-body-lg: 15px; --sr-lh: 1.55;
   --sr-space-1: 4px; --sr-space-2: 8px; --sr-space-3: 12px; --sr-space-4: 16px; --sr-space-5: 20px; --sr-space-6: 28px;
-  --sr-radius-xs: 6px; --sr-radius: 10px; --sr-radius-lg: 14px; --sr-radius-xl: 18px; --sr-control-h: 44px; --sr-control-h-sm: 38px;
-  --sr-focus: 0 0 0 3px rgba(91,55,31,.22); --sr-shadow-sm: 0 1px 2px rgba(50,30,15,.06),0 3px 10px rgba(50,30,15,.07); --sr-shadow-md: 0 12px 32px rgba(50,30,15,.12); --sr-shadow-lg: 0 24px 60px rgba(91,55,31,.22); --sr-shadow-glow: 0 10px 25px rgba(91,55,31,.28); --sr-ease: cubic-bezier(.22,1,.36,1);
+  --sr-radius-xs: 6px; --sr-radius: 10px; --sr-radius-lg: 18px; --sr-radius-xl: 22px; --sr-control-h: 44px; --sr-control-h-sm: 38px;
+  --sr-focus: 0 0 0 3px rgba(91,55,31,.22); --sr-shadow-sm: 0 4px 14px -2px rgba(45,30,20,.035), 0 2px 6px -1px rgba(45,30,20,.02); --sr-shadow-md: 0 10px 28px -4px rgba(45,30,20,.045), 0 4px 12px -2px rgba(45,30,20,.02); --sr-shadow-lg: 0 20px 45px -6px rgba(45,30,20,.08), 0 8px 18px -3px rgba(45,30,20,.03); --sr-shadow-glow: 0 10px 25px rgba(91,55,31,.28); --sr-ease: cubic-bezier(.22,1,.36,1);
 }
 [data-theme="dark"] {
   color-scheme: dark;
@@ -21,7 +21,7 @@
   --auth-brand: #caa06c; --auth-brand-light: #dab27e; --auth-brand-deep: #8b5a34;
   --success: #3fbd82; --success-soft: rgba(63,189,130,.12); --warning: #f0b94a; --warning-soft: rgba(240,185,74,.12); --danger: #ea8c78; --danger-soft: rgba(234,140,120,.12); --info: #7cc3db; --info-soft: rgba(124,195,219,.12);
   --purple: #c7aee0;
-  --sr-focus: 0 0 0 3px rgba(202,160,108,.3); --sr-shadow-sm: 0 1px 3px rgba(0,0,0,.4); --sr-shadow-md: 0 12px 32px rgba(0,0,0,.42); --sr-shadow-lg: 0 28px 70px rgba(0,0,0,.55); --sr-shadow-glow: 0 10px 28px rgba(202,160,108,.24);
+  --sr-focus: 0 0 0 3px rgba(202,160,108,.3); --sr-shadow-sm: 0 4px 14px -2px rgba(0,0,0,.35), 0 2px 6px -1px rgba(0,0,0,.2); --sr-shadow-md: 0 10px 28px -4px rgba(0,0,0,.45), 0 4px 12px -2px rgba(0,0,0,.25); --sr-shadow-lg: 0 22px 50px -6px rgba(0,0,0,.6), 0 8px 20px -3px rgba(0,0,0,.35); --sr-shadow-glow: 0 10px 28px rgba(202,160,108,.24);
 }
 html, body { background: var(--bg); }
 body { color: var(--text); font-family: var(--sr-font); }

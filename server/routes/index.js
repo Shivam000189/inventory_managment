@@ -1,7 +1,7 @@
 import { Router } from 'express'
-import mongoose from 'mongoose'
 import { authenticate, requireBusiness, requireModule, requirePermission } from '../middleware/auth.js'
 import { requireDatabase } from '../middleware/database.js'
+import { getDatabaseStatus } from '../config/db.js'
 import { authRoutes } from './authRoutes.js'
 import { businessRoutes } from './businessRoutes.js'
 import { productRoutes } from './productRoutes.js'
@@ -23,12 +23,19 @@ import { clothingRoutes } from './clothingRoutes.js'
 
 export const api = Router()
 
-const DB_STATES = ['disconnected', 'connected', 'connecting', 'disconnecting']
-
 // Health check never depends on the database being up.
 api.get('/health', (_req, res) => {
-  const db = DB_STATES[mongoose.connection.readyState] || 'unknown'
-  res.json({ success: true, data: { status: 'ok', service: 'stockroom-api', db } })
+  const dbStatus = getDatabaseStatus()
+  res.json({
+    success: true,
+    data: {
+      status: 'ok',
+      service: 'stockroom-api',
+      driver: dbStatus.driver,
+      db: dbStatus[dbStatus.driver] || 'unknown',
+      databases: dbStatus,
+    },
+  })
 })
 
 // Auth + business routes still need the database.

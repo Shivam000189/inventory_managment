@@ -1,4 +1,3 @@
-import mongoose from 'mongoose'
 import { ApiError } from '../utils/ApiError.js'
 import { isProduction } from '../config/env.js'
 
@@ -12,16 +11,19 @@ export function errorHandler(error, _req, res, _next) {
   let message = error.message || 'Something went wrong.'
   let details
 
-  if (error instanceof mongoose.Error.ValidationError) {
+  if (error.name === 'ValidationError') {
     statusCode = 400
     message = 'Validation failed.'
-    details = Object.fromEntries(Object.entries(error.errors).map(([key, value]) => [key, value.message]))
-  } else if (error instanceof mongoose.Error.CastError) {
+    details = error.errors ? Object.fromEntries(Object.entries(error.errors).map(([key, value]) => [key, value?.message || value])) : undefined
+  } else if (error.name === 'CastError') {
     statusCode = 400
     message = `Invalid ${error.path}: ${error.value}`
-  } else if (error.code === 11000) {
+  } else if (error.code === 11000 || error.code === '23505') {
     statusCode = 409
-    message = `Duplicate value for ${Object.keys(error.keyValue || {}).join(', ') || 'a unique field'}.`
+    message = error.detail || `Duplicate entry for a unique field.`
+  } else if (error.code === '23503') {
+    statusCode = 400
+    message = `Referenced record does not exist (${error.detail || ''}).`
   } else if (error.name === 'MulterError') {
     statusCode = error.code === 'LIMIT_FILE_SIZE' ? 413 : 400
     message = error.code === 'LIMIT_FILE_SIZE' ? 'The upload exceeds the 15 MB file limit.' : `Invalid upload: ${error.message}`

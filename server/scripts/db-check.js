@@ -1,26 +1,37 @@
-/* Quick connectivity test for the MONGODB_URI in server/.env */
-import mongoose from 'mongoose'
-import dns from 'node:dns'
+/* Connectivity test for Supabase PostgreSQL in server/.env */
+import { testSupabaseConnection } from '../config/supabase.js'
 import { env } from '../config/env.js'
 
-const masked = env.mongoUri.replace(/\/\/([^:]+):[^@]+@/, '//$1:****@')
-console.log(`Connecting to: ${masked}`)
-
-// Atlas uses DNS SRV records. Some Windows/router DNS proxies refuse Node's
-// SRV lookup even while ordinary DNS works, so match the runtime fallback.
-if (env.mongoUri.startsWith('mongodb+srv://')) dns.setServers(['1.1.1.1', '8.8.8.8'])
+console.log('Testing Supabase PostgreSQL connectivity...')
+console.log(`Supabase URL: ${env.supabase.url || 'not set'}`)
 
 try {
-  await mongoose.connect(env.mongoUri, { serverSelectionTimeoutMS: 12000 })
-  console.log(`MongoDB OK  -  host: ${mongoose.connection.host}  db: ${mongoose.connection.name}`)
-  await mongoose.disconnect()
-  process.exit(0)
-} catch (error) {
-  console.error(`MongoDB FAILED  -  ${error.codeName || error.code || ''} ${error.message}`)
-  if (/bad auth|Authentication failed/i.test(error.message)) {
-    console.error('  -> Wrong database username/password. Fix the user in Atlas > Database Access.')
-  } else if (/ENOTFOUND|querySrv|ECONNREFUSED|ETIMEOUT|timed out/i.test(error.message)) {
-    console.error('  -> Cannot reach the cluster. Check the host in the URI and Atlas > Network Access (add your IP or 0.0.0.0/0).')
+  const result = await testSupabaseConnection()
+  if (!result.configured) {
+    console.error('Supabase is not configured. Define SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in server/.env')
+    process.exit(1)
   }
+
+  if (result.restConnected) {
+    console.log('✓ Supabase REST API connected successfully')
+  } else {
+    console.warn('✗ Supabase REST connection failed:', result.details.restError)
+  }
+
+  if (result.directDbConnected) {
+    console.log(`✓ Direct PostgreSQL pool connected successfully (database: "${result.details.database}")`)
+  } else if (env.supabase.databaseUrl) {
+    console.warn('✗ Direct PostgreSQL pool failed:', result.details.directDbError)
+  }
+
+  if (result.restConnected || result.directDbConnected) {
+    console.log('\nSupabase PostgreSQL check PASSED.')
+    process.exit(0)
+  } else {
+    console.error('\nSupabase PostgreSQL check FAILED.')
+    process.exit(1)
+  }
+} catch (error) {
+  console.error('Database check error:', error.message)
   process.exit(1)
 }

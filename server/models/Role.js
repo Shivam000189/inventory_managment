@@ -1,26 +1,8 @@
-import mongoose from 'mongoose'
+import { createSupabaseModel } from './supabaseModel.js'
 
-const roleSchema = new mongoose.Schema(
-  {
-    business: { type: mongoose.Schema.Types.ObjectId, ref: 'Business', required: true, index: true },
-    roleId: { type: String, required: true, trim: true },
-    name: { type: String, required: true, trim: true },
-    description: { type: String, trim: true, default: '' },
-    permissions: { type: [String], default: [] },
-  },
-  { timestamps: true },
-)
-
-roleSchema.index({ business: 1, roleId: 1 }, { unique: true })
-
-roleSchema.set('toJSON', {
-  transform(_doc, ret) {
-    delete ret.__v
-    return ret
-  },
+export const Role = createSupabaseModel('roles', {
+  idField: 'id',
 })
-
-export const Role = mongoose.model('Role', roleSchema)
 
 export const DEFAULT_PERMISSIONS = [
   'view_dashboard',

@@ -1,4 +1,5 @@
-import mongoose from 'mongoose'
+import crypto from 'node:crypto'
+import { withTransaction } from '../config/db.js'
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs'
 import ExcelJS from 'exceljs'
 import { Product } from '../models/Product.js'
@@ -295,35 +296,32 @@ async function confirmClothingVariants(businessId, payload, actor, normalizedRow
   if (payload.supplierId) supplier = await Supplier.findOne({ _id: toObjectId(payload.supplierId, 'supplier'), business })
   if (payload.supplierId && !supplier) throw ApiError.notFound('Supplier not found in this business.')
   const counts = { created: 0, updated: 0, merged: 0, skipped: 0 }; let history
-  const session = await mongoose.startSession()
-  try {
-    await session.withTransaction(async () => {
-      const resolveSupplier = await createSupplierResolver(business, supplier, session)
-      for (const row of validRows) {
-        const rowSupplier = await resolveSupplier(row)
-        let parent = await Product.findOne({ business, ...(row.parentSku ? { sku: row.parentSku } : { name: row.name, category: row.category }) }).session(session)
-        if (!parent) {
-          let parentSku = row.parentSku || styleSku(row.name); let suffix = 1
-          while (await Product.exists({ business, sku: parentSku }).session(session)) parentSku = `${styleSku(row.name)}-${suffix++}`
-          ;[parent] = await Product.create([{ business, name: row.name, sku: parentSku, category: row.category, brand: row.brand, purchasePrice: row.purchasePrice, sellingPrice: row.sellingPrice, wholesalePrice: row.wholesalePrice, gstRate: row.gstRate, hsnCode: row.hsnCode, supplier: rowSupplier?.supplierName || '', supplierId: rowSupplier?._id || null, currentStock: 0, variants: [] }], { session })
-        }
-        const collision = await Product.findOne({ business, _id: { $ne: parent._id }, $or: [{ sku: row.sku }, { 'variants.sku': row.sku }, ...(row.barcode ? [{ barcode: row.barcode }, { 'variants.barcode': row.barcode }] : [])] }).session(session)
-        if (collision) { failures.push({ rowNumber: row.rowNumber, sku: row.sku, barcode: row.barcode, name: row.name, reasons: ['Variant SKU or barcode already belongs to another product.'] }); continue }
-        const variant = parent.variants.find((item) => item.sku === row.sku || (item.size.toLowerCase() === row.size.toLowerCase() && item.color.toLowerCase() === row.color.toLowerCase()))
-        if (variant && row.duplicateAction === 'skip') { counts.skipped += 1; continue }
-        const previousStock = variant?.currentStock || 0
-        const newStock = variant && row.duplicateAction === 'merge' ? previousStock + row.quantity : row.quantity
-        const values = { size: row.size, color: row.color, sku: row.sku, barcode: row.barcode, purchasePrice: row.purchasePrice, sellingPrice: row.sellingPrice, currentStock: newStock, minimumStock: row.minimumStock, reorderPoint: row.reorderPoint, targetStock: row.targetStock, reorderQuantity: row.reorderQuantity, preferredSupplierId: rowSupplier?._id || null, replenishmentEnabled: row.reorderPoint > 0 || row.targetStock > 0, active: true }
-        if (variant) { Object.assign(variant, values); counts[row.duplicateAction === 'merge' ? 'merged' : 'updated'] += 1 } else { parent.variants.push(values); counts.created += 1 }
-        parent.currentStock = parent.variants.reduce((sum, item) => sum + item.currentStock, 0); await parent.save({ session })
-        const saved = variant || parent.variants[parent.variants.length - 1]
-        if (newStock !== previousStock) await StockTransaction.create([{ business, productId: parent._id, variantId: saved._id, variantSku: saved.sku, variantSize: saved.size, variantColor: saved.color, type: 'adjustment', quantity: Math.abs(newStock - previousStock), previousStock, newStock, reason: `Bulk clothing variant import: ${payload.fileName}`, referenceId: String(payload.purchaseReference || ''), createdBy: actor.name }], { session })
+  await withTransaction(async (session) => {
+    const resolveSupplier = await createSupplierResolver(business, supplier, session)
+    for (const row of validRows) {
+      const rowSupplier = await resolveSupplier(row)
+      let parent = await Product.findOne({ business, ...(row.parentSku ? { sku: row.parentSku } : { name: row.name, category: row.category }) }).session(session)
+      if (!parent) {
+        let parentSku = row.parentSku || styleSku(row.name); let suffix = 1
+        while (await Product.exists({ business, sku: parentSku }).session(session)) parentSku = `${styleSku(row.name)}-${suffix++}`
+        ;[parent] = await Product.create([{ business, name: row.name, sku: parentSku, category: row.category, brand: row.brand, purchasePrice: row.purchasePrice, sellingPrice: row.sellingPrice, wholesalePrice: row.wholesalePrice, gstRate: row.gstRate, hsnCode: row.hsnCode, supplier: rowSupplier?.supplierName || '', supplierId: rowSupplier?._id || null, currentStock: 0, variants: [] }], { session })
       }
-      const processed = counts.created + counts.updated + counts.merged
-      const status = failures.length ? (processed ? 'partial' : 'failed') : 'completed'
-      ;[history] = await ProductImport.create([{ business, fileName: String(payload.fileName || 'import').slice(0, 240), fileType: ['pdf', 'csv', 'xlsx'].includes(payload.fileType) ? payload.fileType : 'csv', variantMode: true, purchaseReference: String(payload.purchaseReference || ''), supplier: supplier?._id || null, supplierName: supplier?.supplierName || '', importedBy, importedByName: actor.name, status, totalRows: normalizedRows.length, createdCount: counts.created, updatedCount: counts.updated, mergedCount: counts.merged, skippedCount: counts.skipped, failedCount: failures.length, failures: failures.slice(0, 500) }], { session })
-    })
-  } finally { await session.endSession() }
+      const collision = await Product.findOne({ business, _id: { $ne: parent._id }, $or: [{ sku: row.sku }, { 'variants.sku': row.sku }, ...(row.barcode ? [{ barcode: row.barcode }, { 'variants.barcode': row.barcode }] : [])] }).session(session)
+      if (collision) { failures.push({ rowNumber: row.rowNumber, sku: row.sku, barcode: row.barcode, name: row.name, reasons: ['Variant SKU or barcode already belongs to another product.'] }); continue }
+      const variant = parent.variants.find((item) => item.sku === row.sku || (item.size.toLowerCase() === row.size.toLowerCase() && item.color.toLowerCase() === row.color.toLowerCase()))
+      if (variant && row.duplicateAction === 'skip') { counts.skipped += 1; continue }
+      const previousStock = variant?.currentStock || 0
+      const newStock = variant && row.duplicateAction === 'merge' ? previousStock + row.quantity : row.quantity
+      const values = { size: row.size, color: row.color, sku: row.sku, barcode: row.barcode, purchasePrice: row.purchasePrice, sellingPrice: row.sellingPrice, currentStock: newStock, minimumStock: row.minimumStock, reorderPoint: row.reorderPoint, targetStock: row.targetStock, reorderQuantity: row.reorderQuantity, preferredSupplierId: rowSupplier?._id || null, replenishmentEnabled: row.reorderPoint > 0 || row.targetStock > 0, active: true }
+      if (variant) { Object.assign(variant, values); counts[row.duplicateAction === 'merge' ? 'merged' : 'updated'] += 1 } else { parent.variants.push(values); counts.created += 1 }
+      parent.currentStock = parent.variants.reduce((sum, item) => sum + item.currentStock, 0); await parent.save({ session })
+      const saved = variant || parent.variants[parent.variants.length - 1]
+      if (newStock !== previousStock) await StockTransaction.create([{ business, productId: parent._id, variantId: saved._id, variantSku: saved.sku, variantSize: saved.size, variantColor: saved.color, type: 'adjustment', quantity: Math.abs(newStock - previousStock), previousStock, newStock, reason: `Bulk clothing variant import: ${payload.fileName}`, referenceId: String(payload.purchaseReference || ''), createdBy: actor.name }], { session })
+    }
+    const processed = counts.created + counts.updated + counts.merged
+    const status = failures.length ? (processed ? 'partial' : 'failed') : 'completed'
+    ;[history] = await ProductImport.create([{ business, fileName: String(payload.fileName || 'import').slice(0, 240), fileType: ['pdf', 'csv', 'xlsx'].includes(payload.fileType) ? payload.fileType : 'csv', variantMode: true, purchaseReference: String(payload.purchaseReference || ''), supplier: supplier?._id || null, supplierName: supplier?.supplierName || '', importedBy, importedByName: actor.name, status, totalRows: normalizedRows.length, createdCount: counts.created, updatedCount: counts.updated, mergedCount: counts.merged, skippedCount: counts.skipped, failedCount: failures.length, failures: failures.slice(0, 500) }], { session })
+  })
   return { import: history.toJSON(), counts, failures }
 }
 
@@ -343,36 +341,34 @@ export async function confirm(businessId, payload, actor) {
   let supplier = null
   if (payload.supplierId) supplier = await Supplier.findOne({ _id: toObjectId(payload.supplierId, 'supplier'), business })
   if (payload.supplierId && !supplier) throw ApiError.notFound('Supplier not found in this business.')
-  const session = await mongoose.startSession(); const counts = { created: 0, updated: 0, merged: 0, skipped: 0 }
+  const counts = { created: 0, updated: 0, merged: 0, skipped: 0 }
   let history
-  try {
-    await session.withTransaction(async () => {
-      const resolveSupplier = await createSupplierResolver(business, supplier, session)
-      const operations = []; const movements = []
-      for (const row of validRows) {
-        const existing = row.duplicate
-        if (existing && row.duplicateAction === 'skip') { counts.skipped += 1; continue }
-        const rowSupplier = await resolveSupplier(row)
-        const productFields = { name: row.name, sku: row.sku, barcode: row.barcode, category: row.category, brand: row.brand, size: row.size, color: row.color, purchasePrice: row.purchasePrice, sellingPrice: row.sellingPrice, wholesalePrice: row.wholesalePrice, gstRate: row.gstRate, hsnCode: row.hsnCode, supplier: rowSupplier?.supplierName || '', supplierId: rowSupplier?._id || null }
-        let productId; let previousStock = 0; let newStock = row.quantity
-        if (existing) {
-          productId = toObjectId(existing.productId, 'product'); previousStock = existing.currentStock
-          newStock = row.duplicateAction === 'merge' ? previousStock + row.quantity : row.quantity
-          operations.push({ updateOne: { filter: { _id: productId, business }, update: { $set: { ...productFields, currentStock: newStock } } } })
-          counts[row.duplicateAction === 'merge' ? 'merged' : 'updated'] += 1
-        } else {
-          productId = new mongoose.Types.ObjectId()
-          operations.push({ insertOne: { document: { _id: productId, business, ...productFields, currentStock: newStock } } }); counts.created += 1
-        }
-        if (newStock !== previousStock) movements.push({ business, productId, type: 'adjustment', quantity: Math.abs(newStock - previousStock), previousStock, newStock, reason: `Bulk product import: ${payload.fileName}`, referenceId: String(payload.purchaseReference || ''), createdBy: actor.name })
+  await withTransaction(async (session) => {
+    const resolveSupplier = await createSupplierResolver(business, supplier, session)
+    const operations = []; const movements = []
+    for (const row of validRows) {
+      const existing = row.duplicate
+      if (existing && row.duplicateAction === 'skip') { counts.skipped += 1; continue }
+      const rowSupplier = await resolveSupplier(row)
+      const productFields = { name: row.name, sku: row.sku, barcode: row.barcode, category: row.category, brand: row.brand, size: row.size, color: row.color, purchasePrice: row.purchasePrice, sellingPrice: row.sellingPrice, wholesalePrice: row.wholesalePrice, gstRate: row.gstRate, hsnCode: row.hsnCode, supplier: rowSupplier?.supplierName || '', supplierId: rowSupplier?._id || null }
+      let productId; let previousStock = 0; let newStock = row.quantity
+      if (existing) {
+        productId = toObjectId(existing.productId, 'product'); previousStock = existing.currentStock
+        newStock = row.duplicateAction === 'merge' ? previousStock + row.quantity : row.quantity
+        operations.push({ updateOne: { filter: { _id: productId, business }, update: { $set: { ...productFields, currentStock: newStock } } } })
+        counts[row.duplicateAction === 'merge' ? 'merged' : 'updated'] += 1
+      } else {
+        productId = crypto.randomUUID()
+        operations.push({ insertOne: { document: { _id: productId, business, ...productFields, currentStock: newStock } } }); counts.created += 1
       }
-      if (operations.length) await Product.bulkWrite(operations, { ordered: false, session })
-      if (movements.length) await StockTransaction.insertMany(movements, { session })
-      const processed = counts.created + counts.updated + counts.merged
-      const status = failures.length ? (processed ? 'partial' : 'failed') : 'completed'
-      ;[history] = await ProductImport.create([{ business, fileName: String(payload.fileName || 'import').slice(0, 240), fileType: ['pdf', 'csv', 'xlsx'].includes(payload.fileType) ? payload.fileType : 'csv', purchaseReference: String(payload.purchaseReference || ''), supplier: supplier?._id || null, supplierName: supplier?.supplierName || String(payload.supplierName || ''), importedBy, importedByName: actor.name, status, totalRows: rows.length, createdCount: counts.created, updatedCount: counts.updated, mergedCount: counts.merged, skippedCount: counts.skipped, failedCount: failures.length, failures: failures.slice(0, 500) }], { session })
-    })
-  } finally { await session.endSession() }
+      if (newStock !== previousStock) movements.push({ business, productId, type: 'adjustment', quantity: Math.abs(newStock - previousStock), previousStock, newStock, reason: `Bulk product import: ${payload.fileName}`, referenceId: String(payload.purchaseReference || ''), createdBy: actor.name })
+    }
+    if (operations.length) await Product.bulkWrite(operations, { ordered: false, session })
+    if (movements.length) await StockTransaction.insertMany(movements, { session })
+    const processed = counts.created + counts.updated + counts.merged
+    const status = failures.length ? (processed ? 'partial' : 'failed') : 'completed'
+    ;[history] = await ProductImport.create([{ business, fileName: String(payload.fileName || 'import').slice(0, 240), fileType: ['pdf', 'csv', 'xlsx'].includes(payload.fileType) ? payload.fileType : 'csv', purchaseReference: String(payload.purchaseReference || ''), supplier: supplier?._id || null, supplierName: supplier?.supplierName || String(payload.supplierName || ''), importedBy, importedByName: actor.name, status, totalRows: rows.length, createdCount: counts.created, updatedCount: counts.updated, mergedCount: counts.merged, skippedCount: counts.skipped, failedCount: failures.length, failures: failures.slice(0, 500) }], { session })
+  })
   return { import: history.toJSON(), counts, failures }
 }
 

@@ -1,5 +1,5 @@
-import mongoose from 'mongoose'
 import { ApiError } from '../utils/ApiError.js'
+import { objectIdToUuid } from '../utils/mongoSupabaseMapper.js'
 
 export function assert(condition, message, statusCode = 400) {
   if (!condition) throw new ApiError(statusCode, message)
@@ -14,8 +14,12 @@ export function requireFields(body, fields) {
 }
 
 export function toObjectId(value, label = 'id') {
-  assert(mongoose.isValidObjectId(value), `Invalid ${label}.`)
-  return new mongoose.Types.ObjectId(String(value))
+  if (!value) throw new ApiError(400, `Invalid ${label}.`)
+  const str = String(value?._id || value?.id || value).trim()
+  assert(str.length > 0, `Invalid ${label}.`)
+  const uuid = objectIdToUuid(str)
+  assert(Boolean(uuid), `Invalid ${label}.`)
+  return uuid
 }
 
 export function toNumber(value, label, { min, integer } = {}) {
