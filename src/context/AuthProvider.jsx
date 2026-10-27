@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { authApi } from "../api/authApi.js";
 import { getCsrfToken } from "../api/client.js";
-import { AuthContext } from "./authContext.js";
+import { AuthContext } from "./AuthContext.js";
 
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);

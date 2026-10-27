@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import AsyncBoundary from './AsyncBoundary.jsx'
-import '../styles/stock-in.css'
+import AsyncBoundary from '../../components/feedback/AsyncBoundary.jsx'
+import '../../styles/stock-in.css'
 
 function InwardIcon({ name, ...props }) {
   const paths = {

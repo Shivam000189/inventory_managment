@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import AsyncBoundary from './AsyncBoundary.jsx'
-import '../styles/stock-adjustments.css'
+import AsyncBoundary from '../../components/feedback/AsyncBoundary.jsx'
+import '../../styles/stock-adjustments.css'
 
 function AdjustmentIcon({ name }) {
   const paths = {

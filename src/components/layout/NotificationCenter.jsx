@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { notificationApi } from '../api/notificationApi.js'
+import { notificationApi } from '../../api/notificationApi.js'
 
 const TABS = [
   { id: 'all', label: 'All' },

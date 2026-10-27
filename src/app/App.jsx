@@ -8,11 +8,11 @@ import "../styles/modern-dashboard.css";
 // Layout & Context
 import AppSidebar from "../components/layout/AppSidebar.jsx";
 import AppHeader from "../components/layout/AppHeader.jsx";
-import { AuthProvider } from "../context/AuthContext.jsx";
-import { ThemeProvider } from "../context/ThemeContext.jsx";
+import { AuthProvider } from "../context/AuthProvider.jsx";
+import { ThemeProvider } from "../context/ThemeProvider.jsx";
 import { useAuth } from "../hooks/useAuth.js";
 import { useTheme } from "../hooks/useTheme.js";
-import { getNavigation } from "../constants/navigation.js";
+import { getNavigation } from "../../shared/industryConfig.js";
 import { resolveBusinessCapabilities } from "../../shared/industryConfig.js";
 
 // Feature modules
@@ -33,7 +33,7 @@ import UserManagementPage from "../features/team/UserManagementPage.jsx";
 import ReportsPage from "../features/reports/ReportsPage.jsx";
 import BusinessProfilePage from "../features/settings/BusinessProfilePage.jsx";
 import StoreSettingsPage from "../features/settings/StoreSettingsPage.jsx";
-import { Returns } from "../components/RemainingModules.jsx";
+import Returns from "../features/returns/ReturnsPage.jsx";
 import ClothingModule from "../features/industries/clothing/ClothingModule.jsx";
 import ColorManagementPage from "../features/industries/clothing/ColorManagementPage.jsx";
 import BulkPricingPage from "../features/industries/wholesale/BulkPricingPage.jsx";

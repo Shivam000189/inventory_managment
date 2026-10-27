@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import NotificationCenter from "../NotificationCenter.jsx";
+import NotificationCenter from "./NotificationCenter.jsx";
 
 const NAVIGATION_LABELS = {
   Overview: "Dashboard Overview",
