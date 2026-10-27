@@ -1,10 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { receivingApi } from '../../api/receivingApi.js'
 import { useResource } from '../../hooks/useResource.js'
-import AsyncBoundary from '../../components/feedback/AsyncBoundary.jsx'
-import '../../styles/receiving.css'
+import { PageHeader } from '../../components/ui/PageHeader.jsx'
+import { StatGrid, StatCard, Card } from '../../components/ui/Card.jsx'
+import { DataTable } from '../../components/ui/DataTable.jsx'
+import { Button } from '../../components/ui/Button.jsx'
+import { Badge } from '../../components/ui/Badge.jsx'
+import { Field, Input, Select, Textarea } from '../../components/ui/FormControls.jsx'
+import { FormStatus } from '../../components/ui/Feedback.jsx'
+import { Toolbar } from '../../components/ui/Toolbar.jsx'
+import './ReceivingGrnPage.css'
 
-function GrnIcon({ name }) {
+function GrnLocalIcon({ name }) {
   const paths = {
     inbound: <><path d="M12 3v11m-4-4 4 4 4-4" /><path d="M4 17v3h16v-3" /></>,
     export: <><path d="M12 3v12m-4-4 4 4 4-4" /><path d="M5 17v3h14v-3" /></>,
@@ -18,15 +25,32 @@ function GrnIcon({ name }) {
     plus: <path d="M12 5v14M5 12h14" />,
     printer: <><path d="M7 8V3h10v5M7 18H5a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M7 14h10v7H7z" /></>,
   }
-  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      style={{ width: 16, height: 16 }}
+    >
+      {paths[name]}
+    </svg>
+  )
 }
 
 const DOCK_BAYS = ['Bay 01 - Ambient', 'Bay 02 - Cold storage', 'Bay 03 - Bulk / pallet', 'Bay 04 - Returns dock']
-const startOfToday = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d }
+const startOfToday = () => {
+  const d = new Date()
+  d.setHours(0, 0, 0, 0)
+  return d
+}
 
 function Receiving({ business, account, onNavigate }) {
   const load = useCallback(() => Promise.all([receivingApi.pendingOrders(), receivingApi.list()]), [])
-  const { data, loading, error, refetch, setData } = useResource(load, [], [[], []])
+  const { data, loading, error, setData } = useResource(load, [], [[], []])
   const [pendingOrders, receivings] = data
 
   const [selectedOrderId, setSelectedOrderId] = useState('')
@@ -38,58 +62,106 @@ function Receiving({ business, account, onNavigate }) {
   const [saving, setSaving] = useState(false)
   const orderSelectRef = useRef(null)
 
-  const currency = business.currency || 'INR'
-  const money = (value, dp = 2) => {
-    const amount = Number(value || 0)
-    try {
-      return new Intl.NumberFormat('en-IN', { style: 'currency', currency, minimumFractionDigits: dp, maximumFractionDigits: dp }).format(amount)
-    } catch {
-      return `${currency} ${amount.toLocaleString('en-IN', { minimumFractionDigits: dp, maximumFractionDigits: dp })}`
-    }
-  }
+  const currency = business?.currency || 'INR'
+  const money = useCallback(
+    (value, dp = 2) => {
+      const amount = Number(value || 0)
+      try {
+        return new Intl.NumberFormat('en-IN', {
+          style: 'currency',
+          currency,
+          minimumFractionDigits: dp,
+          maximumFractionDigits: dp,
+        }).format(amount)
+      } catch {
+        return `${currency} ${amount.toLocaleString('en-IN', { minimumFractionDigits: dp, maximumFractionDigits: dp })}`
+      }
+    },
+    [currency],
+  )
 
-  const selectedOrder = pendingOrders.find((order) => order.purchaseOrderId === selectedOrderId)
+  const getPoId = (order) => order?.purchaseOrderId || order?.poId || ''
 
-  const buildLines = (order) => order.lines.map((line) => ({
-    productId: line.productId,
-    productName: line.productName,
-    variantSku: line.variantSku || '',
-    orderedQuantity: line.orderedQuantity,
-    alreadyReceived: line.alreadyReceived,
-    receivedQuantity: Math.max(0, line.orderedQuantity - line.alreadyReceived),
-    damagedQuantity: 0,
-    rejectedQuantity: 0,
-    batchNumber: '',
-    expiryDate: '',
-  }))
+  const selectedOrder = pendingOrders.find((order) => getPoId(order) === selectedOrderId)
+
+  const buildLines = (order) =>
+    (order.lines || order.items || []).map((line) => ({
+      productId: line.productId,
+      productName: line.productName || line.name || 'Unknown item',
+      variantSku: line.variantSku || line.sku || '',
+      orderedQuantity: Number(line.orderedQuantity || line.quantity || 0),
+      alreadyReceived: Number(line.alreadyReceived || 0),
+      receivedQuantity: Math.max(0, Number(line.orderedQuantity || line.quantity || 0) - Number(line.alreadyReceived || 0)),
+      damagedQuantity: 0,
+      rejectedQuantity: 0,
+      batchNumber: '',
+      expiryDate: '',
+    }))
 
   const selectOrder = (orderId) => {
-    const order = pendingOrders.find((item) => item.purchaseOrderId === orderId)
+    const order = pendingOrders.find((item) => getPoId(item) === orderId)
     setSelectedOrderId(orderId)
     setMessage(null)
     setLines(order ? buildLines(order) : [])
   }
-  const updateLine = (index, field, value) => setLines(lines.map((line, lineIndex) => lineIndex === index ? { ...line, [field]: value } : line))
-  const stepQty = (index, delta) => setLines(lines.map((line, lineIndex) => {
-    if (lineIndex !== index) return line
-    const remaining = line.orderedQuantity - line.alreadyReceived
-    return { ...line, receivedQuantity: Math.max(0, Math.min(remaining, Number(line.receivedQuantity || 0) + delta)) }
-  }))
-  const acceptAllAsOrdered = () => selectedOrder && setLines(lines.map((line) => ({ ...line, receivedQuantity: line.orderedQuantity - line.alreadyReceived, damagedQuantity: 0, rejectedQuantity: 0 })))
+
+  const updateLine = (index, field, value) =>
+    setLines((current) =>
+      current.map((line, lineIndex) => (lineIndex === index ? { ...line, [field]: value } : line)),
+    )
+
+  const stepQty = (index, delta) =>
+    setLines((current) =>
+      current.map((line, lineIndex) => {
+        if (lineIndex !== index) return line
+        const remaining = line.orderedQuantity - line.alreadyReceived
+        return {
+          ...line,
+          receivedQuantity: Math.max(0, Math.min(remaining, Number(line.receivedQuantity || 0) + delta)),
+        }
+      }),
+    )
+
+  const acceptAllAsOrdered = () =>
+    selectedOrder &&
+    setLines((current) =>
+      current.map((line) => ({
+        ...line,
+        receivedQuantity: line.orderedQuantity - line.alreadyReceived,
+        damagedQuantity: 0,
+        rejectedQuantity: 0,
+      })),
+    )
 
   const handleSubmit = async (event) => {
     event.preventDefault()
     if (saving) return
-    if (!selectedOrder) { setMessage({ type: 'error', text: 'Select a purchase order first.' }); return }
+    if (!selectedOrder) {
+      setMessage({ type: 'error', text: 'Select a purchase order first.' })
+      return
+    }
     const invalid = lines.find((line) => {
       const remaining = line.orderedQuantity - line.alreadyReceived
-      return Number(line.receivedQuantity) < 0 || Number(line.receivedQuantity) > remaining || Number(line.damagedQuantity) < 0 || Number(line.rejectedQuantity) < 0 || Number(line.damagedQuantity) + Number(line.rejectedQuantity) > Number(line.receivedQuantity)
+      return (
+        Number(line.receivedQuantity) < 0 ||
+        Number(line.receivedQuantity) > remaining ||
+        Number(line.damagedQuantity) < 0 ||
+        Number(line.rejectedQuantity) < 0 ||
+        Number(line.damagedQuantity) + Number(line.rejectedQuantity) > Number(line.receivedQuantity)
+      )
     })
-    if (invalid) { setMessage({ type: 'error', text: 'Check received quantities. They cannot exceed the remaining ordered quantity, and damaged/rejected quantities cannot exceed received quantity.' }); return }
+    if (invalid) {
+      setMessage({
+        type: 'error',
+        text: 'Check received quantities. They cannot exceed the remaining ordered quantity, and damaged/rejected quantities cannot exceed received quantity.',
+      })
+      return
+    }
 
     setSaving(true)
     try {
-      const form = event.currentTarget; const userNotes = (new FormData(form).get('notes') || '').trim()
+      const form = event.currentTarget
+      const userNotes = (new FormData(form).get('notes') || '').trim()
       const context = [challan.trim() && `Challan ${challan.trim()}`, dockBay].filter(Boolean).join(' · ')
       const payload = {
         purchaseOrderId: selectedOrder.purchaseOrderId,
@@ -99,7 +171,7 @@ function Receiving({ business, account, onNavigate }) {
           receivedQuantity: Number(line.receivedQuantity),
           damagedQuantity: Number(line.damagedQuantity),
           rejectedQuantity: Number(line.rejectedQuantity),
-          batchNumber: line.batchNumber.trim(),
+          batchNumber: (line.batchNumber || '').trim(),
           expiryDate: line.expiryDate,
         })),
       }
@@ -121,7 +193,10 @@ function Receiving({ business, account, onNavigate }) {
   useEffect(() => {
     const handler = (event) => {
       if (event.defaultPrevented || event.repeat || event.isComposing) return
-      if (event.key === 'F2') { event.preventDefault(); orderSelectRef.current?.focus() }
+      if (event.key === 'F2') {
+        event.preventDefault()
+        orderSelectRef.current?.focus()
+      }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
@@ -129,19 +204,37 @@ function Receiving({ business, account, onNavigate }) {
 
   const stats = useMemo(() => {
     const today = startOfToday()
-    const remainingUnits = pendingOrders.reduce((sum, order) => sum + order.lines.reduce((n, line) => n + Math.max(0, line.orderedQuantity - line.alreadyReceived), 0), 0)
-    const uniqueSkus = new Set(pendingOrders.flatMap((order) => order.lines.map((line) => line.productId))).size
+    const remainingUnits = pendingOrders.reduce(
+      (sum, order) =>
+        sum +
+        (order.lines || order.items || []).reduce(
+          (n, line) => n + Math.max(0, (line.orderedQuantity || line.quantity || 0) - (line.alreadyReceived || 0)),
+          0,
+        ),
+      0,
+    )
+    const uniqueSkus = new Set(
+      pendingOrders.flatMap((order) => (order.lines || order.items || []).map((line) => line.productId)),
+    ).size
     const expectedValue = pendingOrders.reduce((sum, order) => sum + Number(order.totalAmount || 0), 0)
-    const lateTrucks = pendingOrders.filter((order) => order.expectedDeliveryDate && new Date(order.expectedDeliveryDate) < today).length
-    const allItems = receivings.flatMap((receiving) => receiving.items)
+    const lateTrucks = pendingOrders.filter(
+      (order) => order.expectedDeliveryDate && new Date(order.expectedDeliveryDate) < today,
+    ).length
+    const allItems = receivings.flatMap((receiving) => receiving.items || [])
     const received = allItems.reduce((sum, item) => sum + Number(item.receivedQuantity || 0), 0)
     const accepted = allItems.reduce((sum, item) => sum + Number(item.acceptedQuantity || 0), 0)
-    const rejected = allItems.reduce((sum, item) => sum + Number(item.rejectedQuantity || 0) + Number(item.damagedQuantity || 0), 0)
+    const rejected = allItems.reduce(
+      (sum, item) => sum + Number(item.rejectedQuantity || 0) + Number(item.damagedQuantity || 0),
+      0,
+    )
     const todayReceivings = receivings.filter((receiving) => new Date(receiving.receivedAt) >= today)
-    const acceptedToday = todayReceivings.flatMap((receiving) => receiving.items).reduce((sum, item) => sum + Number(item.acceptedQuantity || 0), 0)
+    const acceptedToday = todayReceivings
+      .flatMap((receiving) => receiving.items || [])
+      .reduce((sum, item) => sum + Number(item.acceptedQuantity || 0), 0)
     const days = new Set(receivings.map((receiving) => new Date(receiving.receivedAt).toDateString())).size || 1
     const avgPerDay = receivings.length / days
     const deltaVsAvg = avgPerDay ? Math.round(((todayReceivings.length - avgPerDay) / avgPerDay) * 100) : null
+
     return {
       pendingCount: pendingOrders.length,
       lateTrucks,
@@ -168,10 +261,10 @@ function Receiving({ business, account, onNavigate }) {
     const remaining = line.orderedQuantity - line.alreadyReceived
     const received = Number(line.receivedQuantity || 0)
     const flagged = Number(line.damagedQuantity || 0) + Number(line.rejectedQuantity || 0)
-    if (received === 0) return { label: 'Not checked', tone: 'dim' }
-    if (flagged > 0) return { label: 'Damage logged', tone: 'rose' }
-    if (received < remaining) return { label: 'Short receipt', tone: 'amber' }
-    return { label: 'All good · verified', tone: 'green' }
+    if (received === 0) return { label: 'Not checked', tone: 'neutral' }
+    if (flagged > 0) return { label: 'Damage logged', tone: 'danger' }
+    if (received < remaining) return { label: 'Short receipt', tone: 'warning' }
+    return { label: 'All good · verified', tone: 'success' }
   }
 
   const exportCsv = () => {
@@ -185,16 +278,20 @@ function Receiving({ business, account, onNavigate }) {
       ...receivings.map((receiving) => [
         receiving.receivingId,
         receiving.purchaseOrderId,
-        receiving.items.length,
-        receiving.items.reduce((sum, item) => sum + Number(item.receivedQuantity || 0), 0),
-        receiving.items.reduce((sum, item) => sum + Number(item.acceptedQuantity || 0), 0),
-        receiving.items.reduce((sum, item) => sum + Number(item.damagedQuantity || 0), 0),
-        receiving.items.reduce((sum, item) => sum + Number(item.rejectedQuantity || 0), 0),
+        receiving.items?.length || 0,
+        receiving.items?.reduce((sum, item) => sum + Number(item.receivedQuantity || 0), 0) || 0,
+        receiving.items?.reduce((sum, item) => sum + Number(item.acceptedQuantity || 0), 0) || 0,
+        receiving.items?.reduce((sum, item) => sum + Number(item.damagedQuantity || 0), 0) || 0,
+        receiving.items?.reduce((sum, item) => sum + Number(item.rejectedQuantity || 0), 0) || 0,
         new Date(receiving.receivedAt).toLocaleString('en-GB'),
         receiving.receivedBy,
       ]),
     ]
-    const url = URL.createObjectURL(new Blob([rows.map((row) => row.map(escapeCell).join(',')).join('\r\n')], { type: 'text/csv;charset=utf-8' }))
+    const url = URL.createObjectURL(
+      new Blob([rows.map((row) => row.map(escapeCell).join(',')).join('\r\n')], {
+        type: 'text/csv;charset=utf-8',
+      }),
+    )
     const link = document.createElement('a')
     link.href = url
     link.download = `grn-history-${new Date().toISOString().slice(0, 10)}.csv`
@@ -204,220 +301,467 @@ function Receiving({ business, account, onNavigate }) {
     setTimeout(() => URL.revokeObjectURL(url), 1000)
   }
 
-  const visibleHistory = receivings.filter((receiving) => `${receiving.receivingId} ${receiving.purchaseOrderId} ${receiving.supplierId}`.toLowerCase().includes(search.toLowerCase()))
+  const visibleHistory = useMemo(
+    () =>
+      receivings.filter((receiving) =>
+        `${receiving.receivingId} ${receiving.purchaseOrderId} ${receiving.supplierId}`
+          .toLowerCase()
+          .includes(search.toLowerCase()),
+      ),
+    [receivings, search],
+  )
 
-  return <section className="grn-page" aria-labelledby="grn-title">
-    <header className="grn-heading">
-      <div>
-        <p className="grn-kicker">Manage your inward logistics <span>•</span> Dock &amp; GRN control</p>
-        <div className="grn-title-line">
-          <h1 id="grn-title">Receiving &amp; Inward Goods Inspection</h1>
-          <span className="grn-awaiting">{stats.pendingCount} awaiting unload</span>
-        </div>
-        <p>Inspect deliveries against active purchase orders, verify vendor challans, audit expiry dates, and commit Goods Received Notes directly to inventory.</p>
-      </div>
-      <div className="grn-heading-actions">
-        <button type="button" onClick={() => onNavigate?.('Stock In')}><GrnIcon name="inbound" />Direct inward (No PO)</button>
-        <button type="button" onClick={exportCsv} disabled={loading || !!error || !receivings.length}><GrnIcon name="export" />Export GRN CSV</button>
-        <button type="button" className="primary" onClick={() => orderSelectRef.current?.focus()}><GrnIcon name="scan" />Scan waybill<kbd>F2</kbd></button>
-      </div>
-    </header>
-
-    {message && <p className={`grn-message ${message.type}`} role={message.type === 'error' ? 'alert' : 'status'}>{message.text}</p>}
-
-    <div className="grn-workflow">
-      <div className="grn-workflow-head">
-        <span className="grn-workflow-tag">Workflow guide</span>
-        <strong>Floor receiving in 3 easy steps</strong>
-        <em>Currently at step {currentStep}: {STEPS[currentStep - 1].title}</em>
-      </div>
-      <div className="grn-steps">
-        {STEPS.map((step) => {
-          const state = step.n < currentStep ? 'done' : step.n === currentStep ? 'active' : 'todo'
-          return <div className={`grn-step ${state}`} key={step.n}>
-            <span className="grn-step-mark">{state === 'done' ? '✓' : step.n}</span>
+  const manifestColumns = useMemo(
+    () => [
+      {
+        key: 'product',
+        header: 'Product & SKU',
+        render: (line) => (
+          <div>
+            <strong>{line.productName}</strong>
+            <small style={{ display: 'block', color: 'var(--text-soft)', fontSize: 'var(--fs-xs)' }}>
+              {line.variantSku || 'SKU on file'}
+              {line.alreadyReceived > 0 ? ` · ${line.alreadyReceived} received earlier` : ''}
+            </small>
+          </div>
+        ),
+      },
+      {
+        key: 'orderedQuantity',
+        header: 'Ordered',
+        align: 'right',
+        render: (line) => (
+          <div style={{ textAlign: 'right' }}>
+            <strong>{line.orderedQuantity}</strong>
+            <small style={{ display: 'block', color: 'var(--text-soft)', fontSize: 'var(--fs-xs)' }}>ordered</small>
+          </div>
+        ),
+      },
+      {
+        key: 'receivedQuantity',
+        header: 'Received Qty',
+        render: (line, idx) => {
+          const remaining = line.orderedQuantity - line.alreadyReceived
+          const received = Number(line.receivedQuantity || 0)
+          return (
             <div>
-              <strong>Step {step.n}: {step.title}{state === 'done' ? ' · done' : state === 'active' ? ' · active' : ''}</strong>
-              <small>{step.hint}</small>
-            </div>
-          </div>
-        })}
-      </div>
-      <p className="grn-terms"><b>?</b> Quick terms: <strong>PO</strong> = Purchase Order · <strong>GRN</strong> = Goods Received Note · <strong>Challan</strong> = vendor delivery slip</p>
-    </div>
-
-    <div className="grn-kpis" aria-busy={loading}>
-      <article className="grn-kpi">
-        <span>Pending Deliveries <GrnIcon name="inbound" /></span>
-        <strong>{loading || error ? '—' : stats.pendingCount} <small>open POs</small></strong>
-        <p>{stats.lateTrucks > 0 ? `${stats.lateTrucks} past ETA · ` : ''}{Math.max(0, stats.pendingCount - stats.lateTrucks)} on schedule</p>
-        <div className="grn-meter blue"><i style={{ width: `${stats.pendingCount ? Math.round(((stats.pendingCount - stats.lateTrucks) / stats.pendingCount) * 100) : 0}%` }} /></div>
-      </article>
-      <article className="grn-kpi">
-        <span>Items to Check <GrnIcon name="box" /></span>
-        <strong>{loading || error ? '—' : stats.remainingUnits.toLocaleString('en-IN')} <small>units</small><em>{stats.uniqueSkus} SKUs</em></strong>
-        <p>Expected value {money(stats.expectedValue, 0)}</p>
-        <div className="grn-meter amber"><i style={{ width: `${stats.remainingUnits ? 70 : 0}%` }} /></div>
-      </article>
-      <article className="grn-kpi">
-        <span>Quality Check Pass <GrnIcon name="gauge" /></span>
-        <strong className="grn-good">{loading || error ? '—' : `${stats.passRate.toFixed(1)}%`}</strong>
-        <p>{stats.rejected} rejected/damaged units · {stats.inspectedReceipts} receipts inspected</p>
-        <div className="grn-meter green"><i style={{ width: `${stats.passRate}%` }} /></div>
-      </article>
-      <article className="grn-kpi">
-        <span>Completed Today <GrnIcon name="clipboard" /></span>
-        <strong>{loading || error ? '—' : stats.completedToday} <small>GRNs</small>{stats.deltaVsAvg !== null && <em className={stats.deltaVsAvg >= 0 ? 'up' : 'down'}>{stats.deltaVsAvg >= 0 ? '+' : ''}{stats.deltaVsAvg}% vs avg</em>}</strong>
-        <p>{stats.acceptedToday.toLocaleString('en-IN')} units accepted into stock today</p>
-        <div className="grn-meter green"><i style={{ width: `${Math.min(100, stats.completedToday * 12)}%` }} /></div>
-      </article>
-    </div>
-
-    <div className="grn-intake">
-      <div className="grn-intake-head">
-        <div>
-          <span className="grn-intake-dot" />
-          <strong>Inward consignment intake &amp; verification</strong>
-        </div>
-        <span className="grn-shift">Receiver shift: <strong>{account?.name || account?.email || 'Current user'}</strong></span>
-      </div>
-      <div className="grn-intake-grid">
-        <label className="grn-field">
-          <span>Purchase order <b>*</b></span>
-          <select ref={orderSelectRef} value={selectedOrderId} onChange={(event) => selectOrder(event.target.value)}>
-            <option value="">Select an awaiting purchase order…</option>
-            {pendingOrders.map((order) => <option key={order.purchaseOrderId} value={order.purchaseOrderId}>{order.orderNumber} — {order.supplierName} ({order.items.length} lines · {money(order.totalAmount, 0)})</option>)}
-          </select>
-          <small>Only ordered products can be received. Partial receiving is supported.</small>
-        </label>
-        <label className="grn-field">
-          <span>Vendor challan / invoice #</span>
-          <div className="grn-verify-field">
-            <input value={challan} onChange={(event) => setChallan(event.target.value)} placeholder="e.g. CH-98412" />
-            {challan.trim() && <em>✓ Captured</em>}
-          </div>
-          <small>Recorded on the GRN note for reconciliation.</small>
-        </label>
-        <label className="grn-field">
-          <span>Dock staging bay</span>
-          <select value={dockBay} onChange={(event) => setDockBay(event.target.value)}>
-            {DOCK_BAYS.map((bay) => <option key={bay} value={bay}>{bay}</option>)}
-          </select>
-          <small>Assign the inspection lane for this consignment.</small>
-        </label>
-        <button type="button" className="grn-load" onClick={() => orderSelectRef.current?.focus()} disabled={!!selectedOrder}>
-          {selectedOrder ? 'Manifest loaded' : 'Load manifest'}<GrnIcon name="arrow" />
-        </button>
-      </div>
-    </div>
-
-    {selectedOrder && <section className="grn-manifest" aria-label="Consignment SKU manifest">
-      <div className="grn-manifest-head">
-        <div>
-          <p className="grn-manifest-kicker">Consignment SKU manifest · {selectedOrder.orderNumber}</p>
-          <h2>{selectedOrder.supplierName}<span>{selectedOrder.status}</span></h2>
-        </div>
-        <div className="grn-manifest-actions">
-          <button type="button"><GrnIcon name="printer" />Bulk print labels</button>
-          <button type="button" className="accent" onClick={acceptAllAsOrdered}><GrnIcon name="check" />Accept all as ordered</button>
-        </div>
-      </div>
-      <form onSubmit={handleSubmit}>
-        <div className="grn-table-scroll" tabIndex={0} role="region" aria-label="Manifest lines">
-          <table className="grn-table">
-            <thead><tr>
-              <th>Product &amp; SKU</th><th className="num">Ordered</th><th>Received qty</th><th>Accepted / shortage</th>
-              <th>Batch &amp; expiry</th><th>Barcode</th><th>Inspection</th>
-            </tr></thead>
-            <tbody>
-              {lines.map((line, index) => {
-                const remaining = line.orderedQuantity - line.alreadyReceived
-                const received = Number(line.receivedQuantity || 0)
-                const accepted = Math.max(0, received - Number(line.damagedQuantity || 0) - Number(line.rejectedQuantity || 0))
-                const shortage = Math.max(0, remaining - received)
-                const status = lineStatus(line)
-                return <tr key={line.productId}>
-                  <td>
-                    <div className="grn-product">
-                      <span className="grn-avatar">{(line.productName || '?').slice(0, 2).toUpperCase()}</span>
-                      <div>
-                        <strong>{line.productName}</strong>
-                        <small>{line.variantSku || 'SKU on file'}{line.alreadyReceived > 0 ? ` · ${line.alreadyReceived} received earlier` : ''}</small>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="num"><strong>{line.orderedQuantity}</strong><small>ordered</small></td>
-                  <td>
-                    <div className="grn-stepper">
-                      <button type="button" aria-label="Decrease" onClick={() => stepQty(index, -1)}><GrnIcon name="minus" /></button>
-                      <input aria-label={`${line.productName} received quantity`} type="number" min="0" max={remaining} value={line.receivedQuantity} onChange={(event) => updateLine(index, 'receivedQuantity', event.target.value)} />
-                      <button type="button" aria-label="Increase" onClick={() => stepQty(index, 1)}><GrnIcon name="plus" /></button>
-                    </div>
-                    <small>{received === remaining ? 'Exact match' : `of ${remaining} remaining`}</small>
-                  </td>
-                  <td>
-                    <div className="grn-accept">
-                      <strong className={shortage > 0 ? 'short' : ''}>{accepted} accepted</strong>
-                      <label>Damaged<input type="number" min="0" value={line.damagedQuantity} onChange={(event) => updateLine(index, 'damagedQuantity', event.target.value)} /></label>
-                      <label>Rejected<input type="number" min="0" value={line.rejectedQuantity} onChange={(event) => updateLine(index, 'rejectedQuantity', event.target.value)} /></label>
-                      <small>{shortage > 0 ? `${shortage} short` : 'No shortage'}</small>
-                    </div>
-                  </td>
-                  <td>
-                    <input className="grn-batch" aria-label={`${line.productName} batch number`} value={line.batchNumber} onChange={(event) => updateLine(index, 'batchNumber', event.target.value)} placeholder="Batch / lot #" />
-                    <input className="grn-expiry" aria-label={`${line.productName} expiry date`} type="date" value={line.expiryDate} onChange={(event) => updateLine(index, 'expiryDate', event.target.value)} />
-                  </td>
-                  <td><span className={`grn-barcode ${line.variantSku ? 'ok' : 'none'}`}>{line.variantSku ? 'Scanned' : 'No barcode'}</span></td>
-                  <td><span className={`grn-pill ${status.tone}`}><i />{status.label}</span></td>
-                </tr>
-              })}
-            </tbody>
-          </table>
-        </div>
-        <label className="grn-notes" htmlFor="receiving-notes">Receiving notes</label>
-        <textarea id="receiving-notes" name="notes" placeholder="Dock observations, temperature checks, discrepancies…" />
-        <div className="grn-form-actions">
-          <button className="grn-cancel" type="button" onClick={() => { setSelectedOrderId(''); setLines([]) }}>Cancel</button>
-          <button className="grn-submit" type="submit" disabled={saving}>{saving ? 'Posting GRN…' : 'Post GRN to stock'}<GrnIcon name="arrow" /></button>
-        </div>
-      </form>
-    </section>}
-
-    <section className="grn-history">
-      <div className="grn-history-head">
-        <div>
-          <p className="grn-manifest-kicker">Completed receiving</p>
-          <h2>GRN history</h2>
-        </div>
-        <label className="grn-search">
-          <input aria-label="Search receiving history" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search GRN or PO reference" />
-        </label>
-      </div>
-      <AsyncBoundary loading={loading} error={error} onRetry={refetch} isEmpty={!visibleHistory.length} emptyText={receivings.length ? 'No GRNs match your search.' : 'No goods received notes logged yet.'}>
-        <div className="grn-history-list">
-          {visibleHistory.map((receiving) => {
-            const accepted = receiving.items.reduce((sum, item) => sum + Number(item.acceptedQuantity || 0), 0)
-            const flagged = receiving.items.reduce((sum, item) => sum + Number(item.damagedQuantity || 0) + Number(item.rejectedQuantity || 0), 0)
-            return <div className="grn-history-row" key={receiving.receivingId}>
-              <span className={`grn-pill ${flagged > 0 ? 'amber' : 'green'}`}><i />{flagged > 0 ? 'Posted with flags' : 'Posted clean'}</span>
-              <div>
-                <strong>{receiving.receivingId}</strong>
-                <small>PO {receiving.purchaseOrderId} · {receiving.items.length} lines · {new Date(receiving.receivedAt).toLocaleString('en-GB')} · {receiving.receivedBy || 'Receiver'}</small>
+              <div className="grn-stepper">
+                <button type="button" aria-label="Decrease" onClick={() => stepQty(idx, -1)}>
+                  <GrnLocalIcon name="minus" />
+                </button>
+                <input
+                  aria-label={`${line.productName} received quantity`}
+                  type="number"
+                  min="0"
+                  max={remaining}
+                  value={line.receivedQuantity}
+                  onChange={(event) => updateLine(idx, 'receivedQuantity', event.target.value)}
+                />
+                <button type="button" aria-label="Increase" onClick={() => stepQty(idx, 1)}>
+                  <GrnLocalIcon name="plus" />
+                </button>
               </div>
-              <span className="grn-history-qty">{accepted.toLocaleString('en-IN')} accepted{flagged > 0 ? ` · ${flagged} flagged` : ''}</span>
+              <small style={{ display: 'block', color: 'var(--text-soft)', fontSize: 'var(--fs-xs)', marginTop: 2 }}>
+                {received === remaining ? 'Exact match' : `of ${remaining} remaining`}
+              </small>
             </div>
+          )
+        },
+      },
+      {
+        key: 'accepted',
+        header: 'Accepted / Shortage',
+        render: (line, idx) => {
+          const remaining = line.orderedQuantity - line.alreadyReceived
+          const received = Number(line.receivedQuantity || 0)
+          const accepted = Math.max(0, received - Number(line.damagedQuantity || 0) - Number(line.rejectedQuantity || 0))
+          const shortage = Math.max(0, remaining - received)
+          return (
+            <div className="grn-accept">
+              <strong style={{ color: shortage > 0 ? 'var(--warning)' : 'var(--success)' }}>
+                {accepted} accepted
+              </strong>
+              <label>
+                Damaged
+                <input
+                  type="number"
+                  min="0"
+                  value={line.damagedQuantity}
+                  onChange={(event) => updateLine(idx, 'damagedQuantity', event.target.value)}
+                />
+              </label>
+              <label>
+                Rejected
+                <input
+                  type="number"
+                  min="0"
+                  value={line.rejectedQuantity}
+                  onChange={(event) => updateLine(idx, 'rejectedQuantity', event.target.value)}
+                />
+              </label>
+              <small style={{ color: 'var(--text-soft)' }}>{shortage > 0 ? `${shortage} short` : 'No shortage'}</small>
+            </div>
+          )
+        },
+      },
+      {
+        key: 'batchExpiry',
+        header: 'Batch & Expiry',
+        render: (line, idx) => (
+          <div>
+            <input
+              className="grn-batch"
+              aria-label={`${line.productName} batch number`}
+              value={line.batchNumber}
+              onChange={(event) => updateLine(idx, 'batchNumber', event.target.value)}
+              placeholder="Batch / lot #"
+            />
+            <input
+              className="grn-expiry"
+              aria-label={`${line.productName} expiry date`}
+              type="date"
+              value={line.expiryDate}
+              onChange={(event) => updateLine(idx, 'expiryDate', event.target.value)}
+            />
+          </div>
+        ),
+      },
+      {
+        key: 'status',
+        header: 'Inspection',
+        render: (line) => {
+          const st = lineStatus(line)
+          return <Badge tone={st.tone}>{st.label}</Badge>
+        },
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [lines],
+  )
+
+  const historyColumns = useMemo(
+    () => [
+      {
+        key: 'receivingId',
+        header: 'GRN ID',
+        render: (r) => {
+          const flagged = (r.items || []).reduce(
+            (sum, item) => sum + Number(item.damagedQuantity || 0) + Number(item.rejectedQuantity || 0),
+            0,
+          )
+          return (
+            <div>
+              <strong>{r.receivingId}</strong>
+              <Badge tone={flagged > 0 ? 'warning' : 'success'} style={{ marginTop: 4 }}>
+                {flagged > 0 ? 'Posted with flags' : 'Posted clean'}
+              </Badge>
+            </div>
+          )
+        },
+      },
+      {
+        key: 'purchaseOrderId',
+        header: 'PO Reference',
+        render: (r) => (
+          <div>
+            <strong>PO {r.purchaseOrderId}</strong>
+            <small style={{ display: 'block', color: 'var(--text-soft)', fontSize: 'var(--fs-xs)' }}>
+              {r.items?.length || 0} lines · {r.receivedBy || 'Receiver'}
+            </small>
+          </div>
+        ),
+      },
+      {
+        key: 'receivedAt',
+        header: 'Received At',
+        render: (r) => (
+          <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--text)' }}>
+            {new Date(r.receivedAt).toLocaleString('en-GB')}
+          </span>
+        ),
+      },
+      {
+        key: 'summary',
+        header: 'Accepted Quantity',
+        align: 'right',
+        render: (r) => {
+          const accepted = (r.items || []).reduce((sum, item) => sum + Number(item.acceptedQuantity || 0), 0)
+          const flagged = (r.items || []).reduce(
+            (sum, item) => sum + Number(item.damagedQuantity || 0) + Number(item.rejectedQuantity || 0),
+            0,
+          )
+          return (
+            <div style={{ textAlign: 'right' }}>
+              <strong style={{ color: 'var(--text)' }}>{accepted.toLocaleString('en-IN')} accepted</strong>
+              {flagged > 0 && (
+                <small style={{ display: 'block', color: 'var(--warning)', fontSize: 'var(--fs-xs)' }}>
+                  {flagged} flagged
+                </small>
+              )}
+            </div>
+          )
+        },
+      },
+    ],
+    [],
+  )
+
+  return (
+    <section className="grn-page" aria-labelledby="grn-title">
+      <PageHeader
+        kicker="Manage your inward logistics • Dock & GRN control"
+        title="Receiving & Inward Goods Inspection"
+        badge={<Badge tone="success">{stats.pendingCount} awaiting unload</Badge>}
+        subtitle="Inspect deliveries against active purchase orders, verify vendor challans, audit expiry dates, and commit Goods Received Notes directly to inventory."
+        actions={
+          <>
+            <Button
+              variant="secondary"
+              icon={<GrnLocalIcon name="inbound" />}
+              onClick={() => onNavigate?.('Stock In')}
+            >
+              Direct Inward (No PO)
+            </Button>
+            <Button
+              variant="secondary"
+              icon={<GrnLocalIcon name="export" />}
+              onClick={exportCsv}
+              disabled={loading || !!error || !receivings.length}
+            >
+              Export GRN CSV
+            </Button>
+            <Button
+              variant="primary"
+              icon={<GrnLocalIcon name="scan" />}
+              onClick={() => orderSelectRef.current?.focus()}
+            >
+              Scan Waybill
+            </Button>
+          </>
+        }
+      />
+
+      {message && <FormStatus status={message.type} message={message.text} />}
+
+      <div className="grn-workflow">
+        <div className="grn-workflow-head">
+          <span className="grn-workflow-tag">Workflow Guide</span>
+          <strong>Floor receiving in 3 easy steps</strong>
+          <em>
+            Currently at step {currentStep}: {STEPS[currentStep - 1].title}
+          </em>
+        </div>
+        <div className="grn-steps">
+          {STEPS.map((step) => {
+            const state = step.n < currentStep ? 'done' : step.n === currentStep ? 'active' : 'todo'
+            return (
+              <div className={`grn-step ${state}`} key={step.n}>
+                <span className="grn-step-mark">{state === 'done' ? '✓' : step.n}</span>
+                <div>
+                  <strong>
+                    Step {step.n}: {step.title}
+                    {state === 'done' ? ' · done' : state === 'active' ? ' · active' : ''}
+                  </strong>
+                  <small>{step.hint}</small>
+                </div>
+              </div>
+            )
           })}
         </div>
-      </AsyncBoundary>
-    </section>
+        <p className="grn-terms">
+          <b>?</b> Quick terms: <strong>PO</strong> = Purchase Order · <strong>GRN</strong> = Goods Received Note ·{' '}
+          <strong>Challan</strong> = vendor delivery slip
+        </p>
+      </div>
 
-    <footer className="grn-statusbar">
-      <span><i />Stockroom · Dock &amp; GRN control</span>
-      <span>{business.currency === 'INR' ? 'Node ap-south-1 · Mumbai' : 'Workspace region'}</span>
-      <span>{DOCK_BAYS.length} dock bays online</span>
-      <span className="grn-statusbar-suite">Enterprise Warehousing OS</span>
-    </footer>
-  </section>
+      <StatGrid>
+        <StatCard
+          icon="truck"
+          label="Pending Deliveries"
+          value={loading || error ? '—' : stats.pendingCount}
+          helpText={`${stats.lateTrucks > 0 ? `${stats.lateTrucks} past ETA · ` : ''}${Math.max(0, stats.pendingCount - stats.lateTrucks)} on schedule`}
+          tone="info"
+        />
+        <StatCard
+          icon="cart"
+          label="Items to Check"
+          value={loading || error ? '—' : stats.remainingUnits.toLocaleString('en-IN')}
+          helpText={`Expected value ${money(stats.expectedValue, 0)}`}
+          badge={`${stats.uniqueSkus} SKUs`}
+          tone="warning"
+        />
+        <StatCard
+          icon="shield"
+          label="Quality Check Pass"
+          value={loading || error ? '—' : `${stats.passRate.toFixed(1)}%`}
+          helpText={`${stats.rejected} rejected/damaged units · ${stats.inspectedReceipts} receipts inspected`}
+          tone="success"
+        />
+        <StatCard
+          icon="check"
+          label="Completed Today"
+          value={loading || error ? '—' : stats.completedToday}
+          helpText={`${stats.acceptedToday.toLocaleString('en-IN')} units accepted today`}
+          badge={
+            stats.deltaVsAvg !== null
+              ? `${stats.deltaVsAvg >= 0 ? '+' : ''}${stats.deltaVsAvg}% vs avg`
+              : null
+          }
+          tone="success"
+        />
+      </StatGrid>
+
+      {/* Intake Terminal */}
+      <Card className="grn-intake-card">
+        <div className="grn-intake-head">
+          <div>
+            <strong>Inward consignment intake &amp; verification</strong>
+          </div>
+          <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-soft)' }}>
+            Receiver: <strong>{account?.name || account?.email || 'Current user'}</strong>
+          </span>
+        </div>
+        <div className="grn-intake-grid">
+          <Field label="Purchase Order" required hint="Select an awaiting PO">
+            <Select
+              ref={orderSelectRef}
+              value={selectedOrderId}
+              onChange={(event) => selectOrder(event.target.value)}
+            >
+              <option value="">Select an awaiting purchase order…</option>
+              {pendingOrders.map((order, idx) => {
+                const poId = getPoId(order) || `order-${idx}`
+                return (
+                  <option key={poId} value={poId}>
+                    {order.orderNumber} — {order.supplierName} ({(order.lines || order.items || []).length} lines ·{' '}
+                    {money(order.totalAmount, 0)})
+                  </option>
+                )
+              })}
+            </Select>
+          </Field>
+
+          <Field label="Vendor Challan / Invoice #" hint="Recorded on the GRN note">
+            <Input
+              value={challan}
+              onChange={(event) => setChallan(event.target.value)}
+              placeholder="e.g. CH-98412"
+            />
+          </Field>
+
+          <Field label="Dock Staging Bay" hint="Inspection lane for this consignment">
+            <Select value={dockBay} onChange={(event) => setDockBay(event.target.value)}>
+              {DOCK_BAYS.map((bay) => (
+                <option key={bay} value={bay}>
+                  {bay}
+                </option>
+              ))}
+            </Select>
+          </Field>
+
+          <div>
+            <Button
+              variant={selectedOrder ? 'secondary' : 'primary'}
+              onClick={() => orderSelectRef.current?.focus()}
+              disabled={!!selectedOrder}
+            >
+              {selectedOrder ? 'Manifest Loaded' : 'Load Manifest'}
+            </Button>
+          </div>
+        </div>
+      </Card>
+
+      {/* Manifest Table */}
+      {selectedOrder && (
+        <Card>
+          <div className="grn-manifest-head">
+            <div>
+              <p style={{ margin: 0, color: 'var(--orange)', fontSize: 'var(--fs-xs)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Consignment SKU manifest · {selectedOrder.orderNumber}
+              </p>
+              <h3 style={{ margin: '4px 0 0', color: 'var(--text)' }}>
+                {selectedOrder.supplierName}{' '}
+                <Badge tone="info" style={{ marginLeft: 8 }}>
+                  {selectedOrder.status}
+                </Badge>
+              </h3>
+            </div>
+            <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+              <Button size="sm" variant="secondary" icon={<GrnLocalIcon name="printer" />}>
+                Bulk Print Labels
+              </Button>
+              <Button
+                size="sm"
+                variant="primary"
+                icon={<GrnLocalIcon name="check" />}
+                onClick={acceptAllAsOrdered}
+              >
+                Accept All as Ordered
+              </Button>
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit}>
+            <DataTable columns={manifestColumns} data={lines} />
+
+            <div style={{ marginTop: 'var(--space-4)' }}>
+              <Field label="Receiving Notes">
+                <Textarea
+                  id="receiving-notes"
+                  name="notes"
+                  placeholder="Dock observations, temperature checks, discrepancies…"
+                  rows={2}
+                />
+              </Field>
+            </div>
+
+            <div className="grn-form-actions">
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setSelectedOrderId('')
+                  setLines([])
+                }}
+              >
+                Cancel
+              </Button>
+              <Button variant="primary" type="submit" loading={saving}>
+                {saving ? 'Posting GRN…' : 'Post GRN to Stock'}
+              </Button>
+            </div>
+          </form>
+        </Card>
+      )}
+
+      {/* History */}
+      <Card>
+        <div style={{ marginBottom: 'var(--space-3)' }}>
+          <h3 style={{ margin: 0, color: 'var(--text)' }}>Completed GRN History</h3>
+          <p style={{ margin: '4px 0 0', color: 'var(--text-soft)', fontSize: 'var(--fs-xs)' }}>
+            All past Goods Received Notes committed to stock
+          </p>
+        </div>
+
+        <Toolbar
+          search={search}
+          onSearchChange={setSearch}
+          placeholder="Search GRN or PO reference..."
+        />
+
+        <DataTable
+          columns={historyColumns}
+          data={visibleHistory}
+          isLoading={loading}
+          emptyState={{
+            title: 'No GRNs found',
+            description: receivings.length
+              ? 'No GRNs match your search filter.'
+              : 'No goods received notes logged yet.',
+          }}
+        />
+      </Card>
+    </section>
+  )
 }
 
 export default Receiving

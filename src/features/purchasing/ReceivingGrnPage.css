@@ -1,0 +1,280 @@
+/* ReceivingGrnPage.css - Scoped styles using tokens */
+.grn-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  width: min(100%, 1440px);
+  margin: 0 auto;
+}
+
+/* Workflow banner */
+.grn-workflow {
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--line);
+  border-radius: var(--sr-radius-lg);
+  background: var(--surface);
+}
+
+.grn-workflow-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.grn-workflow-tag {
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--sr-radius-sm);
+  color: var(--text-soft);
+  font: var(--fs-xs) var(--font-family);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.grn-workflow-head strong {
+  color: var(--text);
+  font-size: var(--fs-sm);
+}
+
+.grn-workflow-head em {
+  margin-left: auto;
+  padding: 4px 10px;
+  border: 1px solid rgba(47, 214, 168, 0.3);
+  border-radius: var(--sr-radius-full);
+  color: var(--success);
+  background: rgba(47, 214, 168, 0.08);
+  font: var(--fs-xs) var(--font-family);
+  font-style: normal;
+}
+
+.grn-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+@media (max-width: 768px) {
+  .grn-steps {
+    grid-template-columns: 1fr;
+  }
+}
+
+.grn-step {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--sr-radius-md);
+  background: var(--surface-soft);
+}
+
+.grn-step.active {
+  border-color: var(--orange);
+  background: rgba(255, 106, 26, 0.08);
+}
+
+.grn-step-mark {
+  display: grid;
+  place-items: center;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--sr-radius-full);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  background: var(--surface);
+  font: 700 var(--fs-xs) var(--font-family);
+}
+
+.grn-step.done .grn-step-mark {
+  color: var(--success);
+  border-color: rgba(47, 214, 168, 0.4);
+  background: rgba(47, 214, 168, 0.1);
+}
+
+.grn-step.active .grn-step-mark {
+  color: #fff;
+  border-color: var(--orange);
+  background: var(--orange);
+}
+
+.grn-step strong {
+  display: block;
+  color: var(--text);
+  font-size: var(--fs-xs);
+}
+
+.grn-step small {
+  display: block;
+  margin-top: 2px;
+  color: var(--text-soft);
+  font-size: var(--fs-xs);
+}
+
+.grn-terms {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 0;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line);
+  color: var(--text-soft);
+  font-size: var(--fs-xs);
+}
+
+.grn-terms strong {
+  color: var(--orange);
+}
+
+/* Intake Card */
+.grn-intake-card {
+  padding: var(--space-4) var(--space-5);
+}
+
+.grn-intake-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+}
+
+.grn-intake-head strong {
+  font-size: var(--fs-base);
+  color: var(--text);
+}
+
+.grn-intake-grid {
+  display: grid;
+  grid-template-columns: 2fr 1.5fr 1.5fr auto;
+  gap: var(--space-4);
+  align-items: end;
+}
+
+@media (max-width: 1024px) {
+  .grn-intake-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .grn-intake-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Manifest & Line Controls */
+.grn-manifest-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+}
+
+.grn-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.grn-stepper button {
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--line);
+  border-radius: var(--sr-radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.grn-stepper button:hover {
+  background: var(--surface-soft);
+}
+
+.grn-stepper input {
+  width: 60px;
+  height: 28px;
+  text-align: center;
+  border: 1px solid var(--line);
+  border-radius: var(--sr-radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--fs-xs);
+}
+
+.grn-accept {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--fs-xs);
+}
+
+.grn-accept label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-soft);
+}
+
+.grn-accept input {
+  width: 50px;
+  height: 24px;
+  padding: 0 var(--space-1);
+  border: 1px solid var(--line);
+  border-radius: var(--sr-radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--fs-xs);
+}
+
+.grn-batch, .grn-expiry {
+  display: block;
+  width: 120px;
+  height: 26px;
+  margin-bottom: var(--space-1);
+  padding: 0 var(--space-2);
+  border: 1px solid var(--line);
+  border-radius: var(--sr-radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--fs-xs);
+}
+
+.grn-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+/* History */
+.grn-history-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--line);
+}
+
+.grn-history-row strong {
+  display: block;
+  color: var(--text);
+  font-size: var(--fs-sm);
+}
+
+.grn-history-row small {
+  color: var(--text-soft);
+  font-size: var(--fs-xs);
+}
+
+.grn-history-qty {
+  font-weight: 600;
+  color: var(--text);
+  font-size: var(--fs-sm);
+}

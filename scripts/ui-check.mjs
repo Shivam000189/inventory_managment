@@ -230,6 +230,7 @@ const MOCK_CUSTOMERS = [
 const MOCK_PURCHASE_ORDERS = [
   {
     poId: 'po_101',
+    purchaseOrderId: 'po_101',
     orderNumber: 'PO-2026-001',
     supplierId: 'sup_1',
     supplierName: 'Metro Pharma Wholesale Hub',
@@ -244,6 +245,7 @@ const MOCK_PURCHASE_ORDERS = [
   },
   {
     poId: 'po_102',
+    purchaseOrderId: 'po_102',
     orderNumber: 'PO-2026-002',
     supplierId: 'sup_2',
     supplierName: 'National Healthcare Distributors',
