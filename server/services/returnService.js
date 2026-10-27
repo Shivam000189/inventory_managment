@@ -1,4 +1,3 @@
-import mongoose from 'mongoose'
 import { Return } from '../models/Return.js'
 import { Refund } from '../models/Refund.js'
 import { SalesOrder } from '../models/SalesOrder.js'
@@ -73,7 +72,7 @@ export async function listReturns(businessId, query = {}) {
     const term = String(query.search).trim()
     const rx = new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i')
     filter.$or = [{ orderNumber: rx }, { productName: rx }, { productSku: rx }, { customerName: rx }, { processedBy: rx }]
-    if (mongoose.isValidObjectId(term)) filter.$or.push({ _id: toObjectId(term, 'return id') })
+    if (/^[0-9a-f]{24}$/i.test(term) || /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(term)) filter[''].push({ _id: toObjectId(term, 'return id') })
   }
   const docs = await Return.find(filter).sort('-createdAt').limit(Math.min(500, Number(query.limit) || 200))
   return decorateReturns(businessId, docs)

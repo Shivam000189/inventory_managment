@@ -10,7 +10,6 @@
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import mongoose from 'mongoose'
 import { connectDatabase, disconnectDatabase } from '../config/db.js'
 import { User } from '../models/User.js'
 import { Business } from '../models/Business.js'
@@ -97,7 +96,7 @@ async function run() {
 
   if (flags.has('--fresh')) {
     console.log('Wiping collections...')
-    await Promise.all(Object.values(mongoose.connection.collections).map((c) => c.deleteMany({})))
+    await Promise.all([User.deleteMany({}), Business.deleteMany({}), Product.deleteMany({}), Supplier.deleteMany({}), Customer.deleteMany({}), Role.deleteMany({}), Member.deleteMany({})])
   }
 
   const legacy = await loadLegacy()

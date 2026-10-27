@@ -4,7 +4,8 @@ import { Member } from '../models/Member.js'
 import { User } from '../models/User.js'
 import { ApiError } from '../utils/ApiError.js'
 import { signToken } from '../utils/token.js'
-import mongoose from 'mongoose'
+import { getSupabaseAdmin } from '../config/supabase.js'
+import { objectIdToUuid } from '../utils/mongoSupabaseMapper.js'
 import { requireFields, assert, isEmail } from '../validators/assert.js'
 import { normalizeConfigValue, resolveBusinessCapabilities } from '../../shared/industryConfig.js'
 
@@ -83,11 +84,19 @@ export async function deleteBusiness(businessId, user) {
   if (!business) throw ApiError.notFound('Business not found.')
   if (String(business.owner) !== String(user._id)) throw ApiError.forbidden('Only the business owner can delete this workspace.')
 
-  const scopedModels = mongoose.modelNames()
-    .filter((name) => !['Business', 'User'].includes(name))
-    .map((name) => mongoose.model(name))
-    .filter((Model) => Model.schema.path('business'))
-  await Promise.all(scopedModels.map((Model) => Model.deleteMany({ business: business._id })))
+  const businessScopedTables = [
+    'roles', 'members', 'suppliers', 'customers', 'products', 'product_variants',
+    'promotions', 'coupons', 'gift_cards', 'loyalty_transactions', 'store_credit_transactions',
+    'cashier_shifts', 'colors', 'notifications', 'payments', 'product_imports',
+    'purchase_orders', 'receivings', 'refunds', 'returns', 'sales_orders', 'stock_transactions',
+  ]
+  const supabase = getSupabaseAdmin()
+  const bUuid = objectIdToUuid(business._id)
+  await Promise.all(
+    businessScopedTables.map((table) =>
+      supabase.from(table).delete().eq('business_id', bUuid),
+    ),
+  )
   await User.updateMany({ business: business._id }, { $set: { business: null } })
   await Business.deleteOne({ _id: business._id })
   return { deleted: true }

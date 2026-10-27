@@ -10,7 +10,7 @@ server/
 ├── app.js             express app (helmet, cors, json, routes, errors)
 ├── config/
 │   ├── env.js          loads server/.env (+ root .env fallback)
-│   └── db.js           mongoose connection + withTransaction() helper
+│   └── db.js           Supabase PostgreSQL connection + withTransaction() helper
 ├── models/            User, Business, Member, Role, Product, Supplier, Customer,
 │                      PurchaseOrder, Receiving, SalesOrder, Payment,
 │                      StockTransaction, Return
