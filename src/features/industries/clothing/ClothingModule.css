@@ -1,0 +1,389 @@
+/* ClothingModule.css - Co-located token-driven styling for Clothing features */
+.clothing-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  animation: clothing-fade var(--transition-fast) ease-out both;
+}
+
+@keyframes clothing-fade {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.clothing-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  padding: var(--space-5);
+}
+
+.variant-product-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-soft);
+}
+
+.variant-product-combobox {
+  position: relative;
+  width: 100%;
+}
+
+.variant-product-combobox input {
+  width: 100%;
+  height: 44px;
+  padding: 0 var(--space-3);
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  font-size: var(--text-sm);
+}
+
+.variant-product-options {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 240px;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+}
+
+.variant-product-options button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: var(--space-2) var(--space-3);
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.variant-product-options button:last-child {
+  border-bottom: none;
+}
+
+.variant-product-options button.highlighted,
+.variant-product-options button:hover {
+  background: var(--surface-hover);
+}
+
+.variant-product-options button small {
+  font-size: var(--text-xs);
+  color: var(--text-soft);
+}
+
+.variant-entry {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+}
+
+.variant-entry legend {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--text);
+  padding: 0 var(--space-2);
+}
+
+.variant-entry label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--text-soft);
+}
+
+.variant-entry input:not([type="checkbox"]) {
+  height: 40px;
+  padding: 0 var(--space-2);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: var(--text-sm);
+}
+
+.variant-entry label.variant-checkbox {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-2);
+  padding-top: var(--space-4);
+}
+
+.variant-entry label.variant-checkbox input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary);
+}
+
+.variant-row-error {
+  grid-column: 1 / -1;
+  color: var(--danger);
+  font-size: var(--text-xs);
+}
+
+.variant-form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  padding-top: var(--space-2);
+}
+
+.clothing-search {
+  height: 44px;
+  padding: 0 var(--space-3);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  font-size: var(--text-sm);
+  width: 100%;
+}
+
+.clothing-grid-table {
+  display: grid;
+  grid-template-columns: 2fr 1.5fr 1.5fr 1fr;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+}
+
+.clothing-grid-table b {
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-soft);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-soft);
+  border-bottom: 1px solid var(--line);
+}
+
+.clothing-grid-row {
+  display: contents;
+}
+
+.clothing-grid-row span {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--line);
+  font-size: var(--text-sm);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.clothing-grid-row span small {
+  font-size: var(--text-xs);
+  color: var(--text-soft);
+}
+
+/* Replenishment */
+.replenishment-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  padding: var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+}
+
+.replenishment-actions label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--text-soft);
+  flex: 1 1 300px;
+}
+
+.replenishment-actions select {
+  height: 44px;
+  padding: 0 var(--space-3);
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  font-size: var(--text-sm);
+}
+
+.replenishment-table-wrap {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+}
+
+.replenishment-table {
+  display: flex;
+  flex-direction: column;
+  min-width: 800px;
+}
+
+.replenishment-row {
+  display: grid;
+  grid-template-columns: 48px 2fr 1.2fr 80px 80px 80px 80px 100px 1.5fr 100px;
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--line);
+  font-size: var(--text-xs);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.replenishment-head {
+  background: var(--surface-soft);
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-soft);
+  cursor: default;
+}
+
+.replenishment-row:hover:not(.replenishment-head) {
+  background: var(--surface-hover);
+}
+
+.replenishment-status {
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+  background: rgba(43, 127, 255, 0.1);
+  color: #2b7fff;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* Master list (Promotions, Coupons, Gift cards, Shifts, Loyalty) */
+.clothing-list {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+}
+
+.clothing-list-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--line);
+  font-size: var(--text-sm);
+  color: var(--text);
+}
+
+.clothing-list-row:last-child {
+  border-bottom: none;
+}
+
+.clothing-list-row span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.clothing-list-row span small {
+  font-size: var(--text-xs);
+  color: var(--text-soft);
+}
+
+/* Reports */
+.report-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.report-cards article {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.report-cards article small {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-soft);
+}
+
+.report-cards article strong {
+  font-size: var(--text-2xl);
+  font-weight: 800;
+  color: var(--text);
+}
+
+.report-panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.report-panel h3 {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  text-transform: capitalize;
+  color: var(--text);
+}
+
+@media (max-width: 900px) {
+  .variant-entry {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .report-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .variant-entry {
+    grid-template-columns: 1fr;
+  }
+  .clothing-grid-table {
+    display: flex;
+    flex-direction: column;
+  }
+  .report-cards {
+    grid-template-columns: 1fr;
+  }
+}

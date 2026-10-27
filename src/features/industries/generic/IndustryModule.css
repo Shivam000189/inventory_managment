@@ -1,0 +1,418 @@
+/* IndustryModule.css - Co-located token-driven styles for Industry & Variant modules */
+.var-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  animation: var-fade var(--transition-fast) ease-out both;
+}
+
+@keyframes var-fade {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.var-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.var-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.var-kpi {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.var-kpi span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-soft);
+}
+
+.var-kpi span i {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-soft);
+  color: var(--primary);
+}
+
+.var-kpi span i.blue {
+  background: rgba(43, 127, 255, 0.1);
+  color: #2b7fff;
+}
+
+.var-kpi span i.amber {
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--warning);
+}
+
+.var-kpi span i.purple {
+  background: rgba(168, 85, 247, 0.1);
+  color: #a855f7;
+}
+
+.var-kpi strong {
+  font-size: var(--text-2xl);
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.var-kpi strong small {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--text-soft);
+  margin-left: var(--space-1);
+}
+
+.var-kpi p {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--text-soft);
+}
+
+.var-kpi-alert {
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
+.var-filters {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  padding: var(--space-3);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+}
+
+.var-search {
+  flex: 1 1 240px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  color: var(--text);
+}
+
+.var-search svg {
+  width: 18px;
+  height: 18px;
+  color: var(--text-soft);
+  flex-shrink: 0;
+}
+
+.var-search input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-size: var(--text-sm);
+  outline: none;
+}
+
+.var-filters select {
+  height: 44px;
+  padding: 0 var(--space-3);
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.var-refresh {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.var-refresh:hover {
+  background: var(--surface-hover);
+}
+
+.var-refresh svg {
+  width: 18px;
+  height: 18px;
+}
+
+.var-table-wrap {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.var-table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.var-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: var(--text-sm);
+}
+
+.var-table th {
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-soft);
+  background: var(--surface-soft);
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+.var-table td {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--line);
+  color: var(--text);
+  vertical-align: middle;
+}
+
+.var-table tr:last-child td {
+  border-bottom: none;
+}
+
+.var-table tr:hover td {
+  background: var(--surface-hover);
+}
+
+.var-table th.num,
+.var-table td.num {
+  text-align: right;
+}
+
+.var-variant {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.var-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  flex-shrink: 0;
+}
+
+.var-chip {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.var-sku {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  color: var(--text-soft);
+}
+
+.var-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+.var-badge.in {
+  background: rgba(34, 197, 94, 0.12);
+  color: var(--success);
+}
+
+.var-badge.low {
+  background: rgba(245, 158, 11, 0.12);
+  color: var(--warning);
+}
+
+.var-badge.out {
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--danger);
+}
+
+.var-stock {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.var-price {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.var-price small {
+  font-size: var(--text-xs);
+  color: var(--text-soft);
+}
+
+.var-row-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.var-row-actions button {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  color: var(--text-soft);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.var-row-actions button:hover {
+  background: var(--surface-soft);
+  color: var(--text);
+  border-color: var(--text-soft);
+}
+
+.var-row-actions button svg {
+  width: 14px;
+  height: 14px;
+}
+
+.var-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--line);
+  font-size: var(--text-xs);
+  color: var(--text-soft);
+}
+
+.var-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.var-pagination-controls button {
+  min-height: 32px;
+  padding: 0 var(--space-3);
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  font-size: var(--text-xs);
+  cursor: pointer;
+}
+
+.var-pagination-controls button.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.var-pagination-controls button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.var-statusbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-xs);
+  color: var(--text-soft);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+
+.empty-dashboard {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  padding: var(--space-8) var(--space-4);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.empty-dashboard-icon {
+  font-size: 32px;
+  color: var(--text-soft);
+}
+
+@media (max-width: 1024px) {
+  .var-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .var-kpis {
+    grid-template-columns: 1fr;
+  }
+  .var-filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .var-search {
+    flex: 1 1 auto;
+  }
+  .var-pagination {
+    flex-direction: column;
+    align-items: center;
+  }
+}
