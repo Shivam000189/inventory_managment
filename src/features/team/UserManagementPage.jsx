@@ -1,8 +1,14 @@
 import { useCallback, useMemo, useState } from 'react'
 import { userApi } from '../../api/userApi.js'
 import { useResource } from '../../hooks/useResource.js'
-import AsyncBoundary from '../../components/feedback/AsyncBoundary.jsx'
-import '../../styles/user-management.css'
+import { PageHeader } from '../../components/ui/PageHeader.jsx'
+import { StatGrid, StatCard, Card } from '../../components/ui/Card.jsx'
+import { DataTable } from '../../components/ui/DataTable.jsx'
+import { Button } from '../../components/ui/Button.jsx'
+import { Field, Input, Select, Textarea } from '../../components/ui/FormControls.jsx'
+import { Badge } from '../../components/ui/Badge.jsx'
+import { Modal } from '../../components/ui/Modal.jsx'
+import './UserManagementPage.css'
 
 const PERMISSION_META = {
   view_dashboard: ['View dashboard', 'Access KPI store revenue telemetry'],
@@ -38,12 +44,13 @@ const PERMISSION_CATALOG = Object.keys(PERMISSION_META)
 
 const roleTone = (name = '') => {
   const key = name.toLowerCase()
-  if (key.includes('admin') || key.includes('owner')) return 'purple'
-  if (key.includes('manager') || key.includes('lead')) return 'teal'
-  if (key.includes('account')) return 'amber'
-  if (key.includes('staff') || key.includes('cashier') || key.includes('sales')) return 'blue'
-  return 'dim'
+  if (key.includes('admin') || key.includes('owner')) return 'info'
+  if (key.includes('manager') || key.includes('lead')) return 'success'
+  if (key.includes('account')) return 'warning'
+  if (key.includes('staff') || key.includes('cashier') || key.includes('sales')) return 'neutral'
+  return 'neutral'
 }
+
 const scopeFor = (count) => {
   if (count >= 22) return ['Super administrator', 'Unrestricted access to every store module']
   if (count >= 12) return ['Operations manager', 'Purchases, inventory, orders and vendor reconciliation']
@@ -52,27 +59,10 @@ const scopeFor = (count) => {
   return ['Limited access', 'Read-only visibility into assigned screens']
 }
 
-function UserMgIcon({ name }) {
-  const paths = {
-    import: <><path d="M12 15V3m-4 4 4-4 4 4" /><path d="M4 15v4h16v-4" /></>,
-    plus: <path d="M12 5v14M5 12h14" />,
-    search: <><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 4.5 4.5" /></>,
-    refresh: <><path d="M4 12a8 8 0 0 1 13.7-5.7L20 8m0-4v4h-4M20 12a8 8 0 0 1-13.7 5.7L4 16m0 4v-4h4" /></>,
-    users: <><circle cx="9" cy="8" r="3.2" /><path d="M3.5 20a5.5 5.5 0 0 1 11 0M16 6.5a3 3 0 0 1 0 5.6M20.5 20a5.2 5.2 0 0 0-3.5-4.9" /></>,
-    monitor: <><rect x="3" y="4" width="18" height="12" rx="2" /><path d="M8 20h8M12 16v4" /></>,
-    shield: <><path d="M12 3 5 6v5c0 4.4 3 7.6 7 9 4-1.4 7-4.6 7-9V6l-7-3Z" /><path d="m9.3 12 2 2 3.4-4.2" /></>,
-    lock: <><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></>,
-    reset: <><path d="M4 12a8 8 0 1 1 2.3 5.6" /><path d="M4 20v-4h4" /></>,
-    save: <><path d="M5 4h11l3 3v13H5z" /><path d="M8 4v5h7V4M8 20v-6h8v6" /></>,
-    arrow: <path d="M5 12h13m-5-5 5 5-5 5" />,
-  }
-  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>
-}
-
-function UserManagement({ section, business, account }) {
+function UserManagement({ section = 'Users', business = {}, account = {} }) {
   const load = useCallback(() => Promise.all([userApi.listMembers(), userApi.listRoles()]), [])
   const { data, loading, error, refetch, setData } = useResource(load, [], [[], []])
-  const [users, roles] = data
+  const [users = [], roles = []] = data
 
   const [selectedRoleId, setSelectedRoleId] = useState(null)
   const [formOpen, setFormOpen] = useState(false)
@@ -83,17 +73,27 @@ function UserManagement({ section, business, account }) {
   const [roleFilter, setRoleFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
 
-  const activeRole = selectedRoleId === '__new__' ? null : roles.find((role) => role.roleId === selectedRoleId) || roles[0] || null
-  const activeRoleId = selectedRoleId === '__new__' ? '__new__' : activeRole?.roleId ?? null
+  const getRoleId = (role) => role?.roleId || role?.role || role?.name || role?.id || ''
+  const activeRole =
+    selectedRoleId === '__new__'
+      ? null
+      : roles.find((role) => getRoleId(role) === selectedRoleId) || roles[0] || null
+  const activeRoleId = selectedRoleId === '__new__' ? '__new__' : getRoleId(activeRole)
   const setActiveRoleId = setSelectedRoleId
   const roleNames = roles.map((role) => role.name)
-  const currentRole = (roleId) => roles.find((role) => role.roleId === roleId)?.name || 'Staff'
+  const currentRole = (roleId) => {
+    const found = roles.find((role) => getRoleId(role) === roleId)
+    return found?.name || roleId || 'Staff'
+  }
   const setUsers = (updater) => setData((current) => [updater(current[0]), current[1]])
   const setRoles = (updater) => setData((current) => [current[0], updater(current[1])])
 
   const usersByRole = useMemo(() => {
     const map = new Map()
-    for (const user of users) map.set(user.roleId, (map.get(user.roleId) || 0) + 1)
+    for (const user of users) {
+      const rId = user.roleId || user.role
+      map.set(rId, (map.get(rId) || 0) + 1)
+    }
     return map
   }, [users])
 
@@ -101,12 +101,25 @@ function UserManagement({ section, business, account }) {
     event.preventDefault()
     if (saving) return
     const formData = new FormData(event.currentTarget)
-    const payload = { name: formData.get('name').trim(), email: formData.get('email').trim().toLowerCase(), role: formData.get('role') }
-    if (!payload.name || !payload.email) { setMessage({ type: 'error', text: 'Name and email are required.' }); return }
+    const payload = {
+      name: formData.get('name').trim(),
+      email: formData.get('email').trim().toLowerCase(),
+      role: formData.get('role'),
+    }
+    if (!payload.name || !payload.email) {
+      setMessage({ type: 'error', text: 'Name and email are required.' })
+      return
+    }
     setSaving(true)
     try {
-      const saved = editingUser ? await userApi.updateMember(editingUser.userId, payload) : await userApi.createMember(payload)
-      setUsers((list) => (editingUser ? list.map((item) => (item.userId === saved.userId ? saved : item)) : [...list, saved]))
+      const saved = editingUser
+        ? await userApi.updateMember(editingUser.userId, payload)
+        : await userApi.createMember(payload)
+      setUsers((list) =>
+        editingUser
+          ? list.map((item) => (item.userId === saved.userId ? saved : item))
+          : [...list, saved]
+      )
       setFormOpen(false)
       setEditingUser(null)
       setMessage({ type: 'success', text: editingUser ? 'User updated.' : 'Team member added.' })
@@ -119,7 +132,9 @@ function UserManagement({ section, business, account }) {
 
   const toggleStatus = async (user) => {
     try {
-      const saved = await userApi.updateMember(user.userId, { status: user.status === 'active' ? 'inactive' : 'active' })
+      const saved = await userApi.updateMember(user.userId, {
+        status: user.status === 'active' ? 'inactive' : 'active',
+      })
       setUsers((list) => list.map((item) => (item.userId === saved.userId ? saved : item)))
     } catch (caught) {
       setMessage({ type: 'error', text: caught.message || 'Could not update the user.' })
@@ -129,11 +144,20 @@ function UserManagement({ section, business, account }) {
   const handleRoleSubmit = async (event) => {
     event.preventDefault()
     const formData = new FormData(event.currentTarget)
-    const payload = { roleId: activeRole?.roleId, name: formData.get('name').trim(), description: formData.get('description').trim(), permissions: activeRole?.permissions || [] }
+    const payload = {
+      roleId: activeRole?.roleId,
+      name: formData.get('name').trim(),
+      description: formData.get('description').trim(),
+      permissions: activeRole?.permissions || [],
+    }
     if (!payload.name) return
     try {
       const saved = await userApi.saveRole(payload)
-      setRoles((list) => (list.some((role) => role.roleId === saved.roleId) ? list.map((role) => (role.roleId === saved.roleId ? saved : role)) : [...list, saved]))
+      setRoles((list) =>
+        list.some((role) => role.roleId === saved.roleId)
+          ? list.map((role) => (role.roleId === saved.roleId ? saved : role))
+          : [...list, saved]
+      )
       setActiveRoleId(saved.roleId)
       setMessage({ type: 'success', text: 'Role saved.' })
     } catch (caught) {
@@ -143,21 +167,28 @@ function UserManagement({ section, business, account }) {
 
   const togglePermission = async (permission) => {
     if (!activeRole) return
-    const permissions = activeRole.permissions.includes(permission)
-      ? activeRole.permissions.filter((item) => item !== permission)
-      : [...activeRole.permissions, permission]
+    const currentPerms = activeRole.permissions || []
+    const permissions = currentPerms.includes(permission)
+      ? currentPerms.filter((item) => item !== permission)
+      : [...currentPerms, permission]
     try {
-      const saved = await userApi.setRolePermissions(activeRole.roleId, permissions)
-      setRoles((list) => list.map((role) => (role.roleId === saved.roleId ? saved : role)))
+      const rId = getRoleId(activeRole)
+      const saved = await userApi.setRolePermissions(rId, permissions)
+      setRoles((list) => list.map((role) => (getRoleId(role) === getRoleId(saved) ? saved : role)))
     } catch (caught) {
       setMessage({ type: 'error', text: caught.message || 'Could not update permissions.' })
     }
   }
+
   const setAllPermissions = async (all) => {
     if (!activeRole) return
     try {
-      const saved = await userApi.setRolePermissions(activeRole.roleId, all ? [...PERMISSION_CATALOG] : [])
-      setRoles((list) => list.map((role) => (role.roleId === saved.roleId ? saved : role)))
+      const rId = getRoleId(activeRole)
+      const saved = await userApi.setRolePermissions(
+        rId,
+        all ? [...PERMISSION_CATALOG] : []
+      )
+      setRoles((list) => list.map((role) => (getRoleId(role) === getRoleId(saved) ? saved : role)))
     } catch (caught) {
       setMessage({ type: 'error', text: caught.message || 'Could not update permissions.' })
     }
@@ -166,95 +197,180 @@ function UserManagement({ section, business, account }) {
   /* ---- Roles / Permissions view ---- */
   if (section === 'Roles' || section === 'Permissions') {
     const permissionMode = section === 'Permissions'
-    return <section className="um-page um-roles" aria-labelledby="um-title">
-      <header className="um-heading">
-        <div>
-          <p className="um-kicker">Users <span>•</span> {section}</p>
-          <h1 id="um-title">{permissionMode ? 'Permissions' : 'Roles'}</h1>
-          <p>Reusable access controls and the operational privilege matrix for <strong>{business.name}</strong>.</p>
+    return (
+      <div className="um-page um-container">
+        <PageHeader
+          kicker={`Users • ${section}`}
+          title={permissionMode ? 'Role Permissions Matrix' : 'Manage Roles'}
+          badge={`${roles.length} roles configured`}
+          description={`Reusable access controls and operational privilege matrix for ${business.name || 'your business'}.`}
+          actions={
+            permissionMode ? (
+              <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                <Button variant="secondary" onClick={() => setAllPermissions(false)} icon="arrow-path">
+                  Reset to None
+                </Button>
+                <Button variant="primary" onClick={() => setAllPermissions(true)} icon="check">
+                  Grant All
+                </Button>
+              </div>
+            ) : null
+          }
+        />
+
+        <div className="um-note-card">
+          <div className="um-note-icon">i</div>
+          <p>
+            <strong>Role permission propagation:</strong> Changes reflect on staff accounts during their next active session heartbeat. Unchecked privileges hide associated navigation routes and disallow backend actions.
+          </p>
         </div>
-        <div className="um-heading-actions">
-          {permissionMode && <button type="button" onClick={() => setAllPermissions(false)}><UserMgIcon name="reset" />Reset to none</button>}
-          {permissionMode && <button type="button" className="primary" onClick={() => setAllPermissions(true)}><UserMgIcon name="save" />Grant all</button>}
-        </div>
-      </header>
 
-      <div className="um-note">
-        <span className="um-note-mark">i</span>
-        <p><strong>How role permissions operate:</strong> changes reflect on staff accounts at their next session heartbeat. Unchecked privileges completely hide the associated screens and API actions.</p>
-      </div>
+        {message && (
+          <div className={`um-alert-box ${message.type === 'error' ? 'um-alert-error' : 'um-alert-success'}`}>
+            {message.text}
+          </div>
+        )}
 
-      {message && <p className={`um-message ${message.type}`} role="status">{message.text}</p>}
-
-      <AsyncBoundary loading={loading} error={error} onRetry={refetch}>
-        <div className="um-roles-layout">
-          <div className="um-role-list">
-            <div className="um-role-list-head"><span>Select user role</span><b>{roles.length} defined</b></div>
-            {roles.map((role) => {
+        <div className="um-roles-grid">
+          {/* Left: Roles list */}
+          <Card title="Available Roles" subtitle="Select a role to configure">
+            {roles.map((role, idx) => {
+              const rId = getRoleId(role) || `role-${idx}`
               const count = role.permissions?.length || 0
-              return <button type="button" key={role.roleId} className={`um-role-card${activeRoleId === role.roleId ? ' active' : ''}`} onClick={() => setActiveRoleId(role.roleId)}>
-                <div className="um-role-card-top">
-                  <strong>{role.name}</strong>
-                  {activeRoleId === role.roleId && <span className="um-role-active">Active</span>}
-                </div>
-                <small>{role.description || 'No description set'}</small>
-                <div className="um-role-card-foot">
-                  <span className="um-role-count">{count} action{count === 1 ? '' : 's'} allowed</span>
-                  <span>{usersByRole.get(role.roleId) || 0} user{(usersByRole.get(role.roleId) || 0) === 1 ? '' : 's'}</span>
-                </div>
-              </button>
+              const isActive = activeRoleId === rId
+              return (
+                <button
+                  type="button"
+                  key={rId}
+                  className={`um-role-card-btn ${isActive ? 'active' : ''}`}
+                  onClick={() => setActiveRoleId(rId)}
+                >
+                  <div className="um-role-card-header">
+                    <strong>{role.name}</strong>
+                    {isActive && <Badge tone="info">Active</Badge>}
+                  </div>
+                  <small>{role.description || 'No description set'}</small>
+                  <div className="um-role-card-meta">
+                    <span>{count} permissions</span>
+                    <span>{usersByRole.get(rId) || 0} users assigned</span>
+                  </div>
+                </button>
+              )
             })}
-            <button type="button" className="um-role-add" onClick={() => { setActiveRoleId('__new__'); setMessage(null) }}><UserMgIcon name="plus" />Create role</button>
-          </div>
+            <div style={{ marginTop: 'var(--space-3)' }}>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setActiveRoleId('__new__')
+                  setMessage(null)
+                }}
+                icon="plus"
+              >
+                Create Role
+              </Button>
+            </div>
+          </Card>
 
-          <div className="um-role-editor">
-            {permissionMode ? <div className="um-perm-panel">
-              <div className="um-perm-head">
-                <div>
-                  <p className="um-kicker">Action access</p>
-                  <h2>{activeRole?.name || 'Select a role'} permissions<span className={`um-role-badge ${roleTone(activeRole?.name)}`}>{roleTone(activeRole?.name) === 'purple' ? 'Master control' : 'Scoped'}</span></h2>
+          {/* Right: Permission matrix or Role details */}
+          <div>
+            {permissionMode ? (
+              <Card
+                title={`${activeRole?.name || 'Role'} Permissions`}
+                subtitle="Toggle specific privileges for this operational role"
+                actions={
+                  <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                    <Button variant="secondary" size="sm" onClick={() => setAllPermissions(true)} disabled={!activeRole}>
+                      Select All
+                    </Button>
+                    <Button variant="secondary" size="sm" onClick={() => setAllPermissions(false)} disabled={!activeRole}>
+                      Deselect All
+                    </Button>
+                  </div>
+                }
+              >
+                <div className="um-perm-grid">
+                  {PERMISSION_CATALOG.map((permission) => {
+                    const [label, description] = PERMISSION_META[permission]
+                    const checked = Boolean(activeRole?.permissions?.includes(permission))
+                    return (
+                      <label key={permission} className={`um-perm-item ${checked ? 'checked' : ''}`}>
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          disabled={!activeRole}
+                          onChange={() => togglePermission(permission)}
+                        />
+                        <div>
+                          <strong>{label}</strong>
+                          <small>{description}</small>
+                        </div>
+                      </label>
+                    )
+                  })}
                 </div>
-                <div className="um-perm-bulk">
-                  <button type="button" onClick={() => setAllPermissions(true)} disabled={!activeRole}>Select all</button>
-                  <button type="button" onClick={() => setAllPermissions(false)} disabled={!activeRole}>Deselect all</button>
-                </div>
-              </div>
-              <div className="um-perm-grid">
-                {PERMISSION_CATALOG.map((permission) => {
-                  const [label, description] = PERMISSION_META[permission]
-                  const checked = activeRole?.permissions.includes(permission) || false
-                  return <label key={permission} className={checked ? 'checked' : ''}>
-                    <input type="checkbox" checked={checked} disabled={!activeRole} onChange={() => togglePermission(permission)} />
-                    <span><strong>{label}</strong><small>{description}</small></span>
-                  </label>
-                })}
-              </div>
-            </div> : <form className="um-role-form" onSubmit={handleRoleSubmit}>
-              <div className="um-perm-head"><div><p className="um-kicker">Role configuration</p><h2>{activeRole ? `Edit ${activeRole.name}` : 'Create a role'}</h2></div></div>
-              <label htmlFor="role-name">Role name</label>
-              <input id="role-name" name="name" defaultValue={activeRole?.name || ''} placeholder="e.g. Warehouse lead" key={activeRole?.roleId || 'new'} required />
-              <label htmlFor="role-description">Description</label>
-              <textarea id="role-description" name="description" defaultValue={activeRole?.description || ''} placeholder="What can this role do?" key={`${activeRole?.roleId || 'new'}-desc`} />
-              <div className="um-role-form-perms">
-                <span>{activeRole?.permissions?.length || 0} permission{(activeRole?.permissions?.length || 0) === 1 ? '' : 's'} attached — tune them under the Permissions tab.</span>
-              </div>
-              <button className="um-submit" type="submit">Save role<UserMgIcon name="arrow" /></button>
-            </form>}
+              </Card>
+            ) : (
+              <Card
+                title={activeRole ? `Edit ${activeRole.name}` : 'Create a New Role'}
+                subtitle="Configure the role title and summary"
+              >
+                <form onSubmit={handleRoleSubmit}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+                    <Field label="Role Name" required htmlFor="role-name">
+                      <Input
+                        id="role-name"
+                        name="name"
+                        defaultValue={activeRole?.name || ''}
+                        placeholder="e.g. Warehouse Lead"
+                        key={activeRole?.roleId || 'new'}
+                        required
+                      />
+                    </Field>
+
+                    <Field label="Description" htmlFor="role-description">
+                      <Textarea
+                        id="role-description"
+                        name="description"
+                        defaultValue={activeRole?.description || ''}
+                        placeholder="What operational duties does this role handle?"
+                        key={`${activeRole?.roleId || 'new'}-desc`}
+                        rows={3}
+                      />
+                    </Field>
+
+                    <p className="text-muted text-xs" style={{ margin: 0 }}>
+                      {activeRole?.permissions?.length || 0} permissions attached. Tune fine-grained capabilities under the Permissions section.
+                    </p>
+
+                    <div>
+                      <Button variant="primary" type="submit" icon="check">
+                        Save Role
+                      </Button>
+                    </div>
+                  </div>
+                </form>
+              </Card>
+            )}
           </div>
         </div>
-      </AsyncBoundary>
 
-      <footer className="um-statusbar">
-        <span><i />Stockroom · access control</span>
-        <span>{roles.length} roles · {users.length} accounts</span>
-        <span className="um-statusbar-suite">Enterprise Retail OS</span>
-      </footer>
-    </section>
+        <footer className="um-statusbar">
+          <span>
+            <i className="um-statusbar-indicator" />
+            Stockroom · Access Control
+          </span>
+          <span>{roles.length} roles · {users.length} accounts</span>
+          <span className="um-statusbar-suite">Enterprise Retail OS</span>
+        </footer>
+      </div>
+    )
   }
 
   /* ---- Users view ---- */
   const activeUsers = users.filter((user) => user.status === 'active').length
-  const cashierRoleUsers = users.filter((user) => /staff|cashier|sales/i.test(currentRole(user.roleId)) && user.status === 'active').length
+  const cashierRoleUsers = users.filter(
+    (user) => /staff|cashier|sales/i.test(currentRole(user.roleId)) && user.status === 'active'
+  ).length
   const rolesInUse = new Set(users.map((user) => currentRole(user.roleId))).size
   const filteredUsers = users.filter((user) => {
     const query = search.trim().toLowerCase()
@@ -263,127 +379,276 @@ function UserManagement({ section, business, account }) {
     return `${user.name} ${user.email} ${currentRole(user.roleId)}`.toLowerCase().includes(query)
   })
 
-  return <section className="um-page um-users" aria-labelledby="um-title">
-    <header className="um-heading">
-      <div>
-        <p className="um-kicker">Users <span>•</span> Team members</p>
-        <div className="um-title-line"><h1 id="um-title">Users</h1><span className="um-count-badge">{users.length} members registered</span></div>
-        <p>Control employee access levels, register terminal PINs, and cashier role assignments.</p>
+  const columns = [
+    {
+      key: 'user',
+      header: 'Team Member',
+      render: (user) => {
+        const owner = user.email === account.email || user.role === 'owner'
+        return (
+          <div className="um-user-cell">
+            <span className="um-avatar-badge">{user.name ? user.name[0].toUpperCase() : 'U'}</span>
+            <div>
+              <span className="font-semibold text-main">
+                {user.name}
+                {owner && <span className="um-tag owner">Owner</span>}
+                {user.status !== 'active' && <span className="um-tag deactivated">Inactive</span>}
+              </span>
+              <small className="block text-muted">{user.email}</small>
+            </div>
+          </div>
+        )
+      },
+      mobileLabel: 'User',
+    },
+    {
+      key: 'role',
+      header: 'Assigned Role',
+      render: (user) => {
+        const role = currentRole(user.roleId)
+        return <Badge tone={roleTone(role)}>{role}</Badge>
+      },
+      mobileLabel: 'Role',
+    },
+    {
+      key: 'scope',
+      header: 'Access Scope',
+      render: (user) => {
+        const roleObj = roles.find((entry) => entry.roleId === user.roleId)
+        const [scopeTitle, scopeDesc] = scopeFor(
+          roleObj?.permissions?.length || (user.role === 'owner' ? 28 : 4)
+        )
+        return (
+          <div>
+            <strong className="text-main text-xs">{scopeTitle}</strong>
+            <small className="block text-muted">{scopeDesc}</small>
+          </div>
+        )
+      },
+      mobileLabel: 'Scope',
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      render: (user) => (
+        <Badge tone={user.status === 'active' ? 'success' : 'warning'}>
+          {user.status}
+        </Badge>
+      ),
+      mobileLabel: 'Status',
+    },
+    {
+      key: 'actions',
+      header: '',
+      align: 'right',
+      render: (user) => {
+        const owner = user.email === account.email || user.role === 'owner'
+        return (
+          <div style={{ display: 'flex', gap: 'var(--space-2)', justifyContent: 'flex-end' }}>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                setEditingUser(user)
+                setFormOpen(true)
+              }}
+            >
+              Edit
+            </Button>
+            {!owner && (
+              <Button
+                variant={user.status === 'active' ? 'secondary' : 'primary'}
+                size="sm"
+                onClick={() => toggleStatus(user)}
+              >
+                {user.status === 'active' ? 'Deactivate' : 'Activate'}
+              </Button>
+            )}
+          </div>
+        )
+      },
+      mobileLabel: 'Actions',
+    },
+  ]
+
+  return (
+    <div className="um-page um-container">
+      <PageHeader
+        kicker="Users • Team Members"
+        title="Users"
+        badge={`${users.length} members registered`}
+        description="Control employee access levels, terminal PINs, and cashier role assignments."
+        actions={
+          <Button
+            variant="primary"
+            onClick={() => {
+              setEditingUser(null)
+              setFormOpen(true)
+              setMessage(null)
+            }}
+            icon="plus"
+          >
+            Add User
+          </Button>
+        }
+      />
+
+      <StatGrid columns={4}>
+        <StatCard
+          title="Total User Accounts"
+          value={users.length}
+          subtext={`${activeUsers} active · ${users.length - activeUsers} inactive`}
+          icon="users"
+        />
+        <StatCard
+          title="POS Cashiers"
+          value={cashierRoleUsers}
+          subtext="Cleared for counter billing"
+          deltaType="positive"
+          icon="monitor"
+        />
+        <StatCard
+          title="Roles In Use"
+          value={rolesInUse}
+          subtext={`${roles.length} total roles configured`}
+          icon="shield"
+        />
+        <StatCard
+          title="Access Guard"
+          value="100%"
+          subtext="Credentials & role enforced"
+          deltaType="positive"
+          icon="lock"
+        />
+      </StatGrid>
+
+      <div className="um-note-card">
+        <div className="um-note-icon">i</div>
+        <p>
+          <strong>Enterprise role guard:</strong> Only administrators can edit purchase prices, approve stock write-offs, or export tax sheets. Cashiers are restricted to POS billing and receiving orders.
+        </p>
       </div>
-      <div className="um-heading-actions">
-        <button type="button" onClick={() => { setEditingUser(null); setFormOpen(true); setMessage(null) }}><UserMgIcon name="import" />Import staff CSV</button>
-        <button type="button" className="primary" onClick={() => { setEditingUser(null); setFormOpen(true); setMessage(null) }}><UserMgIcon name="plus" />Add user<kbd>Alt U</kbd></button>
-      </div>
-    </header>
 
-    <div className="um-kpis" aria-busy={loading}>
-      <article className="um-kpi">
-        <span>Total user accounts <i className="dim"><UserMgIcon name="users" /></i></span>
-        <strong>{loading || error ? '—' : users.length} <small>accounts</small></strong>
-        <p>{activeUsers} active · {users.length - activeUsers} inactive</p>
-      </article>
-      <article className="um-kpi">
-        <span>POS cashiers <i className="green"><UserMgIcon name="monitor" /></i></span>
-        <strong className="um-good">{loading || error ? '—' : cashierRoleUsers} <small>active</small></strong>
-        <p>Staff / cashier roles cleared for counter billing</p>
-      </article>
-      <article className="um-kpi">
-        <span>System roles in use <i className="amber"><UserMgIcon name="shield" /></i></span>
-        <strong>{loading || error ? '—' : rolesInUse} <small>roles</small></strong>
-        <p>{[...new Set(users.map((user) => currentRole(user.roleId)))].slice(0, 3).join(', ') || 'None assigned'}</p>
-      </article>
-      <article className="um-kpi">
-        <span>Access guard <i className="blue"><UserMgIcon name="lock" /></i></span>
-        <strong className="um-good">{loading || error ? '—' : '100%'} <small>OK</small></strong>
-        <p>All accounts have a role and login credentials set</p>
-      </article>
-    </div>
-
-    <div className="um-note">
-      <span className="um-note-mark">i</span>
-      <p><strong>Enterprise role guard:</strong> only administrators can edit purchase prices, approve stock scrap, or export tax sheets. Staff and cashiers are restricted to POS billing and receiving orders.</p>
-    </div>
-
-    {message && <p className={`um-message ${message.type}`} role="status">{message.text}</p>}
-
-    {formOpen && <form className="um-user-form" onSubmit={handleUserSubmit}>
-      <div className="um-user-form-head"><strong>{editingUser ? `Edit ${editingUser.name}` : 'Add a team member'}</strong><button type="button" className="um-close" onClick={() => setFormOpen(false)} aria-label="Close">×</button></div>
-      <div className="um-user-form-grid">
-        <label>Full name *<input name="name" defaultValue={editingUser?.name || ''} placeholder="e.g. Rahul Sharma" required /></label>
-        <label>Email *<input name="email" type="email" defaultValue={editingUser?.email || ''} placeholder="rahul@business.com" required /></label>
-        <label>Role *<select name="role" defaultValue={currentRole(editingUser?.roleId)}>{roleNames.map((role) => <option key={role}>{role}</option>)}</select></label>
-      </div>
-      <div className="um-user-form-actions"><button type="button" className="um-cancel" onClick={() => setFormOpen(false)}>Cancel</button><button type="submit" className="um-submit" disabled={saving}>{saving ? 'Saving…' : 'Save user'}<UserMgIcon name="arrow" /></button></div>
-    </form>}
-
-    <div className="um-toolbar">
-      <label className="um-search">
-        <UserMgIcon name="search" />
-        <input aria-label="Search users" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by name, email, or role" />
-      </label>
-      <select value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)} aria-label="Filter by role">
-        <option value="all">All roles ({roleNames.join(', ') || '—'})</option>
-        {roleNames.map((role) => <option key={role} value={role}>{role}</option>)}
-      </select>
-      <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} aria-label="Filter by status">
-        <option value="all">All statuses</option>
-        <option value="active">Active</option>
-        <option value="inactive">Inactive</option>
-      </select>
-      <button type="button" className="um-refresh" onClick={refetch} aria-label="Refresh"><UserMgIcon name="refresh" /></button>
-    </div>
-
-    <AsyncBoundary loading={loading} error={error} onRetry={refetch} isEmpty={!filteredUsers.length} emptyText={users.length ? 'No members match these filters.' : 'No team members yet. Add your first user.'}>
-      <div className="um-table-wrap">
-        <div className="um-table-scroll" tabIndex={0} role="region" aria-label="Team members">
-          <table className="um-table">
-            <thead><tr>
-              <th>User</th><th>Assigned role</th><th>Access scope</th><th>Status</th><th className="num">Actions</th>
-            </tr></thead>
-            <tbody>
-              {filteredUsers.map((user) => {
-                const role = currentRole(user.roleId)
-                const roleObj = roles.find((entry) => entry.roleId === user.roleId)
-                const [scopeTitle, scopeDesc] = scopeFor(roleObj?.permissions?.length || (user.role === 'owner' ? 28 : 4))
-                const owner = user.email === account.email || user.role === 'owner'
-                return <tr key={user.userId}>
-                  <td>
-                    <div className="um-user-cell">
-                      <span className="um-avatar">{user.name[0].toUpperCase()}</span>
-                      <div>
-                        <strong>{user.name}{owner && <span className="um-owner-tag">Owner</span>}{user.status !== 'active' && <span className="um-owner-tag muted">Deactivated</span>}</strong>
-                        <small>{user.email}</small>
-                      </div>
-                    </div>
-                  </td>
-                  <td><span className={`um-role-badge ${roleTone(role)}`}>{role}</span></td>
-                  <td className="um-scope"><strong>{scopeTitle}</strong><small>{scopeDesc}</small></td>
-                  <td><span className={`um-status ${user.status === 'active' ? 'green' : 'amber'}`}><i />{user.status}</span></td>
-                  <td className="num">
-                    <div className="um-row-actions">
-                      <button type="button" onClick={() => { setEditingUser(user); setFormOpen(true) }}>Edit</button>
-                      {!owner && <button type="button" className={user.status === 'active' ? '' : 'go'} onClick={() => toggleStatus(user)}>{user.status === 'active' ? 'Deactivate' : 'Activate'}</button>}
-                    </div>
-                  </td>
-                </tr>
-              })}
-            </tbody>
-          </table>
+      {message && (
+        <div className={`um-alert-box ${message.type === 'error' ? 'um-alert-error' : 'um-alert-success'}`}>
+          {message.text}
         </div>
-        <footer className="um-pagination">
-          <span>Showing {filteredUsers.length} of {users.length} registered members</span>
-          <span className="um-pagination-suite">Stockroom access desk</span>
-        </footer>
-      </div>
-    </AsyncBoundary>
+      )}
 
-    <footer className="um-statusbar">
-      <span><i />Stockroom server node online</span>
-      <span>{new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })} local</span>
-      <span>{rolesInUse} roles · {activeUsers} active</span>
-      <span className="um-statusbar-suite">Enterprise Retail OS</span>
-    </footer>
-  </section>
+      {/* User Form Modal */}
+      <Modal
+        isOpen={formOpen}
+        onClose={() => setFormOpen(false)}
+        title={editingUser ? `Edit ${editingUser.name}` : 'Add a Team Member'}
+        kicker="Employee Setup"
+      >
+        <form onSubmit={handleUserSubmit}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+            <Field label="Full Name" required htmlFor="member-name">
+              <Input
+                id="member-name"
+                name="name"
+                defaultValue={editingUser?.name || ''}
+                placeholder="e.g. Rahul Sharma"
+                required
+              />
+            </Field>
+
+            <Field label="Email Address" required htmlFor="member-email">
+              <Input
+                id="member-email"
+                name="email"
+                type="email"
+                defaultValue={editingUser?.email || ''}
+                placeholder="rahul@business.com"
+                required
+              />
+            </Field>
+
+            <Field label="Role" required htmlFor="member-role">
+              <Select
+                id="member-role"
+                name="role"
+                defaultValue={currentRole(editingUser?.roleId)}
+              >
+                {roleNames.map((role) => (
+                  <option key={role} value={role}>{role}</option>
+                ))}
+              </Select>
+            </Field>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-2)', marginTop: 'var(--space-2)' }}>
+              <Button variant="secondary" onClick={() => setFormOpen(false)}>
+                Cancel
+              </Button>
+              <Button variant="primary" type="submit" loading={saving} disabled={saving} icon="check">
+                {saving ? 'Saving…' : 'Save User'}
+              </Button>
+            </div>
+          </div>
+        </form>
+      </Modal>
+
+      <Card title="Team Directory" subtitle="Manage employee access status and privileges">
+        <div className="um-filter-bar">
+          <Input
+            aria-label="Search users"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search by name, email, or role..."
+          />
+          <Select
+            value={roleFilter}
+            onChange={(event) => setRoleFilter(event.target.value)}
+            aria-label="Filter by role"
+          >
+            <option value="all">All roles ({roleNames.join(', ') || '—'})</option>
+            {roleNames.map((role) => (
+              <option key={role} value={role}>{role}</option>
+            ))}
+          </Select>
+          <Select
+            value={statusFilter}
+            onChange={(event) => setStatusFilter(event.target.value)}
+            aria-label="Filter by status"
+          >
+            <option value="all">All statuses</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </Select>
+          <Button variant="secondary" onClick={refetch} icon="arrow-path">
+            Refresh
+          </Button>
+        </div>
+
+        <DataTable
+          columns={columns}
+          data={filteredUsers}
+          loading={loading}
+          error={error}
+          onRetry={refetch}
+          emptyTitle="No team members match"
+          emptyDescription={
+            users.length
+              ? 'No members match these filters.'
+              : 'No team members registered yet. Add your first user.'
+          }
+        />
+      </Card>
+
+      <footer className="um-statusbar">
+        <span>
+          <i className="um-statusbar-indicator" />
+          Stockroom Server Node Online
+        </span>
+        <span>
+          {new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })} local
+        </span>
+        <span>{rolesInUse} roles · {activeUsers} active</span>
+        <span className="um-statusbar-suite">Enterprise Retail OS</span>
+      </footer>
+    </div>
+  )
 }
 
 export default UserManagement

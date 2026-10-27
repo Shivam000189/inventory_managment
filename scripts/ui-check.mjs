@@ -351,9 +351,31 @@ const MOCK_USERS = [
 ];
 
 const MOCK_ROLES = [
-  { role: 'owner', name: 'Owner / Administrator', permissionsCount: 16 },
-  { role: 'cashier', name: 'POS Cashier', permissionsCount: 3 },
-  { role: 'inventory_manager', name: 'Warehouse Storekeeper', permissionsCount: 7 },
+  {
+    roleId: 'owner',
+    role: 'owner',
+    name: 'Owner / Administrator',
+    permissions: [
+      'view_dashboard',
+      'view_inventory',
+      'create_product',
+      'edit_product',
+      'delete_product',
+      'manage_users',
+    ],
+  },
+  {
+    roleId: 'cashier',
+    role: 'cashier',
+    name: 'POS Cashier',
+    permissions: ['view_dashboard', 'process_pos_sale', 'view_returns'],
+  },
+  {
+    roleId: 'inventory_manager',
+    role: 'inventory_manager',
+    name: 'Warehouse Storekeeper',
+    permissions: ['view_dashboard', 'view_inventory', 'stock_in', 'stock_out'],
+  },
 ];
 
 const MOCK_REPORTS_SUMMARY = {
