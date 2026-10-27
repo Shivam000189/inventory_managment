@@ -40,8 +40,10 @@ export default function AppHeader({
   openNotification,
   setNotif,
   onLogout,
+  menuButtonRef,
 }) {
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const userMenuRef = useRef(null);
 
   const displayName = capitalize(account?.name || account?.email?.split("@")[0] || "User");
@@ -52,6 +54,7 @@ export default function AppHeader({
       {/* Top Mobile Bar */}
       <div className="mobile-dashboard-bar">
         <button
+          ref={menuButtonRef}
           className="mobile-menu-button"
           type="button"
           aria-label="Open navigation"
@@ -68,6 +71,39 @@ export default function AppHeader({
 
       {/* Main Modern Navbar Header */}
       <header className="modern-navbar" role="banner">
+        {/* Full-width Search Overlay for Mobile */}
+        {isSearchExpanded && (
+          <div className="modern-search-overlay" role="search">
+            <div className="modern-search-overlay-inner">
+              <svg className="modern-search-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              <input
+                type="text"
+                className="modern-search-overlay-input"
+                placeholder="Search products, orders, SKUs..."
+                autoFocus
+                aria-label="Search products, orders, SKUs"
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") setIsSearchExpanded(false);
+                }}
+              />
+              <button
+                type="button"
+                className="modern-search-overlay-close"
+                aria-label="Close search"
+                onClick={() => setIsSearchExpanded(false)}
+              >
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Left Side: Greeting & Status */}
         <div className="modern-navbar-left">
           {activeNav === "Overview" ? (
@@ -94,7 +130,21 @@ export default function AppHeader({
 
         {/* Right Side: Search, Role Pill, Theme, Notif, User Menu */}
         <div className="modern-navbar-right">
-          {/* Search Pill Input */}
+          {/* Mobile Search Toggle Button */}
+          <button
+            type="button"
+            className="modern-search-toggle-btn"
+            aria-label="Search"
+            aria-expanded={isSearchExpanded}
+            onClick={() => setIsSearchExpanded(true)}
+          >
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+          </button>
+
+          {/* Desktop Search Pill Input */}
           <div className="modern-search-wrap">
             <input
               type="text"
@@ -116,6 +166,33 @@ export default function AppHeader({
             </svg>
             <span>{roleLabel}</span>
           </div>
+
+          {/* Theme Toggle Button */}
+          <button
+            type="button"
+            className="modern-icon-circle-btn theme-toggle-btn"
+            aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
+            title={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
+            onClick={toggleTheme}
+          >
+            {theme === "dark" ? (
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="5" />
+                <line x1="12" y1="1" x2="12" y2="3" />
+                <line x1="12" y1="21" x2="12" y2="23" />
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                <line x1="1" y1="12" x2="3" y2="12" />
+                <line x1="21" y1="12" x2="23" y2="12" />
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+              </svg>
+            )}
+          </button>
 
           {/* Notifications */}
           <NotificationCenter

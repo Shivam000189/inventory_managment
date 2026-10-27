@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const NAVIGATION_LABELS = {
   Overview: "Dashboard",
@@ -103,9 +103,44 @@ export default function AppSidebar({
   setMobileNavOpen,
   canOpen,
   onLogout,
+  sidebarCollapsed,
+  setSidebarCollapsed,
 }) {
   const [showWorkspacePopover, setShowWorkspacePopover] = useState(false);
   const workspaceRef = useRef(null);
+  const sidebarRef = useRef(null);
+  const closeButtonRef = useRef(null);
+
+  useEffect(() => {
+    if (!mobileNavOpen) return;
+    closeButtonRef.current?.focus();
+
+    const handleKeyDown = (e) => {
+      if (e.key !== "Tab") return;
+      const focusable = sidebarRef.current?.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      if (!focusable || focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (e.shiftKey) {
+        if (document.activeElement === first) {
+          last.focus();
+          e.preventDefault();
+        }
+      } else {
+        if (document.activeElement === last) {
+          first.focus();
+          e.preventDefault();
+        }
+      }
+    };
+
+    const node = sidebarRef.current;
+    node?.addEventListener("keydown", handleKeyDown);
+    return () => node?.removeEventListener("keydown", handleKeyDown);
+  }, [mobileNavOpen]);
 
   const rawName = (business?.name && business.name.toLowerCase() !== "name" && business.name.trim())
     ? business.name
@@ -114,7 +149,7 @@ export default function AppSidebar({
 
   return (
     <>
-      <aside className="dashboard-sidebar modern-sidebar" id="dashboard-navigation">
+      <aside className="dashboard-sidebar modern-sidebar" id="dashboard-navigation" ref={sidebarRef}>
         {/* Brand Header */}
         <div className="modern-sidebar-brand">
           <div className="modern-brand-icon" aria-hidden="true">
@@ -129,6 +164,31 @@ export default function AppSidebar({
               {business?.industry ? `${business.industry.toUpperCase()} · SUITE` : "INVENTORY & POS"}
             </span>
           </div>
+          {setSidebarCollapsed && (
+            <button
+              type="button"
+              className="modern-sidebar-collapse-btn"
+              aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            >
+              <svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                {sidebarCollapsed ? <path d="m8 6 4 4-4 4" /> : <path d="m12 6-4 4 4 4" />}
+              </svg>
+            </button>
+          )}
+          <button
+            ref={closeButtonRef}
+            type="button"
+            className="modern-mobile-close-btn"
+            aria-label="Close navigation"
+            onClick={() => setMobileNavOpen(false)}
+          >
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
         </div>
 
         {/* Workspace Quick Switcher */}
@@ -212,6 +272,20 @@ export default function AppSidebar({
                     }}
                   >
                     <span>👥 Team & Users</span>
+                    <span>→</span>
+                  </button>
+                )}
+                {onLogout && (
+                  <button
+                    type="button"
+                    className="workspace-popover-action"
+                    style={{ color: "var(--danger)" }}
+                    onClick={() => {
+                      setShowWorkspacePopover(false);
+                      onLogout();
+                    }}
+                  >
+                    <span>🚪 Log out</span>
                     <span>→</span>
                   </button>
                 )}

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import "../App.css";
 import "../styles/ui-system.css";
@@ -42,6 +42,14 @@ function DashboardView() {
   const navigate = useNavigate();
 
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    if (typeof window !== "undefined") {
+      return window.innerWidth >= 768 && window.innerWidth < 1024;
+    }
+    return false;
+  });
+  const menuButtonRef = useRef(null);
+  const prevMobileNavOpen = useRef(mobileNavOpen);
   const [notif, setNotif] = useState({ items: [], unreadCount: 0 });
   const [gettingStarted, setGettingStarted] = useState(null);
   const [checklistDismissed, setChecklistDismissed] = useState(
@@ -123,6 +131,25 @@ function DashboardView() {
   }, [mobileNavOpen]);
 
   useEffect(() => {
+    if (prevMobileNavOpen.current && !mobileNavOpen) {
+      menuButtonRef.current?.focus();
+    }
+    prevMobileNavOpen.current = mobileNavOpen;
+  }, [mobileNavOpen]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 768 && window.innerWidth < 1024) {
+        setSidebarCollapsed(true);
+      } else if (window.innerWidth >= 1024) {
+        setSidebarCollapsed(false);
+      }
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useEffect(() => {
     if (!canViewInventory) return undefined;
     const refreshDashboardProducts = () => {
       refetch();
@@ -173,7 +200,7 @@ function DashboardView() {
 
   return (
     <main
-      className={`dashboard-shell modern-theme industry-${String(business?.industry || "general")
+      className={`dashboard-shell modern-theme ${sidebarCollapsed ? "sidebar-collapsed" : ""} industry-${String(business?.industry || "general")
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "-")}${mobileNavOpen ? " nav-open" : ""}`}
     >
@@ -189,6 +216,8 @@ function DashboardView() {
         setMobileNavOpen={setMobileNavOpen}
         canOpen={canOpen}
         onLogout={logout}
+        sidebarCollapsed={sidebarCollapsed}
+        setSidebarCollapsed={setSidebarCollapsed}
       />
 
       <section className="dashboard-main">
@@ -214,6 +243,7 @@ function DashboardView() {
           openNotification={openNotification}
           setNotif={setNotif}
           onLogout={logout}
+          menuButtonRef={menuButtonRef}
         />
 
         {activeNav && activeNav !== "Overview" && (
