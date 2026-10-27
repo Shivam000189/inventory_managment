@@ -3,12 +3,22 @@ import { purchaseOrderApi } from '../../api/purchaseOrderApi.js'
 import { productApi } from '../../api/productApi.js'
 import { supplierApi } from '../../api/supplierApi.js'
 import { useResource } from '../../hooks/useResource.js'
-import AsyncBoundary from '../../components/feedback/AsyncBoundary.jsx'
-import '../../styles/purchase-orders.css'
+import { PageHeader } from '../../components/ui/PageHeader.jsx'
+import { StatGrid, StatCard } from '../../components/ui/Card.jsx'
+import { Toolbar } from '../../components/ui/Toolbar.jsx'
+import { Tabs } from '../../components/ui/Tabs.jsx'
+import { DataTable } from '../../components/ui/DataTable.jsx'
+import { Modal } from '../../components/ui/Modal.jsx'
+import { Button } from '../../components/ui/Button.jsx'
+import { Badge } from '../../components/ui/Badge.jsx'
+import { Field, Input, Select, Textarea } from '../../components/ui/FormControls.jsx'
+import { FormStatus } from '../../components/ui/Feedback.jsx'
+import { Icon } from '../../components/ui/icons.jsx'
+import './PurchaseOrdersPage.css'
 
 const emptyLine = () => ({ productId: '', quantity: 1, purchasePrice: '', discount: 0, tax: 0 })
 
-function PoIcon({ name }) {
+function PoLocalIcon({ name }) {
   const paths = {
     export: <><path d="M12 3v12m-4-4 4 4 4-4" /><path d="M5 17v3h14v-3" /></>,
     recur: <><path d="M4 12a8 8 0 0 1 13.7-5.7L20 8m0-4v4h-4M20 12a8 8 0 0 1-13.7 5.7L4 16m0 4v-4h4" /></>,
@@ -16,14 +26,25 @@ function PoIcon({ name }) {
     search: <><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 4.5 4.5" /></>,
     calendar: <><rect x="3.5" y="5" width="17" height="15.5" rx="2" /><path d="M3.5 9.5h17M8 3v4M16 3v4" /></>,
     list: <><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01" /></>,
-    grid: <><rect x="4" y="4" width="7" height="7" rx="1" /><rect x="13" y="4" width="7" height="7" rx="1" /><rect x="4" y="13" width="7" height="7" rx="1" /><rect x="13" y="13" width="7" height="7" rx="1" /></>,
     truck: <><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7z" /><circle cx="7" cy="18" r="1.6" /><circle cx="17.5" cy="18" r="1.6" /></>,
-    dock: <><path d="M4 20V9l8-5 8 5v11" /><path d="M9 20v-6h6v6" /></>,
     check: <><circle cx="12" cy="12" r="9" /><path d="m8.5 12 2.4 2.4 4.6-5" /></>,
     alert: <><path d="M12 4 2 20h20L12 4Z" /><path d="M12 10v5M12 18h.01" /></>,
     next: <path d="M5 12h13m-5-5 5 5-5 5" />,
   }
-  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      style={{ width: 16, height: 16 }}
+    >
+      {paths[name]}
+    </svg>
+  )
 }
 
 const TABS = [
@@ -35,23 +56,27 @@ const TABS = [
 ]
 
 const FULFILLMENT = {
-  Draft: { label: 'Draft', tone: 'dim' },
-  Pending: { label: 'Pending approval', tone: 'amber' },
-  Approved: { label: 'Approved', tone: 'blue' },
-  Ordered: { label: 'In transit', tone: 'blue' },
-  'Partially Received': { label: 'Partially received', tone: 'amber' },
-  Received: { label: 'Fully received', tone: 'green' },
-  Cancelled: { label: 'Cancelled', tone: 'rose' },
+  Draft: { label: 'Draft', tone: 'neutral' },
+  Pending: { label: 'Pending approval', tone: 'warning' },
+  Approved: { label: 'Approved', tone: 'info' },
+  Ordered: { label: 'In transit', tone: 'info' },
+  'Partially Received': { label: 'Partially received', tone: 'warning' },
+  Received: { label: 'Fully received', tone: 'success' },
+  Cancelled: { label: 'Cancelled', tone: 'danger' },
 }
 
-const startOfToday = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d }
+const startOfToday = () => {
+  const d = new Date()
+  d.setHours(0, 0, 0, 0)
+  return d
+}
 
 function PurchaseOrders({ business, onNavigate }) {
   const load = useCallback(
     () => Promise.all([purchaseOrderApi.list(), productApi.list(), supplierApi.list({ status: 'active' })]),
     [],
   )
-  const { data, loading, error, refetch, setData } = useResource(load, [], [[], [], []])
+  const { data, loading, error, setData } = useResource(load, [], [[], [], []])
   const [orders, products, suppliers] = data
 
   const [search, setSearch] = useState('')
@@ -61,7 +86,7 @@ function PurchaseOrders({ business, onNavigate }) {
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
   const [page, setPage] = useState(1)
-  const [rowsPerPage, setRowsPerPage] = useState(10)
+  const [pageSize, setPageSize] = useState(10)
   const [menu, setMenu] = useState(null)
   const [formOpen, setFormOpen] = useState(false)
   const [editingOrder, setEditingOrder] = useState(null)
@@ -72,42 +97,106 @@ function PurchaseOrders({ business, onNavigate }) {
   const [nowTs] = useState(() => Date.now())
   const searchRef = useRef(null)
 
-  const currency = business.currency || 'INR'
-  const money = (value, dp = 2) => {
-    const amount = Number(value || 0)
-    try {
-      return new Intl.NumberFormat('en-IN', { style: 'currency', currency, minimumFractionDigits: dp, maximumFractionDigits: dp }).format(amount)
-    } catch {
-      return `${currency} ${amount.toLocaleString('en-IN', { minimumFractionDigits: dp, maximumFractionDigits: dp })}`
-    }
-  }
+  const currency = business?.currency || 'INR'
+  const money = useCallback(
+    (value, dp = 2) => {
+      const amount = Number(value || 0)
+      try {
+        return new Intl.NumberFormat('en-IN', {
+          style: 'currency',
+          currency,
+          minimumFractionDigits: dp,
+          maximumFractionDigits: dp,
+        }).format(amount)
+      } catch {
+        return `${currency} ${amount.toLocaleString('en-IN', { minimumFractionDigits: dp, maximumFractionDigits: dp })}`
+      }
+    },
+    [currency],
+  )
+
   const supplierById = useMemo(() => new Map(suppliers.map((supplier) => [supplier.supplierId, supplier])), [suppliers])
 
   const setOrders = (updater) => setData((current) => [updater(current[0]), current[1], current[2]])
-  const calculateItemTotal = (item) => { const base = Number(item.quantity || 0) * Number(item.purchasePrice || 0); return Math.max(0, base - Number(item.discount || 0) + Number(item.tax || 0)) }
-  const updateLineItem = (index, field, value) => setLineItems(lineItems.map((item, itemIndex) => itemIndex === index ? { ...item, [field]: value, ...(field === 'productId' ? { purchasePrice: products.find((product) => product.productId === value)?.purchasePrice ?? '' } : {}) } : item))
-  const openForm = (order = null) => { setEditingOrder(order); setLineItems(order ? order.items.map((item) => ({ productId: item.productId, quantity: item.quantity, purchasePrice: item.purchasePrice, discount: item.discount, tax: item.tax })) : [emptyLine()]); setFormOpen(true); setMessage(null); setMenu(null) }
+  const calculateItemTotal = (item) => {
+    const base = Number(item.quantity || 0) * Number(item.purchasePrice || 0)
+    return Math.max(0, base - Number(item.discount || 0) + Number(item.tax || 0))
+  }
+
+  const updateLineItem = (index, field, value) => {
+    setLineItems((current) =>
+      current.map((item, itemIndex) =>
+        itemIndex === index
+          ? {
+              ...item,
+              [field]: value,
+              ...(field === 'productId'
+                ? { purchasePrice: products.find((product) => product.productId === value)?.purchasePrice ?? '' }
+                : {}),
+            }
+          : item,
+      ),
+    )
+  }
+
+  const openForm = useCallback((order = null) => {
+    setEditingOrder(order)
+    setLineItems(
+      order
+        ? order.items.map((item) => ({
+            productId: item.productId,
+            quantity: item.quantity,
+            purchasePrice: item.purchasePrice,
+            discount: item.discount,
+            tax: item.tax,
+          }))
+        : [emptyLine()],
+    )
+    setFormOpen(true)
+    setMessage(null)
+    setMenu(null)
+  }, [])
 
   const handleSubmit = async (event) => {
     event.preventDefault()
     if (saving) return
-    const form = event.currentTarget; const formData = new FormData(form)
-    if (!suppliers.length) { setMessage({ type: 'error', text: 'Add an active supplier before creating a purchase order.' }); return }
-    const validItems = lineItems.filter((item) => item.productId && Number(item.quantity) > 0 && Number(item.purchasePrice) >= 0)
-    if (!validItems.length) { setMessage({ type: 'error', text: 'Add at least one product with a valid quantity and price.' }); return }
+    const form = event.currentTarget
+    const formData = new FormData(form)
+    if (!suppliers.length) {
+      setMessage({ type: 'error', text: 'Add an active supplier before creating a purchase order.' })
+      return
+    }
+    const validItems = lineItems.filter(
+      (item) => item.productId && Number(item.quantity) > 0 && Number(item.purchasePrice) >= 0,
+    )
+    if (!validItems.length) {
+      setMessage({ type: 'error', text: 'Add at least one product with a valid quantity and price.' })
+      return
+    }
     const payload = {
       supplierId: formData.get('supplierId'),
       expectedDeliveryDate: formData.get('expectedDeliveryDate'),
       shippingCharges: Number(formData.get('shippingCharges')) || 0,
-      notes: formData.get('notes').trim(),
-      items: validItems.map((item) => ({ productId: item.productId, quantity: Number(item.quantity), purchasePrice: Number(item.purchasePrice), discount: Number(item.discount || 0), tax: Number(item.tax || 0) })),
+      notes: (formData.get('notes') || '').trim(),
+      items: validItems.map((item) => ({
+        productId: item.productId,
+        quantity: Number(item.quantity),
+        purchasePrice: Number(item.purchasePrice),
+        discount: Number(item.discount || 0),
+        tax: Number(item.tax || 0),
+      })),
     }
     setSaving(true)
     try {
-      const saved = editingOrder && editingOrder.purchaseOrderId
-        ? await purchaseOrderApi.update(editingOrder.purchaseOrderId, payload)
-        : await purchaseOrderApi.create(payload)
-      setOrders((list) => (editingOrder && editingOrder.purchaseOrderId ? list.map((item) => (item.purchaseOrderId === saved.purchaseOrderId ? saved : item)) : [saved, ...list]))
+      const saved =
+        editingOrder && editingOrder.purchaseOrderId
+          ? await purchaseOrderApi.update(editingOrder.purchaseOrderId, payload)
+          : await purchaseOrderApi.create(payload)
+      setOrders((list) =>
+        editingOrder && editingOrder.purchaseOrderId
+          ? list.map((item) => (item.purchaseOrderId === saved.purchaseOrderId ? saved : item))
+          : [saved, ...list],
+      )
       setFormOpen(false)
       setEditingOrder(null)
       setMessage({ type: 'success', text: `${saved.orderNumber} saved successfully.` })
@@ -128,7 +217,19 @@ function PurchaseOrders({ business, onNavigate }) {
       setMessage({ type: 'error', text: caught.message || 'Could not update the order.' })
     }
   }
-  const duplicateOrder = (order) => openForm({ ...order, purchaseOrderId: null, orderNumber: null, status: 'Draft', paymentStatus: 'Unpaid' })
+
+  const duplicateOrder = useCallback(
+    (order) => {
+      openForm({
+        ...order,
+        purchaseOrderId: null,
+        orderNumber: null,
+        status: 'Draft',
+        paymentStatus: 'Unpaid',
+      })
+    },
+    [openForm],
+  )
 
   const fromTime = from ? new Date(`${from}T00:00:00`).getTime() : null
   const toTime = to ? new Date(`${to}T23:59:59.999`).getTime() : null
@@ -146,16 +247,28 @@ function PurchaseOrders({ business, onNavigate }) {
     const awaiting = orders.filter((order) => ['Approved', 'Ordered', 'Partially Received'].includes(order.status))
     const overdue = awaiting.filter((order) => order.expectedDeliveryDate && new Date(order.expectedDeliveryDate) < today)
     const received = orders.filter((order) => order.status === 'Received')
-    const onTime = received.filter((order) => !order.expectedDeliveryDate || new Date(order.updatedAt) <= new Date(`${order.expectedDeliveryDate}T23:59:59`))
+    const onTime = received.filter(
+      (order) =>
+        !order.expectedDeliveryDate ||
+        new Date(order.updatedAt) <= new Date(`${order.expectedDeliveryDate}T23:59:59`),
+    )
     const avgLead = received.length
-      ? received.reduce((sum, order) => sum + Math.max(0, (new Date(order.updatedAt) - new Date(order.createdAt)) / 864e5), 0) / received.length
+      ? received.reduce(
+          (sum, order) => sum + Math.max(0, (new Date(order.updatedAt) - new Date(order.createdAt)) / 864e5),
+          0,
+        ) / received.length
       : 0
     const cycleMs = 30 * 864e5
-    const thisCycle = active.filter((order) => nowTs - new Date(order.createdAt).getTime() <= cycleMs).reduce((sum, order) => sum + Number(order.totalAmount || 0), 0)
-    const prevCycle = active.filter((order) => {
-      const age = nowTs - new Date(order.createdAt).getTime()
-      return age > cycleMs && age <= cycleMs * 2
-    }).reduce((sum, order) => sum + Number(order.totalAmount || 0), 0)
+    const thisCycle = active
+      .filter((order) => nowTs - new Date(order.createdAt).getTime() <= cycleMs)
+      .reduce((sum, order) => sum + Number(order.totalAmount || 0), 0)
+    const prevCycle = active
+      .filter((order) => {
+        const age = nowTs - new Date(order.createdAt).getTime()
+        return age > cycleMs && age <= cycleMs * 2
+      })
+      .reduce((sum, order) => sum + Number(order.totalAmount || 0), 0)
+
     return {
       total: orders.length,
       newThisWeek: orders.filter((order) => new Date(order.createdAt).getTime() >= weekAgo).length,
@@ -182,16 +295,21 @@ function PurchaseOrders({ business, onNavigate }) {
       const created = new Date(order.createdAt).getTime()
       if (fromTime && created < fromTime) return false
       if (toTime && created > toTime) return false
-      if (query && !`${order.orderNumber} ${order.supplierName} ${order.status} ${order.items.map((item) => item.productName).join(' ')}`.toLowerCase().includes(query)) return false
+      if (
+        query &&
+        !`${order.orderNumber} ${order.supplierName} ${order.status} ${order.items.map((item) => item.productName).join(' ')}`
+          .toLowerCase()
+          .includes(query)
+      )
+        return false
       return true
     })
   }, [orders, tab, supplierFilter, paymentFilter, fromTime, toTime, search])
 
-  const resetTo = (setter) => (value) => { setter(value); setPage(1) }
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / rowsPerPage))
-  const currentPage = Math.min(page, totalPages)
-  const pageRows = filtered.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage)
+  const resetTo = (setter) => (value) => {
+    setter(value)
+    setPage(1)
+  }
 
   useEffect(() => {
     const handler = (event) => {
@@ -206,15 +324,17 @@ function PurchaseOrders({ business, onNavigate }) {
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [openForm])
 
   useEffect(() => {
     if (!menu) return undefined
     const close = () => setMenu(null)
     window.addEventListener('scroll', close, true)
     window.addEventListener('resize', close)
-    return () => { window.removeEventListener('scroll', close, true); window.removeEventListener('resize', close) }
+    return () => {
+      window.removeEventListener('scroll', close, true)
+      window.removeEventListener('resize', close)
+    }
   }, [menu])
 
   const etaInfo = (order) => {
@@ -228,15 +348,18 @@ function PurchaseOrders({ business, onNavigate }) {
     if (diff < 0) return { text: `Overdue ${Math.abs(diff)}d`, tone: 'rose' }
     if (diff === 0) return { text: 'ETA today', tone: 'amber' }
     if (diff === 1) return { text: 'ETA tomorrow', tone: 'amber' }
-    return { text: `ETA ${target.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}`, tone: 'muted' }
+    return {
+      text: `ETA ${target.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}`,
+      tone: 'muted',
+    }
   }
 
   const settlement = (order) => {
-    if (order.paymentStatus === 'Paid') return { label: 'Paid in full', tone: 'green' }
-    if (order.paymentStatus === 'Partially Paid') return { label: 'Partial payment', tone: 'amber' }
+    if (order.paymentStatus === 'Paid') return { label: 'Paid in full', tone: 'success' }
+    if (order.paymentStatus === 'Partially Paid') return { label: 'Partial payment', tone: 'warning' }
     const terms = supplierById.get(order.supplierId)?.paymentTerms
-    if (terms && terms !== 'Due on receipt') return { label: `${terms} terms`, tone: 'dim' }
-    return { label: 'Unpaid', tone: 'rose' }
+    if (terms && terms !== 'Due on receipt') return { label: `${terms} terms`, tone: 'neutral' }
+    return { label: 'Unpaid', tone: 'danger' }
   }
 
   const poTag = (order, eta) => {
@@ -249,12 +372,17 @@ function PurchaseOrders({ business, onNavigate }) {
   const primaryAction = (order) => {
     switch (order.status) {
       case 'Draft':
-      case 'Pending': return { label: 'Approve PO', tone: 'amber', run: () => updateStatus(order, 'Approved') }
-      case 'Approved': return { label: 'Mark ordered', tone: 'blue', run: () => updateStatus(order, 'Ordered') }
+      case 'Pending':
+        return { label: 'Approve PO', variant: 'secondary', run: () => updateStatus(order, 'Approved') }
+      case 'Approved':
+        return { label: 'Mark ordered', variant: 'secondary', run: () => updateStatus(order, 'Ordered') }
       case 'Ordered':
-      case 'Partially Received': return { label: 'Receive inward', tone: 'orange', run: () => onNavigate?.('Receiving') }
-      case 'Received': return { label: 'View GRN log', tone: 'ghost', run: () => onNavigate?.('Receiving') }
-      default: return { label: 'Duplicate', tone: 'ghost', run: () => duplicateOrder(order) }
+      case 'Partially Received':
+        return { label: 'Receive inward', variant: 'primary', run: () => onNavigate?.('Receiving') }
+      case 'Received':
+        return { label: 'View GRN log', variant: 'ghost', run: () => onNavigate?.('Receiving') }
+      default:
+        return { label: 'Duplicate', variant: 'ghost', run: () => duplicateOrder(order) }
     }
   }
 
@@ -279,7 +407,11 @@ function PurchaseOrders({ business, onNavigate }) {
         order.items.reduce((sum, item) => sum + Number(item.tax || 0), 0),
       ]),
     ]
-    const url = URL.createObjectURL(new Blob([rows.map((row) => row.map(escapeCell).join(',')).join('\r\n')], { type: 'text/csv;charset=utf-8' }))
+    const url = URL.createObjectURL(
+      new Blob([rows.map((row) => row.map(escapeCell).join(',')).join('\r\n')], {
+        type: 'text/csv;charset=utf-8',
+      }),
+    )
     const link = document.createElement('a')
     link.href = url
     link.download = `purchase-orders-${new Date().toISOString().slice(0, 10)}.csv`
@@ -289,223 +421,555 @@ function PurchaseOrders({ business, onNavigate }) {
     setTimeout(() => URL.revokeObjectURL(url), 1000)
   }
 
-  return <section className="po-page" aria-labelledby="po-title">
-    <header className="po-heading">
-      <div>
-        <p className="po-kicker">Manage your purchase orders <span>•</span> Procurement &amp; receiving</p>
-        <h1 id="po-title">Purchase Orders</h1>
-        <p>Track vendor commitments, lead times, inward shipments, and invoice settlements for <strong>{business.name}</strong>.</p>
-      </div>
-      <div className="po-heading-actions">
-        <button type="button" onClick={exportCsv} disabled={loading || !!error || !orders.length}><PoIcon name="export" />Export POs (CSV)</button>
-        <button type="button" onClick={() => (orders.length ? duplicateOrder(orders[0]) : openForm())}><PoIcon name="recur" />Generate Recurring PO</button>
-        <button type="button" className="primary" onClick={() => openForm()}><PoIcon name="plus" />Create Purchase Order<kbd>Alt N</kbd></button>
-      </div>
-    </header>
+  const columns = useMemo(
+    () => [
+      {
+        key: 'orderNumber',
+        header: 'PO Identifier',
+        render: (order) => {
+          const fulfil = FULFILLMENT[order.status] || { label: order.status, tone: 'neutral' }
+          const eta = etaInfo(order)
+          return (
+            <div className="po-id">
+              <span className={`po-dot ${fulfil.tone === 'info' ? 'blue' : fulfil.tone === 'success' ? 'green' : fulfil.tone === 'warning' ? 'amber' : fulfil.tone === 'danger' ? 'rose' : ''}`} />
+              <div>
+                <strong>{order.orderNumber}</strong>
+                <small>{poTag(order, eta)}</small>
+              </div>
+            </div>
+          )
+        },
+      },
+      {
+        key: 'supplierName',
+        header: 'Supplier & Contact',
+        render: (order) => {
+          const supplier = supplierById.get(order.supplierId)
+          return (
+            <div>
+              <strong className="po-supplier">{order.supplierName}</strong>
+              <small style={{ color: 'var(--text-soft)', fontSize: 'var(--fs-xs)' }}>
+                {[supplier?.contactPerson, supplier?.phone].filter(Boolean).join(' · ') ||
+                  supplier?.email ||
+                  'No contact on file'}
+              </small>
+            </div>
+          )
+        },
+      },
+      {
+        key: 'timeline',
+        header: 'Timeline / ETA',
+        render: (order) => {
+          const eta = etaInfo(order)
+          return (
+            <div className="po-timeline">
+              <span>
+                Ordered{' '}
+                {new Date(order.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+              </span>
+              <small className={`po-eta ${eta.tone}`}>{eta.text}</small>
+            </div>
+          )
+        },
+      },
+      {
+        key: 'items',
+        header: 'Items / SKUs',
+        render: (order) => {
+          const units = order.items.reduce((sum, item) => sum + Number(item.quantity || 0), 0)
+          const skuNames = order.items.map((item) => item.productName).filter(Boolean).slice(0, 3).join(', ')
+          return (
+            <div>
+              <strong>{units.toLocaleString('en-IN')} units</strong>
+              <small style={{ display: 'block', color: 'var(--text-soft)', fontSize: 'var(--fs-xs)' }}>
+                {order.items.length} SKU{order.items.length === 1 ? '' : 's'}
+                {skuNames ? `: ${skuNames}` : ''}
+              </small>
+            </div>
+          )
+        },
+      },
+      {
+        key: 'totalAmount',
+        header: 'Committed Value',
+        align: 'right',
+        render: (order) => {
+          const gst = order.items.reduce((sum, item) => sum + Number(item.tax || 0), 0)
+          return (
+            <div className="po-value" style={{ textAlign: 'right' }}>
+              <strong>{money(order.totalAmount)}</strong>
+              <small>GST {money(gst)}</small>
+            </div>
+          )
+        },
+      },
+      {
+        key: 'paymentStatus',
+        header: 'Settlement',
+        render: (order) => {
+          const pay = settlement(order)
+          return <Badge tone={pay.tone}>{pay.label}</Badge>
+        },
+      },
+      {
+        key: 'status',
+        header: 'Fulfillment Status',
+        render: (order) => {
+          const fulfil = FULFILLMENT[order.status] || { label: order.status, tone: 'neutral' }
+          return <Badge tone={fulfil.tone}>{fulfil.label}</Badge>
+        },
+      },
+      {
+        key: 'actions',
+        header: 'Actions',
+        align: 'right',
+        render: (order) => {
+          const action = primaryAction(order)
+          return (
+            <div className="po-row-actions">
+              <Button size="sm" variant={action.variant} onClick={action.run}>
+                {action.label}
+              </Button>
+              <button
+                type="button"
+                className="po-menu-btn"
+                aria-label={`More actions for ${order.orderNumber}`}
+                aria-expanded={menu?.id === order.purchaseOrderId}
+                onClick={(event) => {
+                  const rect = event.currentTarget.getBoundingClientRect()
+                  setMenu((current) =>
+                    current?.id === order.purchaseOrderId
+                      ? null
+                      : { id: order.purchaseOrderId, order, x: rect.right, y: rect.bottom + 4 },
+                  )
+                }}
+              >
+                ⋮
+              </button>
+            </div>
+          )
+        },
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [supplierById, menu, money],
+  )
 
-    {message && <p className={`po-status-msg ${message.type}`} role={message.type === 'error' ? 'alert' : 'status'}>{message.text}</p>}
+  const tabItems = useMemo(
+    () =>
+      TABS.map((option) => ({
+        id: option.id,
+        label: `${option.label} (${tabCounts[option.id] || 0})`,
+      })),
+    [tabCounts],
+  )
 
-    <div className="po-flow" aria-label="How buying works">
-      <p className="po-flow-title">How goods get from a supplier onto your shelves</p>
-      <ol className="po-flow-steps">
-        {[
-          { label: 'Suppliers', blurb: 'The vendors you buy from.', nav: 'Suppliers' },
-          { label: 'Purchase Order', blurb: 'You list what you want and agree a price.', nav: null },
-          { label: 'Receiving', blurb: 'The delivery arrives — you count and check it.', nav: 'Receiving' },
-          { label: 'Stock', blurb: 'Checked goods are added to inventory automatically.', nav: 'Stock' },
-          { label: 'Sell', blurb: 'Items leave through POS or customer orders.', nav: 'POS / Billing' },
-        ].map((step, index, all) => (
-          <li key={step.label} className={step.nav ? 'link' : 'current'}>
-            <button type="button" disabled={!step.nav} onClick={() => step.nav && onNavigate?.(step.nav)}>
-              <span className="po-flow-index">{index + 1}</span>
-              <strong>{step.label}{step.nav ? '' : ' · you are here'}</strong>
-              <small>{step.blurb}</small>
+  return (
+    <section className="po-page" aria-labelledby="po-title">
+      <PageHeader
+        kicker="Manage your purchase orders • Procurement & receiving"
+        title="Purchase Orders"
+        subtitle={
+          <span>
+            Track vendor commitments, lead times, inward shipments, and invoice settlements for{' '}
+            <strong>{business?.name}</strong>.
+          </span>
+        }
+        actions={
+          <>
+            <Button
+              variant="secondary"
+              icon={<PoLocalIcon name="export" />}
+              onClick={exportCsv}
+              disabled={loading || !!error || !orders.length}
+            >
+              Export POs (CSV)
+            </Button>
+            <Button
+              variant="secondary"
+              icon={<PoLocalIcon name="recur" />}
+              onClick={() => (orders.length ? duplicateOrder(orders[0]) : openForm())}
+            >
+              Generate Recurring PO
+            </Button>
+            <Button variant="primary" icon={<PoLocalIcon name="plus" />} onClick={() => openForm()}>
+              Create Purchase Order
+            </Button>
+          </>
+        }
+      />
+
+      {message && <FormStatus status={message.type} message={message.text} />}
+
+      <div className="po-flow" aria-label="How buying works">
+        <p className="po-flow-title">How goods get from a supplier onto your shelves</p>
+        <ol className="po-flow-steps">
+          {[
+            { label: 'Suppliers', blurb: 'The vendors you buy from.', nav: 'Suppliers' },
+            { label: 'Purchase Order', blurb: 'You list what you want and agree a price.', nav: null },
+            { label: 'Receiving', blurb: 'The delivery arrives — you count and check it.', nav: 'Receiving' },
+            { label: 'Stock', blurb: 'Checked goods are added to inventory automatically.', nav: 'Stock' },
+            { label: 'Sell', blurb: 'Items leave through POS or customer orders.', nav: 'POS / Billing' },
+          ].map((step, index, all) => (
+            <li key={step.label} className={step.nav ? 'link' : 'current'}>
+              <button
+                type="button"
+                disabled={!step.nav}
+                onClick={() => step.nav && onNavigate?.(step.nav)}
+              >
+                <span className="po-flow-index">{index + 1}</span>
+                <strong>{step.label}{step.nav ? '' : ' · you are here'}</strong>
+                <small>{step.blurb}</small>
+              </button>
+              {index < all.length - 1 && (
+                <span className="po-flow-arrow" aria-hidden="true">
+                  <PoLocalIcon name="next" />
+                </span>
+              )}
+            </li>
+          ))}
+        </ol>
+      </div>
+
+      <StatGrid>
+        <StatCard
+          icon="cart"
+          label="Total Active POs"
+          value={loading || error ? '—' : stats.total}
+          helpText={`${stats.inTransit} In Transit · ${stats.pendingApproval} Pending Approval · ${stats.delivered} Delivered`}
+          badge={stats.newThisWeek > 0 ? `+${stats.newThisWeek} this week` : null}
+          tone="info"
+        />
+        <StatCard
+          icon="currency"
+          label="Committed Procurement Value"
+          value={loading || error ? '—' : money(stats.committedValue)}
+          helpText={`${stats.cycleDelta === null ? 'First cycle' : `${stats.cycleDelta >= 0 ? '+' : ''}${stats.cycleDelta}% vs last`} · ${stats.supplierCount} suppliers`}
+          tone="success"
+        />
+        <StatCard
+          icon="alert"
+          label="Pending Inward Receiving"
+          value={loading || error ? '—' : stats.awaiting}
+          helpText="Awaiting dock verification and GRN sign-off"
+          badge={stats.overdue > 0 ? `${stats.overdue} Critical Overdue` : null}
+          tone={stats.overdue > 0 ? 'danger' : 'warning'}
+        />
+        <StatCard
+          icon="truck"
+          label="Supplier Fulfillment SLA"
+          value={loading || error ? '—' : `${stats.slaPct}%`}
+          helpText={`Avg lead time ${stats.avgLead.toFixed(1)}d`}
+          tone="success"
+        />
+      </StatGrid>
+
+      <Tabs items={tabItems} activeId={tab} onChange={resetTo(setTab)} />
+
+      <Toolbar
+        search={search}
+        onSearchChange={resetTo(setSearch)}
+        placeholder="Filter by PO number, supplier, or item SKU..."
+        filters={
+          <>
+            <Select
+              value={supplierFilter}
+              onChange={(e) => resetTo(setSupplierFilter)(e.target.value)}
+              aria-label="Filter by supplier"
+            >
+              <option value="all">All suppliers ({suppliers.length} active)</option>
+              {suppliers.map((supplier) => (
+                <option key={supplier.supplierId} value={supplier.supplierId}>
+                  {supplier.supplierName}
+                </option>
+              ))}
+            </Select>
+            <Select
+              value={paymentFilter}
+              onChange={(e) => resetTo(setPaymentFilter)(e.target.value)}
+              aria-label="Filter by payment status"
+            >
+              <option value="all">All payment statuses</option>
+              {['Unpaid', 'Partially Paid', 'Paid'].map((status) => (
+                <option key={status} value={status}>
+                  {status}
+                </option>
+              ))}
+            </Select>
+            <div className="po-range">
+              <PoLocalIcon name="calendar" />
+              <input
+                type="date"
+                value={from}
+                max={to || undefined}
+                onChange={(event) => resetTo(setFrom)(event.target.value)}
+                aria-label="From date"
+              />
+              <em>–</em>
+              <input
+                type="date"
+                value={to}
+                min={from || undefined}
+                onChange={(event) => resetTo(setTo)(event.target.value)}
+                aria-label="To date"
+              />
+            </div>
+          </>
+        }
+      />
+
+      <DataTable
+        columns={columns}
+        data={filtered}
+        isLoading={loading}
+        pagination={{
+          page,
+          pageSize,
+          total: filtered.length,
+          onPageChange: setPage,
+          onPageSizeChange: (size) => {
+            setPageSize(size)
+            setPage(1)
+          },
+        }}
+        emptyState={{
+          title: 'No purchase orders found',
+          description: orders.length
+            ? 'No purchase orders match the selected filters.'
+            : 'No purchase orders yet. Create one to start tracking vendor commitments.',
+        }}
+      />
+
+      {/* Action Menu Popover */}
+      {menu && (
+        <>
+          <div className="po-menu-backdrop" role="presentation" onClick={() => setMenu(null)} />
+          <div
+            className="po-menu"
+            role="menu"
+            style={{ top: menu.y, left: menu.x, transform: 'translateX(-100%)' }}
+          >
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setViewingOrder(menu.order)
+                setMenu(null)
+              }}
+            >
+              View details
             </button>
-            {index < all.length - 1 && <span className="po-flow-arrow" aria-hidden="true"><PoIcon name="next" /></span>}
-          </li>
-        ))}
-      </ol>
-    </div>
+            <button type="button" role="menuitem" onClick={() => openForm(menu.order)}>
+              Edit order
+            </button>
+            <button type="button" role="menuitem" onClick={() => duplicateOrder(menu.order)}>
+              Duplicate
+            </button>
+            {!['Received', 'Cancelled'].includes(menu.order.status) && (
+              <button
+                type="button"
+                role="menuitem"
+                className="danger"
+                onClick={() => updateStatus(menu.order, 'Cancelled')}
+              >
+                Cancel order
+              </button>
+            )}
+          </div>
+        </>
+      )}
 
-    <div className="po-kpis" aria-busy={loading}>
-      <article className="po-kpi">
-        <span>Total Active POs <PoIcon name="list" /></span>
-        <strong>{loading || error ? '—' : stats.total} <small>POs</small>{stats.newThisWeek > 0 && <em>+{stats.newThisWeek} this week</em>}</strong>
-        <p>{stats.inTransit} In Transit · {stats.pendingApproval} Pending Approval · {stats.delivered} Delivered</p>
-        <div className="po-meter blue"><i style={{ width: `${stats.total ? Math.round((stats.inTransit / stats.total) * 100) : 0}%` }} /></div>
-      </article>
-      <article className="po-kpi">
-        <span>Committed Procurement Value <PoIcon name="check" /></span>
-        <strong className="po-money">{loading || error ? '—' : money(stats.committedValue)}</strong>
-        <p>{stats.cycleDelta === null ? 'First procurement cycle' : `${stats.cycleDelta >= 0 ? '+' : ''}${stats.cycleDelta}% vs last cycle`} · across {stats.supplierCount} supplier{stats.supplierCount === 1 ? '' : 's'}</p>
-        <div className="po-meter green"><i style={{ width: `${stats.total ? Math.round(((stats.total - tabCounts.closed) / stats.total) * 100) : 0}%` }} /></div>
-      </article>
-      <article className={`po-kpi${stats.overdue ? ' po-kpi-alert' : ''}`}>
-        <span>Pending Inward Receiving <PoIcon name="alert" /></span>
-        <strong>{loading || error ? '—' : stats.awaiting} <small>Shipments</small>{stats.overdue > 0 && <em className="warn">{stats.overdue} Critical Overdue</em>}</strong>
-        <p>Awaiting dock verification and GRN sign-off</p>
-        <div className="po-meter amber"><i style={{ width: `${stats.awaiting ? Math.round((stats.overdue / stats.awaiting) * 100) : 0}%` }} /></div>
-      </article>
-      <article className="po-kpi">
-        <span>Supplier Fulfillment SLA <PoIcon name="check" /></span>
-        <strong className="po-good">{loading || error ? '—' : `${stats.slaPct}%`} <small>Avg lead {stats.avgLead.toFixed(1)}d</small></strong>
-        <p>On-time delivery rate across received orders</p>
-        <div className="po-meter green"><i style={{ width: `${stats.slaPct}%` }} /></div>
-      </article>
-    </div>
+      {/* Create / Edit Modal */}
+      <Modal
+        isOpen={formOpen}
+        onClose={() => setFormOpen(false)}
+        title={editingOrder?.purchaseOrderId ? `Edit ${editingOrder.orderNumber}` : 'Create Purchase Order'}
+        subtitle="Specify vendor, delivery requirements, and line items"
+        size="lg"
+      >
+        <form onSubmit={handleSubmit}>
+          <div className="purchase-order-fields">
+            <Field label="Supplier" required>
+              <Select id="po-supplier" name="supplierId" defaultValue={editingOrder?.supplierId || ''} required>
+                <option value="" disabled>
+                  Select supplier
+                </option>
+                {suppliers.map((supplier) => (
+                  <option key={supplier.supplierId} value={supplier.supplierId}>
+                    {supplier.supplierName}
+                  </option>
+                ))}
+              </Select>
+            </Field>
 
-    <div className="po-toolbar">
-      <div className="po-tabs" role="tablist">
-        {TABS.map((option) => (
-          <button type="button" key={option.id} role="tab" aria-selected={tab === option.id} className={tab === option.id ? 'active' : ''} onClick={() => resetTo(setTab)(option.id)}>
-            {option.label}<b>{tabCounts[option.id]}</b>
-          </button>
-        ))}
-      </div>
-    </div>
+            <Field label="Expected Delivery">
+              <Input
+                id="po-delivery"
+                name="expectedDeliveryDate"
+                type="date"
+                defaultValue={editingOrder?.expectedDeliveryDate || ''}
+              />
+            </Field>
 
-    <div className="po-filters">
-      <label className="po-search">
-        <PoIcon name="search" />
-        <input ref={searchRef} value={search} onChange={(event) => resetTo(setSearch)(event.target.value)} placeholder="Filter by PO number, supplier name, or item SKU" aria-label="Filter purchase orders" />
-        <kbd>Ctrl K</kbd>
-      </label>
-      <select value={supplierFilter} onChange={(event) => resetTo(setSupplierFilter)(event.target.value)} aria-label="Filter by supplier">
-        <option value="all">All suppliers ({suppliers.length} active)</option>
-        {suppliers.map((supplier) => <option key={supplier.supplierId} value={supplier.supplierId}>{supplier.supplierName}</option>)}
-      </select>
-      <select value={paymentFilter} onChange={(event) => resetTo(setPaymentFilter)(event.target.value)} aria-label="Filter by payment status">
-        <option value="all">All payment statuses</option>
-        {['Unpaid', 'Partially Paid', 'Paid'].map((status) => <option key={status} value={status}>{status}</option>)}
-      </select>
-      <div className="po-range">
-        <PoIcon name="calendar" />
-        <input type="date" value={from} max={to || undefined} onChange={(event) => resetTo(setFrom)(event.target.value)} aria-label="From date" />
-        <em>–</em>
-        <input type="date" value={to} min={from || undefined} onChange={(event) => resetTo(setTo)(event.target.value)} aria-label="To date" />
-      </div>
-    </div>
+            <Field label="Shipping / Charges">
+              <Input
+                id="po-shipping"
+                name="shippingCharges"
+                type="number"
+                min="0"
+                step="0.01"
+                defaultValue={editingOrder?.shippingCharges || 0}
+              />
+            </Field>
+          </div>
 
-    {formOpen && <form className="purchase-order-form" onSubmit={handleSubmit}>
-      <div className="product-form-heading">
-        <div><p className="dashboard-kicker">{editingOrder && editingOrder.purchaseOrderId ? 'Update order' : 'New purchase order'}</p><h3>{editingOrder && editingOrder.orderNumber ? `Edit ${editingOrder.orderNumber}` : 'Create purchase order'}</h3></div>
-        <button type="button" className="close-button" onClick={() => setFormOpen(false)} aria-label="Close form">×</button>
-      </div>
-      <div className="purchase-order-fields">
-        <div><label htmlFor="po-supplier">Supplier *</label><select id="po-supplier" name="supplierId" defaultValue={editingOrder?.supplierId || ''} required><option value="" disabled>Select supplier</option>{suppliers.map((supplier) => <option key={supplier.supplierId} value={supplier.supplierId}>{supplier.supplierName}</option>)}</select></div>
-        <div><label htmlFor="po-delivery">Expected delivery</label><input id="po-delivery" name="expectedDeliveryDate" type="date" defaultValue={editingOrder?.expectedDeliveryDate || ''} /></div>
-        <div><label htmlFor="po-shipping">Shipping / other charges</label><input id="po-shipping" name="shippingCharges" type="number" min="0" step="0.01" defaultValue={editingOrder?.shippingCharges || 0} /></div>
-      </div>
-      <div className="order-items-heading"><h4>Order items</h4><button type="button" className="outline-button" onClick={() => setLineItems([...lineItems, emptyLine()])}>Add item <span>+</span></button></div>
-      <div className="order-items">{lineItems.map((item, index) => <div className="order-item-row" key={`${index}-${item.productId}`}><select aria-label="Select product" value={item.productId} onChange={(event) => updateLineItem(index, 'productId', event.target.value)} required><option value="">Select product</option>{products.map((product) => <option key={product.productId} value={product.productId}>{product.name} ({product.sku})</option>)}</select><input aria-label="Quantity" type="number" min="1" value={item.quantity} onChange={(event) => updateLineItem(index, 'quantity', event.target.value)} placeholder="Qty" required /><input aria-label="Purchase price" type="number" min="0" step="0.01" value={item.purchasePrice} onChange={(event) => updateLineItem(index, 'purchasePrice', event.target.value)} placeholder="Price" required /><input aria-label="Discount" type="number" min="0" step="0.01" value={item.discount} onChange={(event) => updateLineItem(index, 'discount', event.target.value)} placeholder="Discount" /><input aria-label="Tax" type="number" min="0" step="0.01" value={item.tax} onChange={(event) => updateLineItem(index, 'tax', event.target.value)} placeholder="Tax" /><strong>{money(calculateItemTotal(item))}</strong>{lineItems.length > 1 && <button type="button" className="remove-item" onClick={() => setLineItems(lineItems.filter((_, itemIndex) => itemIndex !== index))}>×</button>}</div>)}</div>
-      <label htmlFor="po-notes">Notes</label>
-      <textarea id="po-notes" name="notes" defaultValue={editingOrder?.notes || ''} placeholder="Delivery or order notes" />
-      <div className="product-form-actions"><button type="button" className="outline-button" onClick={() => setFormOpen(false)}>Cancel</button><button className="submit-button" type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save order'} <span>→</span></button></div>
-    </form>}
+          <div className="order-items-heading">
+            <h4>Order items</h4>
+            <Button
+              size="sm"
+              variant="secondary"
+              icon={<Icon name="plus" />}
+              onClick={() => setLineItems([...lineItems, emptyLine()])}
+            >
+              Add Item
+            </Button>
+          </div>
 
-    <AsyncBoundary loading={loading} error={error} onRetry={refetch} isEmpty={!filtered.length} emptyText={orders.length ? 'No purchase orders match these filters.' : 'No purchase orders yet. Create one to start tracking vendor commitments.'}>
-      <div className="po-table-scroll" tabIndex={0} role="region" aria-label="Purchase orders">
-        <table className="po-table">
-          <thead><tr>
-            <th>PO Identifier</th><th>Supplier &amp; Contact</th><th>Timeline / ETA</th><th>Items / SKUs</th>
-            <th className="num">Committed Value</th><th>Settlement</th><th>Fulfillment Status</th><th className="num">Actions</th>
-          </tr></thead>
-          <tbody>
-            {pageRows.map((order) => {
-              const supplier = supplierById.get(order.supplierId)
-              const eta = etaInfo(order)
-              const pay = settlement(order)
-              const fulfil = FULFILLMENT[order.status] || { label: order.status, tone: 'dim' }
-              const units = order.items.reduce((sum, item) => sum + Number(item.quantity || 0), 0)
-              const gst = order.items.reduce((sum, item) => sum + Number(item.tax || 0), 0)
-              const skuNames = order.items.map((item) => item.productName).filter(Boolean).slice(0, 3).join(', ')
-              const action = primaryAction(order)
-              return <tr key={order.purchaseOrderId}>
-                <td>
-                  <div className="po-id"><span className={`po-dot ${fulfil.tone}`} />
-                    <div><strong>{order.orderNumber}</strong><small>{poTag(order, eta)}</small></div>
-                  </div>
-                </td>
-                <td>
-                  <strong className="po-supplier">{order.supplierName}</strong>
-                  <small>{[supplier?.contactPerson, supplier?.phone].filter(Boolean).join(' · ') || supplier?.email || 'No contact on file'}</small>
-                </td>
-                <td className="po-timeline">
-                  <span>Ordered {new Date(order.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}</span>
-                  <small className={`po-eta ${eta.tone}`}>{eta.text}</small>
-                </td>
-                <td>
-                  <strong>{units.toLocaleString('en-IN')} units</strong>
-                  <small>{order.items.length} SKU{order.items.length === 1 ? '' : 's'}{skuNames ? `: ${skuNames}` : ''}</small>
-                </td>
-                <td className="num po-value">
-                  <strong>{money(order.totalAmount)}</strong>
-                  <small>GST {money(gst)}</small>
-                </td>
-                <td><span className={`po-badge ${pay.tone}`}>{pay.label}</span></td>
-                <td><span className={`po-badge ${fulfil.tone}`}><i />{fulfil.label}</span></td>
-                <td className="num">
-                  <div className="po-row-actions">
-                    <button type="button" className={`po-action ${action.tone}`} onClick={action.run}>{action.label}</button>
-                    <button type="button" className="po-menu-btn" aria-label={`More actions for ${order.orderNumber}`} aria-expanded={menu?.id === order.purchaseOrderId} onClick={(event) => {
-                      const rect = event.currentTarget.getBoundingClientRect()
-                      setMenu((current) => current?.id === order.purchaseOrderId ? null : { id: order.purchaseOrderId, order, x: rect.right, y: rect.bottom + 4 })
-                    }}>⋮</button>
-                  </div>
-                </td>
-              </tr>
-            })}
-          </tbody>
-        </table>
-      </div>
-      <footer className="po-pagination">
-        <span>Showing {(currentPage - 1) * rowsPerPage + 1}–{Math.min(currentPage * rowsPerPage, filtered.length)} of {filtered.length} purchase orders</span>
-        <div className="po-pagination-controls">
-          <label>Rows
-            <select value={rowsPerPage} onChange={(event) => { setRowsPerPage(Number(event.target.value)); setPage(1) }}>
-              {[10, 25, 50].map((size) => <option key={size} value={size}>{size}</option>)}
-            </select>
-          </label>
-          <button type="button" disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)}>Previous</button>
-          <span>{currentPage} / {totalPages}</span>
-          <button type="button" disabled={currentPage === totalPages} onClick={() => setPage(currentPage + 1)}>Next</button>
-        </div>
-      </footer>
-    </AsyncBoundary>
+          <div className="order-items">
+            {lineItems.map((item, index) => (
+              <div className="order-item-row" key={`${index}-${item.productId}`}>
+                <Select
+                  aria-label="Select product"
+                  value={item.productId}
+                  onChange={(event) => updateLineItem(index, 'productId', event.target.value)}
+                  required
+                >
+                  <option value="">Select product</option>
+                  {products.map((product) => (
+                    <option key={product.productId} value={product.productId}>
+                      {product.name} ({product.sku})
+                    </option>
+                  ))}
+                </Select>
+                <Input
+                  aria-label="Quantity"
+                  type="number"
+                  min="1"
+                  value={item.quantity}
+                  onChange={(event) => updateLineItem(index, 'quantity', event.target.value)}
+                  placeholder="Qty"
+                  required
+                />
+                <Input
+                  aria-label="Purchase price"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={item.purchasePrice}
+                  onChange={(event) => updateLineItem(index, 'purchasePrice', event.target.value)}
+                  placeholder="Price"
+                  required
+                />
+                <Input
+                  aria-label="Discount"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={item.discount}
+                  onChange={(event) => updateLineItem(index, 'discount', event.target.value)}
+                  placeholder="Discount"
+                />
+                <Input
+                  aria-label="Tax"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={item.tax}
+                  onChange={(event) => updateLineItem(index, 'tax', event.target.value)}
+                  placeholder="Tax"
+                />
+                <strong>{money(calculateItemTotal(item))}</strong>
+                {lineItems.length > 1 && (
+                  <button
+                    type="button"
+                    className="remove-item"
+                    onClick={() => setLineItems(lineItems.filter((_, itemIndex) => itemIndex !== index))}
+                    aria-label="Remove item"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
 
-    {menu && <>
-      <div className="po-menu-backdrop" role="presentation" onClick={() => setMenu(null)} />
-      <div className="po-menu" role="menu" style={{ top: menu.y, left: menu.x, transform: 'translateX(-100%)' }}>
-        <button type="button" role="menuitem" onClick={() => { setViewingOrder(menu.order); setMenu(null) }}>View details</button>
-        <button type="button" role="menuitem" onClick={() => openForm(menu.order)}>Edit order</button>
-        <button type="button" role="menuitem" onClick={() => duplicateOrder(menu.order)}>Duplicate</button>
-        {!['Received', 'Cancelled'].includes(menu.order.status) && <button type="button" role="menuitem" className="danger" onClick={() => updateStatus(menu.order, 'Cancelled')}>Cancel order</button>}
-      </div>
-    </>}
+          <Field label="Notes">
+            <Textarea
+              id="po-notes"
+              name="notes"
+              defaultValue={editingOrder?.notes || ''}
+              placeholder="Delivery or order notes"
+              rows={3}
+            />
+          </Field>
 
-    <div className="po-statusbar">
-      <span><i />Stockroom · Procurement gateway</span>
-      <span>Node {business.currency === 'INR' ? 'ap-south-1 · Mumbai' : 'workspace region'}</span>
-      <span>{stats.supplierCount} vendors linked</span>
-      <span className="po-statusbar-suite">Enterprise Warehousing OS</span>
-    </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-3)', marginTop: 'var(--space-4)' }}>
+            <Button variant="secondary" onClick={() => setFormOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="primary" type="submit" loading={saving}>
+              {saving ? 'Saving…' : 'Save Order'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
-    {viewingOrder && <div className="supplier-modal-backdrop" role="presentation" onClick={() => setViewingOrder(null)}>
-      <article className="supplier-modal" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
-        <div className="product-form-heading">
-          <div><p className="dashboard-kicker">Purchase order details</p><h3>{viewingOrder.orderNumber}</h3></div>
-          <button type="button" className="close-button" onClick={() => setViewingOrder(null)} aria-label="Close purchase order">×</button>
-        </div>
-        <div className="supplier-detail-grid">
-          <div><small>Supplier</small><strong>{viewingOrder.supplierName}</strong></div>
-          <div><small>Status</small><strong>{viewingOrder.status} · {viewingOrder.paymentStatus}</strong></div>
-          <div><small>Expected delivery</small><strong>{viewingOrder.expectedDeliveryDate || 'Not set'}</strong></div>
-          <div><small>Total</small><strong>{money(viewingOrder.totalAmount)}</strong></div>
-        </div>
-        <div className="order-detail-items">{viewingOrder.items.map((item) => <div key={`${item.productId}-${item.variantSku || ''}`}><span>{item.productName} × {item.quantity}</span><strong>{money(item.total)}</strong></div>)}</div>
-      </article>
-    </div>}
-  </section>
+      {/* Details Modal */}
+      <Modal
+        isOpen={!!viewingOrder}
+        onClose={() => setViewingOrder(null)}
+        title={viewingOrder?.orderNumber || 'Purchase Order'}
+        subtitle="Order details and item summary"
+        size="md"
+      >
+        {viewingOrder && (
+          <div>
+            <div className="po-detail-grid">
+              <div>
+                <small>Supplier</small>
+                <strong>{viewingOrder.supplierName}</strong>
+              </div>
+              <div>
+                <small>Status</small>
+                <strong>
+                  {viewingOrder.status} · {viewingOrder.paymentStatus}
+                </strong>
+              </div>
+              <div>
+                <small>Expected delivery</small>
+                <strong>{viewingOrder.expectedDeliveryDate || 'Not set'}</strong>
+              </div>
+              <div>
+                <small>Total</small>
+                <strong>{money(viewingOrder.totalAmount)}</strong>
+              </div>
+            </div>
+            <div className="po-detail-items">
+              {viewingOrder.items.map((item, idx) => (
+                <div key={`${item.productId}-${idx}`}>
+                  <span>
+                    {item.productName} × {item.quantity}
+                  </span>
+                  <strong>{money(item.total || (item.quantity * item.purchasePrice))}</strong>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </Modal>
+    </section>
+  )
 }
 
 export default PurchaseOrders
