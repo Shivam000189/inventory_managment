@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 
 const NAVIGATION_LABELS = {
   Overview: "Dashboard",
@@ -93,7 +93,7 @@ function getSectionIcon(section) {
 
 export default function AppSidebar({
   business,
-  account,
+  _account,
   activeNav,
   navigateTo,
   visibleNavigation,
@@ -101,13 +101,11 @@ export default function AppSidebar({
   setExpandedNavSections,
   mobileNavOpen,
   setMobileNavOpen,
-  canOpen,
-  onLogout,
+  _canOpen,
+  _onLogout,
   sidebarCollapsed,
   setSidebarCollapsed,
 }) {
-  const [showWorkspacePopover, setShowWorkspacePopover] = useState(false);
-  const workspaceRef = useRef(null);
   const sidebarRef = useRef(null);
   const closeButtonRef = useRef(null);
 
@@ -190,110 +188,6 @@ export default function AppSidebar({
             </svg>
           </button>
         </div>
-
-        {/* Workspace Quick Switcher */}
-        <div
-          className="workspace-switcher-wrap"
-          ref={workspaceRef}
-          onMouseEnter={() => setShowWorkspacePopover(true)}
-          onMouseLeave={() => setShowWorkspacePopover(false)}
-          style={{ marginBottom: "16px" }}
-        >
-          <button
-            className={`workspace-switcher ${showWorkspacePopover ? "active" : ""}`}
-            type="button"
-            aria-expanded={showWorkspacePopover}
-            aria-haspopup="dialog"
-            aria-label="Workspace details"
-            onClick={() => setShowWorkspacePopover(!showWorkspacePopover)}
-          >
-            <span className="workspace-avatar">
-              {companyName[0].toUpperCase()}
-            </span>
-            <span className="workspace-copy">
-              <small>Workspace</small>
-              <strong>{companyName}</strong>
-            </span>
-            <span className={`chevron workspace-chevron ${showWorkspacePopover ? "open" : ""}`} aria-hidden="true">
-              <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 8 4 4 4-4" /></svg>
-            </span>
-          </button>
-
-          {showWorkspacePopover && (
-            <div className="workspace-popover" role="dialog" aria-label="Workspace Details">
-              <div className="workspace-popover-header">
-                <span className="workspace-popover-avatar">
-                  {companyName[0].toUpperCase()}
-                </span>
-                <div className="workspace-popover-title">
-                  <strong>{companyName}</strong>
-                  <span className="workspace-role-badge">
-                    {account?.role === "owner" ? "Owner / Admin" : (account?.role ? account.role.charAt(0).toUpperCase() + account.role.slice(1) : "Staff")}
-                  </span>
-                </div>
-              </div>
-
-              <div className="workspace-popover-divider" />
-
-              <div className="workspace-popover-details">
-                <div className="workspace-detail-row">
-                  <span className="workspace-detail-label">Industry</span>
-                  <span className="workspace-detail-val">
-                    {business?.industry ? business.industry.charAt(0).toUpperCase() + business.industry.slice(1) : "General"}
-                  </span>
-                </div>
-                <div className="workspace-detail-row">
-                  <span className="workspace-detail-label">Currency</span>
-                  <span className="workspace-detail-val">{business?.currency || "INR"}</span>
-                </div>
-              </div>
-
-              <div className="workspace-popover-actions">
-                {canOpen("Business Profile") && (
-                  <button
-                    type="button"
-                    className="workspace-popover-action"
-                    onClick={() => {
-                      navigateTo("Business Profile");
-                      setShowWorkspacePopover(false);
-                    }}
-                  >
-                    <span>⚙ Business Profile</span>
-                    <span>→</span>
-                  </button>
-                )}
-                {canOpen("Users") && (
-                  <button
-                    type="button"
-                    className="workspace-popover-action"
-                    onClick={() => {
-                      navigateTo("Users");
-                      setShowWorkspacePopover(false);
-                    }}
-                  >
-                    <span>👥 Team & Users</span>
-                    <span>→</span>
-                  </button>
-                )}
-                {onLogout && (
-                  <button
-                    type="button"
-                    className="workspace-popover-action"
-                    style={{ color: "var(--danger)" }}
-                    onClick={() => {
-                      setShowWorkspacePopover(false);
-                      onLogout();
-                    }}
-                  >
-                    <span>🚪 Log out</span>
-                    <span>→</span>
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-
         {/* Modern Navigation Menu */}
         <nav className="modern-sidebar-nav" aria-label="Main navigation">
           {/* Overview / Dashboard */}

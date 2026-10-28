@@ -254,6 +254,9 @@ export default function AppHeader({
                     {business?.industry ? capitalize(business.industry) : "General"}
                   </strong>
 
+                  <span className="detail-label">Currency</span>
+                  <strong className="detail-value">{business?.currency || "INR"}</strong>
+
                   <span className="detail-label">Access</span>
                   <strong className="detail-value highlight">
                     {account?.role === "owner" ? "Full Admin Access" : (account?.role || "Staff")}
