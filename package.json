@@ -14,7 +14,7 @@
     "seed:pharmacy": "node server/scripts/seed-pharmacy.js",
     "reset-password": "node server/scripts/reset-password.js",
     "db:check": "node server/scripts/db-check.js",
-    "db:check:supabase": "node -e \"import('./server/config/supabase.js').then(m => m.testSupabaseConnection()).then(console.log)\"",
+    "db:check:supabase": "node -e \"import('./server/config/supabase.js').then(m => m.testSupabaseConnection()).then(r => { console.log(r); process.exit(0); })\"",
     "db:migrate:supabase": "node server/scripts/migrate-mongo-to-supabase.js",
     "seed:supabase": "node server/scripts/seed-supabase.js",
     "build": "vite build",
