@@ -104,28 +104,14 @@ export default function AppHeader({
           </div>
         )}
 
-        {/* Left Side: Greeting & Status */}
+        {/* Left Side: Greeting & Status (Persistent across all pages) */}
         <div className="modern-navbar-left">
-          {activeNav === "Overview" ? (
-            <>
-              <span className="modern-navbar-welcome-small">Welcome back,</span>
-              <div className="modern-navbar-name-row">
-                <h1 className="modern-navbar-name">{displayName}</h1>
-                <span className="modern-verified-pill" title="Verified business owner">✓</span>
-              </div>
-              <p className="modern-navbar-sub">Here&apos;s what&apos;s happening in your business today.</p>
-            </>
-          ) : (
-            <>
-              <span className="modern-navbar-welcome-small">
-                {business?.name || "Workspace"} • {business?.industry ? capitalize(business.industry) : "Retail"}
-              </span>
-              <div className="modern-navbar-name-row">
-                <span className="modern-navbar-name">{navigationLabel(activeNav)}</span>
-              </div>
-              <p className="modern-navbar-sub">Manage your {activeNav.toLowerCase()} operations</p>
-            </>
-          )}
+          <span className="modern-navbar-welcome-small">Welcome back,</span>
+          <div className="modern-navbar-name-row">
+            <h1 className="modern-navbar-name">{displayName}</h1>
+            <span className="modern-verified-pill" title="Verified business owner">✓</span>
+          </div>
+          <p className="modern-navbar-sub">Here&apos;s what&apos;s happening in your business today.</p>
         </div>
 
         {/* Right Side: Search, Role Pill, Theme, Notif, User Menu */}
