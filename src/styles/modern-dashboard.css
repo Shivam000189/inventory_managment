@@ -402,6 +402,97 @@
   font-weight: 700;
 }
 
+/* Workspace Switcher in Modern Sidebar */
+#dashboard-navigation.modern-sidebar .workspace-switcher-wrap {
+  width: 100%;
+  margin-bottom: 12px;
+  position: relative;
+}
+
+#dashboard-navigation.modern-sidebar .workspace-switcher {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 10px !important;
+  width: 100% !important;
+  height: 48px !important;
+  min-height: 48px !important;
+  max-height: 48px !important;
+  padding: 8px 10px !important;
+  border-radius: 12px !important;
+  border: 1px solid var(--line) !important;
+  background: var(--surface-soft) !important;
+  color: var(--text) !important;
+  cursor: pointer !important;
+  box-sizing: border-box !important;
+  transition: all 0.18s var(--sr-ease) !important;
+  text-align: left !important;
+}
+
+#dashboard-navigation.modern-sidebar .workspace-avatar {
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  border-radius: 8px !important;
+  background: var(--orange-soft) !important;
+  color: var(--orange) !important;
+  font-weight: 700 !important;
+  font-size: 14px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+}
+
+#dashboard-navigation.modern-sidebar .workspace-copy {
+  display: flex !important;
+  flex-direction: column !important;
+  min-width: 0 !important;
+  flex: 1 1 auto !important;
+  overflow: hidden !important;
+}
+
+#dashboard-navigation.modern-sidebar .workspace-copy small {
+  font-size: 10px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  color: var(--text-soft) !important;
+  line-height: 1.2 !important;
+}
+
+#dashboard-navigation.modern-sidebar .workspace-copy strong {
+  font-size: 12.5px !important;
+  font-weight: 700 !important;
+  color: var(--ink) !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  line-height: 1.3 !important;
+}
+
+#dashboard-navigation.modern-sidebar .workspace-chevron {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 16px !important;
+  height: 16px !important;
+  min-width: 16px !important;
+  margin-left: auto !important;
+  flex-shrink: 0 !important;
+  color: var(--text-soft) !important;
+  transition: transform 0.2s ease !important;
+}
+
+#dashboard-navigation.modern-sidebar .workspace-chevron.open {
+  transform: rotate(180deg) !important;
+}
+
+#dashboard-navigation.modern-sidebar .workspace-chevron svg {
+  width: 16px !important;
+  height: 16px !important;
+  display: block !important;
+}
+
 #dashboard-navigation .workspace-switcher:hover,
 #dashboard-navigation .workspace-switcher:hover .workspace-copy strong,
 #dashboard-navigation .workspace-switcher:hover .workspace-copy small {
@@ -1379,6 +1470,53 @@
   .modern-navbar { flex-direction: column; align-items: flex-start; gap: 14px; padding: 16px 0 12px 0; }
   .modern-navbar-right { width: 100%; justify-content: space-between; }
   .modern-search-wrap { width: 100%; }
+}
+
+/* Top Mobile Bar Visibility */
+.mobile-dashboard-bar {
+  display: none !important;
+}
+
+@media (max-width: 768px) {
+  .mobile-dashboard-bar {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    padding: 12px 16px !important;
+    background: var(--surface) !important;
+    border-bottom: 1px solid var(--line) !important;
+    margin-bottom: 14px !important;
+  }
+
+  .mobile-menu-button {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    width: 36px !important;
+    height: 36px !important;
+    padding: 9px 8px !important;
+    border-radius: 8px !important;
+    border: 1px solid var(--line) !important;
+    background: var(--surface) !important;
+    cursor: pointer !important;
+    box-sizing: border-box !important;
+    flex-shrink: 0 !important;
+  }
+
+  .mobile-menu-button span {
+    display: block !important;
+    width: 100% !important;
+    height: 2px !important;
+    border-radius: 2px !important;
+    background-color: var(--ink) !important;
+    transition: all 0.2s ease !important;
+  }
+
+  .mobile-page-title {
+    font-size: 16px !important;
+    font-weight: 700 !important;
+    color: var(--ink) !important;
+  }
 }
 
 /* Collapsed Sidebar Rules */
