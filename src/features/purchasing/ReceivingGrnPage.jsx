@@ -2,13 +2,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { receivingApi } from '../../api/receivingApi.js'
 import { useResource } from '../../hooks/useResource.js'
 import { PageHeader } from '../../components/ui/PageHeader.jsx'
-import { StatGrid, StatCard, Card } from '../../components/ui/Card.jsx'
+import { Card } from '../../components/ui/Card.jsx'
 import { DataTable } from '../../components/ui/DataTable.jsx'
 import { Button } from '../../components/ui/Button.jsx'
 import { Badge } from '../../components/ui/Badge.jsx'
 import { Field, Input, Select, Textarea } from '../../components/ui/FormControls.jsx'
 import { FormStatus } from '../../components/ui/Feedback.jsx'
-import { Toolbar } from '../../components/ui/Toolbar.jsx'
+import { Icon } from '../../components/ui/icons.jsx'
 import './ReceivingGrnPage.css'
 
 function GrnLocalIcon({ name }) {
@@ -443,7 +443,7 @@ function Receiving({ business, account, onNavigate }) {
     () => [
       {
         key: 'receivingId',
-        header: 'GRN ID',
+        header: 'GRN Id',
         render: (r) => {
           const flagged = (r.items || []).reduce(
             (sum, item) => sum + Number(item.damagedQuantity || 0) + Number(item.rejectedQuantity || 0),
@@ -451,10 +451,15 @@ function Receiving({ business, account, onNavigate }) {
           )
           return (
             <div>
-              <strong>{r.receivingId}</strong>
-              <Badge tone={flagged > 0 ? 'warning' : 'success'} style={{ marginTop: 4 }}>
-                {flagged > 0 ? 'Posted with flags' : 'Posted clean'}
-              </Badge>
+              <span className="ledger-cell-id">#{r.receivingId}</span>
+              <div style={{ marginTop: 4 }}>
+                <span
+                  className="ledger-status-pill"
+                  style={{ backgroundColor: flagged > 0 ? '#f59e0b' : '#10b981' }}
+                >
+                  {flagged > 0 ? 'Posted with flags' : 'Posted clean'}
+                </span>
+              </div>
             </div>
           )
         },
@@ -464,10 +469,10 @@ function Receiving({ business, account, onNavigate }) {
         header: 'PO Reference',
         render: (r) => (
           <div>
-            <strong>PO {r.purchaseOrderId}</strong>
-            <small style={{ display: 'block', color: 'var(--text-soft)', fontSize: 'var(--fs-xs)' }}>
+            <span className="ledger-cell-primary">PO #{r.purchaseOrderId}</span>
+            <span className="ledger-cell-secondary">
               {r.items?.length || 0} lines · {r.receivedBy || 'Receiver'}
-            </small>
+            </span>
           </div>
         ),
       },
@@ -475,7 +480,7 @@ function Receiving({ business, account, onNavigate }) {
         key: 'receivedAt',
         header: 'Received At',
         render: (r) => (
-          <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--text)' }}>
+          <span className="ledger-cell-secondary">
             {new Date(r.receivedAt).toLocaleString('en-GB')}
           </span>
         ),
@@ -492,11 +497,11 @@ function Receiving({ business, account, onNavigate }) {
           )
           return (
             <div style={{ textAlign: 'right' }}>
-              <strong style={{ color: 'var(--text)' }}>{accepted.toLocaleString('en-IN')} accepted</strong>
+              <span className="ledger-cell-cost">{accepted.toLocaleString('en-IN')} accepted</span>
               {flagged > 0 && (
-                <small style={{ display: 'block', color: 'var(--warning)', fontSize: 'var(--fs-xs)' }}>
+                <span className="ledger-cell-secondary" style={{ color: '#ef4444', display: 'block' }}>
                   {flagged} flagged
-                </small>
+                </span>
               )}
             </div>
           )
@@ -574,42 +579,62 @@ function Receiving({ business, account, onNavigate }) {
         </p>
       </div>
 
-      <StatGrid>
-        <StatCard
-          icon="truck"
-          label="Pending Deliveries"
-          value={loading || error ? '—' : stats.pendingCount}
-          helpText={`${stats.lateTrucks > 0 ? `${stats.lateTrucks} past ETA · ` : ''}${Math.max(0, stats.pendingCount - stats.lateTrucks)} on schedule`}
-          tone="info"
-        />
-        <StatCard
-          icon="cart"
-          label="Items to Check"
-          value={loading || error ? '—' : stats.remainingUnits.toLocaleString('en-IN')}
-          helpText={`Expected value ${money(stats.expectedValue, 0)}`}
-          badge={`${stats.uniqueSkus} SKUs`}
-          tone="warning"
-        />
-        <StatCard
-          icon="shield"
-          label="Quality Check Pass"
-          value={loading || error ? '—' : `${stats.passRate.toFixed(1)}%`}
-          helpText={`${stats.rejected} rejected/damaged units · ${stats.inspectedReceipts} receipts inspected`}
-          tone="success"
-        />
-        <StatCard
-          icon="check"
-          label="Completed Today"
-          value={loading || error ? '—' : stats.completedToday}
-          helpText={`${stats.acceptedToday.toLocaleString('en-IN')} units accepted today`}
-          badge={
-            stats.deltaVsAvg !== null
-              ? `${stats.deltaVsAvg >= 0 ? '+' : ''}${stats.deltaVsAvg}% vs avg`
-              : null
-          }
-          tone="success"
-        />
-      </StatGrid>
+      {/* 4 Pastel KPI Summary Cards */}
+      <div className="ledger-kpi-grid">
+        <div className="ledger-kpi-card blue">
+          <div className="ledger-kpi-icon-bubble">
+            <Icon name="truck" size={20} />
+          </div>
+          <div className="ledger-kpi-content">
+            <span className="ledger-kpi-label">Pending Deliveries</span>
+            <span className="ledger-kpi-value">{loading || error ? '—' : stats.pendingCount}</span>
+            <span className="ledger-kpi-subtext">
+              {stats.lateTrucks > 0 ? `${stats.lateTrucks} past ETA` : 'All on schedule'}
+            </span>
+          </div>
+        </div>
+
+        <div className="ledger-kpi-card slate">
+          <div className="ledger-kpi-icon-bubble">
+            <Icon name="box" size={20} />
+          </div>
+          <div className="ledger-kpi-content">
+            <span className="ledger-kpi-label">Items to Inward</span>
+            <span className="ledger-kpi-value">
+              {loading || error ? '—' : stats.remainingUnits.toLocaleString('en-IN')}
+            </span>
+            <span className="ledger-kpi-subtext">{stats.uniqueSkus} unique SKUs</span>
+          </div>
+        </div>
+
+        <div className="ledger-kpi-card green">
+          <div className="ledger-kpi-icon-bubble">
+            <Icon name="check" size={20} />
+          </div>
+          <div className="ledger-kpi-content">
+            <span className="ledger-kpi-label">Completed Today</span>
+            <span className="ledger-kpi-value">{loading || error ? '—' : stats.completedToday}</span>
+            <span className="ledger-kpi-subtext">
+              {stats.acceptedToday.toLocaleString('en-IN')} units accepted
+            </span>
+          </div>
+        </div>
+
+        <div className="ledger-kpi-card amber">
+          <div className="ledger-kpi-icon-bubble">
+            <Icon name="shield" size={20} />
+          </div>
+          <div className="ledger-kpi-content">
+            <span className="ledger-kpi-label">Quality Pass Rate</span>
+            <span className="ledger-kpi-value">
+              {loading || error ? '—' : `${stats.passRate.toFixed(1)}%`}
+            </span>
+            <span className="ledger-kpi-subtext">
+              {stats.rejected} rejected / damaged
+            </span>
+          </div>
+        </div>
+      </div>
 
       {/* Intake Terminal */}
       <Card className="grn-intake-card">
@@ -742,11 +767,30 @@ function Receiving({ business, account, onNavigate }) {
           </p>
         </div>
 
-        <Toolbar
-          search={search}
-          onSearchChange={setSearch}
-          placeholder="Search GRN or PO reference..."
-        />
+        <div className="ledger-toolbar" style={{ marginBottom: '1.25rem' }}>
+          <div className="ledger-search-box" style={{ flex: '1 1 240px' }}>
+            <span className="ledger-search-icon">
+              <Icon name="search" size={14} />
+            </span>
+            <input
+              type="text"
+              className="ledger-search-input"
+              aria-label="Search GRN"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search GRN, PO reference or supplier..."
+            />
+          </div>
+          <button
+            type="button"
+            className="ledger-btn-secondary"
+            onClick={exportCsv}
+            disabled={loading || !!error || !receivings.length}
+          >
+            <Icon name="download" size={14} />
+            <span>Export CSV</span>
+          </button>
+        </div>
 
         <DataTable
           columns={historyColumns}

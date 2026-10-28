@@ -5,11 +5,11 @@ import { purchaseOrderApi } from '../../api/purchaseOrderApi.js'
 import { salesOrderApi } from '../../api/salesOrderApi.js'
 import { useResource } from '../../hooks/useResource.js'
 import { PageHeader } from '../../components/ui/PageHeader.jsx'
-import { StatGrid, StatCard, Card } from '../../components/ui/Card.jsx'
+import { Card } from '../../components/ui/Card.jsx'
 import { DataTable } from '../../components/ui/DataTable.jsx'
 import { Button } from '../../components/ui/Button.jsx'
 import { Field, Input, Select } from '../../components/ui/FormControls.jsx'
-import { Badge } from '../../components/ui/Badge.jsx'
+import { Icon } from '../../components/ui/icons.jsx'
 import './ReturnsPage.css'
 
 export default function PurchaseReturnsPage({ business = {}, purchase = true }) {
@@ -64,12 +64,11 @@ export default function PurchaseReturnsPage({ business = {}, purchase = true }) 
   const columns = [
     {
       key: 'returnId',
-      header: 'Return ID',
+      header: 'Id',
       render: (item) => (
-        <div>
-          <span className="font-semibold text-main">{item.returnId || 'RET-ITEM'}</span>
-          <small className="block text-muted">{item.type} return</small>
-        </div>
+        <span className="ledger-cell-id">
+          #{item.returnId || 'RET-ITEM'}
+        </span>
       ),
       mobileLabel: 'Return ID',
     },
@@ -78,8 +77,8 @@ export default function PurchaseReturnsPage({ business = {}, purchase = true }) 
       header: 'Product',
       render: (item) => (
         <div>
-          <span className="font-medium text-main">{item.productName || 'Unknown Product'}</span>
-          <small className="block text-muted">{item.productSku || 'No SKU'}</small>
+          <span className="ledger-cell-primary">{item.productName || 'Unknown Product'}</span>
+          <span className="ledger-cell-secondary">{item.productSku || 'No SKU'}</span>
         </div>
       ),
       mobileLabel: 'Product',
@@ -89,24 +88,38 @@ export default function PurchaseReturnsPage({ business = {}, purchase = true }) 
       header: 'Quantity & Reason',
       render: (item) => (
         <div>
-          <span className="text-main">{item.quantity} units</span>
-          <small className="block text-muted">{item.reason || 'Not specified'}</small>
+          <span className="ledger-cell-primary">{item.quantity} units</span>
+          <span className="ledger-cell-secondary">{item.reason || 'Not specified'}</span>
         </div>
       ),
       mobileLabel: 'Qty & Reason',
     },
     {
+      key: 'refundAmount',
+      header: 'Credit / Refund',
+      render: (item) => (
+        <span className="ledger-cell-cost">
+          {business.currency || 'INR'} {Number(item.refundAmount || 0).toFixed(2)}
+        </span>
+      ),
+      mobileLabel: 'Refund',
+    },
+    {
       key: 'status',
       header: 'Status',
-      render: (_item) => <Badge tone="success">Completed</Badge>,
+      render: (_item) => (
+        <span className="ledger-status-pill" style={{ backgroundColor: '#10b981' }}>
+          Completed
+        </span>
+      ),
       mobileLabel: 'Status',
     },
     {
       key: 'createdAt',
       header: 'Date',
       render: (item) => (
-        <span className="text-soft text-sm">
-          {item.createdAt ? new Date(item.createdAt).toLocaleString() : 'Recent'}
+        <span className="ledger-cell-secondary">
+          {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'Recent'}
         </span>
       ),
       mobileLabel: 'Date',
@@ -114,6 +127,7 @@ export default function PurchaseReturnsPage({ business = {}, purchase = true }) 
   ]
 
   const totalUnitsReturned = returns.reduce((sum, r) => sum + Number(r.quantity || 0), 0)
+  const totalRefund = returns.reduce((sum, r) => sum + Number(r.refundAmount || 0), 0)
 
   return (
     <div className="returns-page returns-container">
@@ -130,27 +144,54 @@ export default function PurchaseReturnsPage({ business = {}, purchase = true }) 
         </div>
       )}
 
-      <StatGrid columns={3}>
-        <StatCard
-          title="Total Returns"
-          value={returns.length}
-          subtext="Processed purchase returns"
-          icon="arrow-path"
-        />
-        <StatCard
-          title="Units Returned"
-          value={`${totalUnitsReturned} units`}
-          subtext="Returned to supplier"
-          deltaType="neutral"
-          icon="box"
-        />
-        <StatCard
-          title="Active Suppliers"
-          value={orders.length}
-          subtext="Eligible orders available"
-          icon="truck"
-        />
-      </StatGrid>
+      {/* 4 Pastel KPI Summary Cards */}
+      <div className="ledger-kpi-grid">
+        <div className="ledger-kpi-card blue">
+          <div className="ledger-kpi-icon-bubble">
+            <Icon name="return" size={20} />
+          </div>
+          <div className="ledger-kpi-content">
+            <span className="ledger-kpi-label">Total PO Returns</span>
+            <span className="ledger-kpi-value">{returns.length}</span>
+            <span className="ledger-kpi-subtext">Processed supplier returns</span>
+          </div>
+        </div>
+
+        <div className="ledger-kpi-card slate">
+          <div className="ledger-kpi-icon-bubble">
+            <Icon name="truck" size={20} />
+          </div>
+          <div className="ledger-kpi-content">
+            <span className="ledger-kpi-label">Units Dispatched</span>
+            <span className="ledger-kpi-value">{totalUnitsReturned} units</span>
+            <span className="ledger-kpi-subtext">Returned to vendor</span>
+          </div>
+        </div>
+
+        <div className="ledger-kpi-card green">
+          <div className="ledger-kpi-icon-bubble">
+            <Icon name="dollar" size={20} />
+          </div>
+          <div className="ledger-kpi-content">
+            <span className="ledger-kpi-label">Supplier Credit</span>
+            <span className="ledger-kpi-value">
+              {business.currency || 'INR'} {totalRefund.toFixed(2)}
+            </span>
+            <span className="ledger-kpi-subtext">Credit notes & refunds</span>
+          </div>
+        </div>
+
+        <div className="ledger-kpi-card amber">
+          <div className="ledger-kpi-icon-bubble">
+            <Icon name="pending" size={20} />
+          </div>
+          <div className="ledger-kpi-content">
+            <span className="ledger-kpi-label">Eligible Orders</span>
+            <span className="ledger-kpi-value">{orders.length} orders</span>
+            <span className="ledger-kpi-subtext">Available for return</span>
+          </div>
+        </div>
+      </div>
 
       <Card title="Initiate Purchase Return" subtitle="Select purchase order and product to record an outbound return">
         <form className="purchase-return-form" onSubmit={handleSubmit}>

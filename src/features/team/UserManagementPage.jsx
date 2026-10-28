@@ -2,12 +2,13 @@ import { useCallback, useMemo, useState } from 'react'
 import { userApi } from '../../api/userApi.js'
 import { useResource } from '../../hooks/useResource.js'
 import { PageHeader } from '../../components/ui/PageHeader.jsx'
-import { StatGrid, StatCard, Card } from '../../components/ui/Card.jsx'
+import { Card } from '../../components/ui/Card.jsx'
 import { DataTable } from '../../components/ui/DataTable.jsx'
 import { Button } from '../../components/ui/Button.jsx'
 import { Field, Input, Select, Textarea } from '../../components/ui/FormControls.jsx'
 import { Badge } from '../../components/ui/Badge.jsx'
 import { Modal } from '../../components/ui/Modal.jsx'
+import { Icon } from '../../components/ui/icons.jsx'
 import './UserManagementPage.css'
 
 const PERMISSION_META = {
@@ -42,14 +43,6 @@ const PERMISSION_META = {
 }
 const PERMISSION_CATALOG = Object.keys(PERMISSION_META)
 
-const roleTone = (name = '') => {
-  const key = name.toLowerCase()
-  if (key.includes('admin') || key.includes('owner')) return 'info'
-  if (key.includes('manager') || key.includes('lead')) return 'success'
-  if (key.includes('account')) return 'warning'
-  if (key.includes('staff') || key.includes('cashier') || key.includes('sales')) return 'neutral'
-  return 'neutral'
-}
 
 const scopeFor = (count) => {
   if (count >= 22) return ['Super administrator', 'Unrestricted access to every store module']
@@ -389,12 +382,12 @@ function UserManagement({ section = 'Users', business = {}, account = {} }) {
           <div className="um-user-cell">
             <span className="um-avatar-badge">{user.name ? user.name[0].toUpperCase() : 'U'}</span>
             <div>
-              <span className="font-semibold text-main">
+              <span className="ledger-cell-primary">
                 {user.name}
-                {owner && <span className="um-tag owner">Owner</span>}
-                {user.status !== 'active' && <span className="um-tag deactivated">Inactive</span>}
+                {owner && <span className="um-tag owner" style={{ marginLeft: 6 }}>Owner</span>}
+                {user.status !== 'active' && <span className="um-tag deactivated" style={{ marginLeft: 6 }}>Inactive</span>}
               </span>
-              <small className="block text-muted">{user.email}</small>
+              <span className="ledger-cell-secondary">{user.email}</span>
             </div>
           </div>
         )
@@ -406,7 +399,11 @@ function UserManagement({ section = 'Users', business = {}, account = {} }) {
       header: 'Assigned Role',
       render: (user) => {
         const role = currentRole(user.roleId)
-        return <Badge tone={roleTone(role)}>{role}</Badge>
+        return (
+          <span className="ledger-status-pill" style={{ backgroundColor: '#0084ff' }}>
+            {role}
+          </span>
+        )
       },
       mobileLabel: 'Role',
     },
@@ -420,8 +417,8 @@ function UserManagement({ section = 'Users', business = {}, account = {} }) {
         )
         return (
           <div>
-            <strong className="text-main text-xs">{scopeTitle}</strong>
-            <small className="block text-muted">{scopeDesc}</small>
+            <span className="ledger-cell-primary" style={{ fontSize: '0.85rem' }}>{scopeTitle}</span>
+            <span className="ledger-cell-secondary">{scopeDesc}</span>
           </div>
         )
       },
@@ -430,39 +427,47 @@ function UserManagement({ section = 'Users', business = {}, account = {} }) {
     {
       key: 'status',
       header: 'Status',
-      render: (user) => (
-        <Badge tone={user.status === 'active' ? 'success' : 'warning'}>
-          {user.status}
-        </Badge>
-      ),
+      render: (user) => {
+        const isActive = user.status === 'active'
+        return (
+          <span
+            className="ledger-status-pill"
+            style={{ backgroundColor: isActive ? '#10b981' : '#f59e0b' }}
+          >
+            {user.status}
+          </span>
+        )
+      },
       mobileLabel: 'Status',
     },
     {
       key: 'actions',
-      header: '',
+      header: 'Action',
       align: 'right',
       render: (user) => {
         const owner = user.email === account.email || user.role === 'owner'
         return (
-          <div style={{ display: 'flex', gap: 'var(--space-2)', justifyContent: 'flex-end' }}>
-            <Button
-              variant="secondary"
-              size="sm"
+          <div className="ledger-actions-group">
+            <button
+              type="button"
+              className="ledger-action-icon edit"
+              title="Edit User"
               onClick={() => {
                 setEditingUser(user)
                 setFormOpen(true)
               }}
             >
-              Edit
-            </Button>
+              <Icon name="edit" size={14} />
+            </button>
             {!owner && (
-              <Button
-                variant={user.status === 'active' ? 'secondary' : 'primary'}
-                size="sm"
+              <button
+                type="button"
+                className={`ledger-action-icon ${user.status === 'active' ? 'delete' : 'view'}`}
+                title={user.status === 'active' ? 'Deactivate' : 'Activate'}
                 onClick={() => toggleStatus(user)}
               >
-                {user.status === 'active' ? 'Deactivate' : 'Activate'}
-              </Button>
+                <Icon name={user.status === 'active' ? 'trash' : 'check'} size={14} />
+              </button>
             )}
           </div>
         )
@@ -493,34 +498,52 @@ function UserManagement({ section = 'Users', business = {}, account = {} }) {
         }
       />
 
-      <StatGrid columns={4}>
-        <StatCard
-          title="Total User Accounts"
-          value={users.length}
-          subtext={`${activeUsers} active · ${users.length - activeUsers} inactive`}
-          icon="users"
-        />
-        <StatCard
-          title="POS Cashiers"
-          value={cashierRoleUsers}
-          subtext="Cleared for counter billing"
-          deltaType="positive"
-          icon="monitor"
-        />
-        <StatCard
-          title="Roles In Use"
-          value={rolesInUse}
-          subtext={`${roles.length} total roles configured`}
-          icon="shield"
-        />
-        <StatCard
-          title="Access Guard"
-          value="100%"
-          subtext="Credentials & role enforced"
-          deltaType="positive"
-          icon="lock"
-        />
-      </StatGrid>
+      {/* 4 Pastel KPI Summary Cards */}
+      <div className="ledger-kpi-grid">
+        <div className="ledger-kpi-card blue">
+          <div className="ledger-kpi-icon-bubble">
+            <Icon name="user" size={20} />
+          </div>
+          <div className="ledger-kpi-content">
+            <span className="ledger-kpi-label">Total Accounts</span>
+            <span className="ledger-kpi-value">{users.length}</span>
+            <span className="ledger-kpi-subtext">{activeUsers} active members</span>
+          </div>
+        </div>
+
+        <div className="ledger-kpi-card slate">
+          <div className="ledger-kpi-icon-bubble">
+            <Icon name="truck" size={20} />
+          </div>
+          <div className="ledger-kpi-content">
+            <span className="ledger-kpi-label">Store Staff & POS</span>
+            <span className="ledger-kpi-value">{cashierRoleUsers}</span>
+            <span className="ledger-kpi-subtext">Active floor operators</span>
+          </div>
+        </div>
+
+        <div className="ledger-kpi-card green">
+          <div className="ledger-kpi-icon-bubble">
+            <Icon name="user-check" size={20} />
+          </div>
+          <div className="ledger-kpi-content">
+            <span className="ledger-kpi-label">Active Users</span>
+            <span className="ledger-kpi-value">{activeUsers}</span>
+            <span className="ledger-kpi-subtext">{users.length - activeUsers} inactive</span>
+          </div>
+        </div>
+
+        <div className="ledger-kpi-card amber">
+          <div className="ledger-kpi-icon-bubble">
+            <Icon name="shield" size={20} />
+          </div>
+          <div className="ledger-kpi-content">
+            <span className="ledger-kpi-label">Configured Roles</span>
+            <span className="ledger-kpi-value">{rolesInUse} in use</span>
+            <span className="ledger-kpi-subtext">{roles.length} total defined</span>
+          </div>
+        </div>
+      </div>
 
       <div className="um-note-card">
         <div className="um-note-icon">i</div>
@@ -590,14 +613,22 @@ function UserManagement({ section = 'Users', business = {}, account = {} }) {
       </Modal>
 
       <Card title="Team Directory" subtitle="Manage employee access status and privileges">
-        <div className="um-filter-bar">
-          <Input
-            aria-label="Search users"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search by name, email, or role..."
-          />
-          <Select
+        <div className="ledger-toolbar" style={{ marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.625rem' }}>
+          <div className="ledger-search-box" style={{ flex: '1 1 240px' }}>
+            <span className="ledger-search-icon">
+              <Icon name="search" size={14} />
+            </span>
+            <input
+              type="text"
+              className="ledger-search-input"
+              aria-label="Search users"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search by name, email, or role..."
+            />
+          </div>
+          <select
+            className="ledger-pill-select"
             value={roleFilter}
             onChange={(event) => setRoleFilter(event.target.value)}
             aria-label="Filter by role"
@@ -606,8 +637,9 @@ function UserManagement({ section = 'Users', business = {}, account = {} }) {
             {roleNames.map((role) => (
               <option key={role} value={role}>{role}</option>
             ))}
-          </Select>
-          <Select
+          </select>
+          <select
+            className="ledger-pill-select"
             value={statusFilter}
             onChange={(event) => setStatusFilter(event.target.value)}
             aria-label="Filter by status"
@@ -615,10 +647,15 @@ function UserManagement({ section = 'Users', business = {}, account = {} }) {
             <option value="all">All statuses</option>
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
-          </Select>
-          <Button variant="secondary" onClick={refetch} icon="arrow-path">
-            Refresh
-          </Button>
+          </select>
+          <button
+            type="button"
+            className="ledger-btn-secondary"
+            onClick={refetch}
+          >
+            <Icon name="refresh" size={14} />
+            <span>Refresh</span>
+          </button>
         </div>
 
         <DataTable

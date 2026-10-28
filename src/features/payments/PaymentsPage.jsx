@@ -4,13 +4,10 @@ import { salesOrderApi } from '../../api/salesOrderApi.js'
 import { purchaseOrderApi } from '../../api/purchaseOrderApi.js'
 import { useResource } from '../../hooks/useResource.js'
 import { PageHeader } from '../../components/ui/PageHeader.jsx'
-import { StatGrid, StatCard } from '../../components/ui/Card.jsx'
-import { Toolbar } from '../../components/ui/Toolbar.jsx'
-import { Tabs } from '../../components/ui/Tabs.jsx'
 import { DataTable } from '../../components/ui/DataTable.jsx'
-import { Badge } from '../../components/ui/Badge.jsx'
 import { Button } from '../../components/ui/Button.jsx'
 import { Field, Input, Select } from '../../components/ui/FormControls.jsx'
+import { Icon } from '../../components/ui/icons.jsx'
 import './PaymentsPage.css'
 
 const startOfToday = () => {
@@ -189,15 +186,6 @@ function Payments({ business = {}, account = {} }) {
     return payments.filter(matchMode)
   }, [payments, mode])
 
-  const tabsConfig = useMemo(
-    () =>
-      MODE_TABS.map((t) => ({
-        id: t.id,
-        label: t.label,
-        count: payments.filter(t.match).length,
-      })),
-    [payments]
-  )
 
   const exportCsv = () => {
     const escapeCell = (value) => {
@@ -236,117 +224,116 @@ function Payments({ business = {}, account = {} }) {
     setTimeout(() => URL.revokeObjectURL(url), 1000)
   }
 
-  const methodTone = (method) => {
-    if (/upi/i.test(method)) return 'info'
-    if (/cash/i.test(method)) return 'success'
-    if (/card/i.test(method)) return 'warning'
-    return 'neutral'
-  }
 
   const columns = [
     {
       key: 'paymentId',
-      header: 'Receipt & Date',
+      header: 'Id',
       priority: 'high',
-      mobileLabel: 'Receipt',
+      mobileLabel: 'Id',
       render: (payment) => (
-        <div className="pay-receipt-cell">
-          <strong className="pay-receipt-num">
-            RCP-{payment.paymentId?.slice(-6).toUpperCase()}
-          </strong>
-          <small className="pay-cell-sub">
-            {new Date(payment.paymentDate || payment.createdAt).toLocaleString('en-GB', {
-              day: '2-digit',
-              month: 'short',
-              hour: '2-digit',
-              minute: '2-digit',
-            })}
-          </small>
-        </div>
+        <span className="ledger-cell-id">
+          #RCP-{payment.paymentId?.slice(-6).toUpperCase()}
+        </span>
       ),
     },
     {
       key: 'entity',
       header: 'Party / Customer',
       priority: 'high',
-      mobileLabel: 'Entity',
+      mobileLabel: 'Party',
       render: (payment) => {
         const info = orderName(payment.referenceId)
         return (
-          <div className="pay-entity-cell">
-            <strong>{info.entity}</strong>
-            <small className="pay-cell-sub">
-              {info.gstin
-                ? `GSTIN ${info.gstin}`
-                : payment.recordedBy ||
-                  (payment.type === 'sale' ? 'Counter sale' : 'Vendor settlement')}
-            </small>
+          <div>
+            <div className="ledger-cell-primary">{info.entity}</div>
+            <div className="ledger-cell-secondary" style={{ fontSize: '11px', marginTop: '2px' }}>
+              Ref: {info.ref || 'Direct'} {info.gstin ? `· GSTIN ${info.gstin}` : ''}
+            </div>
           </div>
         )
       },
     },
     {
-      key: 'refOrder',
-      header: 'Reference Order',
+      key: 'dateMethod',
+      header: 'Date & Mode',
       priority: 'medium',
-      mobileLabel: 'Order',
-      render: (payment) => {
-        const info = orderName(payment.referenceId)
-        return info.ref ? (
-          <span className="pay-ref-pill">{info.ref}</span>
-        ) : (
-          <span className="pay-cell-sub">—</span>
-        )
-      },
-    },
-    {
-      key: 'paymentMethod',
-      header: 'Method',
-      priority: 'high',
-      mobileLabel: 'Method',
+      mobileLabel: 'Mode',
       render: (payment) => (
-        <Badge tone={methodTone(payment.paymentMethod)} dot>
-          {payment.paymentMethod}
-        </Badge>
+        <div>
+          <div className="ledger-cell-secondary">
+            {new Date(payment.paymentDate || payment.createdAt).toLocaleDateString('en-GB', {
+              day: '2-digit',
+              month: 'short',
+              year: 'numeric',
+            })}
+          </div>
+          <div className="ledger-cell-secondary" style={{ fontSize: '11px', marginTop: '2px', color: '#0084ff', fontWeight: 600 }}>
+            {payment.paymentMethod}
+          </div>
+        </div>
       ),
     },
     {
       key: 'notes',
-      header: 'Reference / Notes',
+      header: 'Notes / Ref',
       priority: 'low',
       mobileLabel: 'Notes',
       render: (payment) => (
-        <span className="pay-cell-sub">
+        <span className="ledger-cell-secondary">
           {payment.transactionReference || payment.notes || '—'}
         </span>
       ),
     },
     {
       key: 'amount',
-      header: 'Amount',
+      header: 'Total Cost',
       priority: 'high',
       align: 'right',
       mobileLabel: 'Amount',
       render: (payment) => (
-        <div
-          className={`pay-amount-cell ${payment.type === 'sale' ? 'plus' : 'minus'}`}
-        >
-          <strong>
+        <div style={{ textAlign: 'right' }}>
+          <span className="ledger-cell-cost" style={{ color: payment.type === 'sale' ? '#10b981' : '#ef4444' }}>
             {payment.type === 'sale' ? '+ ' : '− '}
             {money(payment.amount)}
-          </strong>
-          <small className="pay-cell-sub">
-            {payment.type === 'sale' ? 'Inflow' : 'Outflow'}
-          </small>
+          </span>
+          <div className="ledger-cell-secondary" style={{ fontSize: '11px', marginTop: '2px' }}>
+            {payment.type === 'sale' ? 'Customer Inflow' : 'Vendor Outflow'}
+          </div>
         </div>
       ),
     },
     {
       key: 'status',
       header: 'Status',
-      priority: 'medium',
+      priority: 'high',
+      align: 'center',
       mobileLabel: 'Status',
-      render: () => <Badge tone="success">Settled</Badge>,
+      render: (payment) => (
+        <span className={`ledger-status-pill ${payment.type === 'sale' ? 'status-delivered' : 'status-shipped'}`}>
+          {payment.type === 'sale' ? 'Paid' : 'Vendor Paid'}
+        </span>
+      ),
+    },
+    {
+      key: 'actions',
+      header: 'Action',
+      priority: 'high',
+      align: 'right',
+      mobileLabel: 'Action',
+      render: () => (
+        <div className="ledger-actions-group" onClick={(e) => e.stopPropagation()}>
+          <button
+            type="button"
+            className="ledger-action-icon action-view"
+            onClick={() => window.print()}
+            title="Print Receipt"
+            aria-label="Print Receipt"
+          >
+            <Icon name="print" size={17} />
+          </button>
+        </div>
+      ),
     },
   ]
 
@@ -389,34 +376,66 @@ function Payments({ business = {}, account = {} }) {
         </div>
       )}
 
-      <StatGrid>
-        <StatCard
-          label="Sales Collections Today"
-          value={loading || error ? '—' : money(stats.salesToday)}
-          delta={stats.salesDelta !== null ? `${stats.salesDelta >= 0 ? '+' : ''}${stats.salesDelta}%` : undefined}
-          deltaType={stats.salesDelta !== null && stats.salesDelta >= 0 ? 'up' : 'down'}
-          subtext={`${stats.salesTxns} customer transactions today`}
-          tone="emerald"
-        />
-        <StatCard
-          label="Purchases Paid Out"
-          value={loading || error ? '—' : money(stats.purchasesOut)}
-          subtext={`Across ${stats.vendorCount} vendor account${stats.vendorCount === 1 ? '' : 's'}`}
-          tone="amber"
-        />
-        <StatCard
-          label="Outstanding Dues"
-          value={loading || error ? '—' : money(stats.duesTotal)}
-          subtext={`${stats.duesCount} pending credit account${stats.duesCount === 1 ? '' : 's'}`}
-          tone={stats.duesTotal > 0 ? 'rose' : 'neutral'}
-        />
-        <StatCard
-          label="Cash Drawer (Today)"
-          value={loading || error ? '—' : money(stats.cashDrawer)}
-          subtext="Register #01 cash collections logged"
-          tone="primary"
-        />
-      </StatGrid>
+      {/* 4 Pastel KPI Summary Cards */}
+      <div className="ledger-kpi-grid">
+        <div
+          className={`ledger-kpi-card theme-blue ${type === 'sale' ? 'is-active' : ''}`}
+          onClick={() => setType('sale')}
+          role="button"
+          tabIndex={0}
+        >
+          <div className="ledger-kpi-bubble">
+            <Icon name="list" size={20} />
+          </div>
+          <div className="ledger-kpi-content">
+            <span className="ledger-kpi-label">Total</span>
+            <span className="ledger-kpi-val">{payments.length} Invoices</span>
+          </div>
+        </div>
+
+        <div
+          className={`ledger-kpi-card theme-slate ${type === 'purchase' ? 'is-active' : ''}`}
+          onClick={() => setType('purchase')}
+          role="button"
+          tabIndex={0}
+        >
+          <div className="ledger-kpi-bubble">
+            <Icon name="credit-card" size={20} />
+          </div>
+          <div className="ledger-kpi-content">
+            <span className="ledger-kpi-label">Shipped</span>
+            <span className="ledger-kpi-val">{stats.vendorCount} Vendors</span>
+          </div>
+        </div>
+
+        <div
+          className="ledger-kpi-card theme-green"
+          role="button"
+          tabIndex={0}
+        >
+          <div className="ledger-kpi-bubble">
+            <Icon name="dollar" size={20} />
+          </div>
+          <div className="ledger-kpi-content">
+            <span className="ledger-kpi-label">Delivered</span>
+            <span className="ledger-kpi-val">{money(stats.salesToday)}</span>
+          </div>
+        </div>
+
+        <div
+          className={`ledger-kpi-card theme-amber ${stats.duesTotal > 0 ? 'is-active' : ''}`}
+          role="button"
+          tabIndex={0}
+        >
+          <div className="ledger-kpi-bubble">
+            <Icon name="pending" size={20} />
+          </div>
+          <div className="ledger-kpi-content">
+            <span className="ledger-kpi-label">Pending</span>
+            <span className="ledger-kpi-val">{money(stats.duesTotal)}</span>
+          </div>
+        </div>
+      </div>
 
       {/* Record Payment Entry Card */}
       <div className="pay-form-card">
@@ -543,36 +562,60 @@ function Payments({ business = {}, account = {} }) {
       </div>
 
       {/* Payment Ledger / History */}
-      <Toolbar
-        filters={<Tabs tabs={tabsConfig} activeTab={mode} onChange={setMode} />}
-        actions={
-          <div className="pay-toolbar-actions">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={exportCsv}
-              disabled={!payments.length}
-            >
-              Export CSV
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => window.print()}
-            >
-              Print Slips
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={refetch}
-              disabled={loading}
-            >
-              Refresh
-            </Button>
-          </div>
-        }
-      />
+      {/* Pill Search & Action Toolbar */}
+      <div className="ledger-toolbar">
+        <div className="ledger-toolbar-left">
+          <select
+            className="ledger-pill-select"
+            value={mode}
+            onChange={(e) => setMode(e.target.value)}
+          >
+            {MODE_TABS.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.label} ({payments.filter(m.match).length})
+              </option>
+            ))}
+          </select>
+
+          <select
+            className="ledger-pill-select"
+            value={type}
+            onChange={(e) => setType(e.target.value)}
+          >
+            <option value="sale">Customer Inflows</option>
+            <option value="purchase">Vendor Outflows</option>
+          </select>
+        </div>
+
+        <div className="ledger-toolbar-right">
+          <button
+            type="button"
+            className="ledger-btn-secondary"
+            onClick={exportCsv}
+            disabled={!payments.length}
+          >
+            <Icon name="download" size={15} />
+            <span>Export</span>
+          </button>
+          <button
+            type="button"
+            className="ledger-btn-secondary"
+            onClick={() => window.print()}
+          >
+            <Icon name="print" size={15} />
+            <span>Print Slips</span>
+          </button>
+          <button
+            type="button"
+            className="ledger-btn-secondary"
+            onClick={refetch}
+            disabled={loading}
+          >
+            <Icon name="refresh" size={15} />
+            <span>Refresh</span>
+          </button>
+        </div>
+      </div>
 
       <DataTable
         columns={columns}

@@ -3,8 +3,6 @@ import { customerApi } from '../../api/customerApi.js'
 import { salesOrderApi } from '../../api/salesOrderApi.js'
 import { useResource } from '../../hooks/useResource.js'
 import { PageHeader } from '../../components/ui/PageHeader.jsx'
-import { StatGrid, StatCard } from '../../components/ui/Card.jsx'
-import { Toolbar } from '../../components/ui/Toolbar.jsx'
 import { DataTable } from '../../components/ui/DataTable.jsx'
 import { Modal } from '../../components/ui/Modal.jsx'
 import { Button } from '../../components/ui/Button.jsx'
@@ -59,7 +57,7 @@ const TYPE_LABEL = {
 
 function Customers({ business, onNavigate }) {
   const load = useCallback(() => Promise.all([customerApi.list(), salesOrderApi.list()]), [])
-  const { data, loading, error, refetch, setData } = useResource(load, [], [[], []])
+  const { data, loading, error, setData } = useResource(load, [], [[], []])
   const [customers, salesOrders] = data
 
   const [search, setSearch] = useState('')
@@ -279,125 +277,120 @@ function Customers({ business, onNavigate }) {
   const columns = useMemo(
     () => [
       {
+        key: 'customerId',
+        header: 'Id',
+        priority: 'high',
+        render: (customer) => (
+          <span className="ledger-cell-id">
+            #{String(customer.customerId || '').slice(-6).toUpperCase() || 'CUST'}
+          </span>
+        ),
+      },
+      {
         key: 'name',
-        header: 'Customer Details',
+        header: 'Customer',
+        priority: 'high',
         render: (customer) => {
           const tier = tierOf(customer)
           return (
-            <div className="cust-name">
-              <span className="cust-avatar">{customer.name[0].toUpperCase()}</span>
-              <div>
-                <strong>
-                  {customer.name}
-                  <Badge tone={tier.tone}>{tier.label}</Badge>
-                </strong>
-                <small>
-                  <CustLocalIcon name="pin" />
-                  {customer.city || 'City not set'}
-                  {customer.gstin
-                    ? ` · GSTIN ${customer.gstin}`
-                    : ` · ID ${(customer.customerId || '').slice(-6).toUpperCase()}`}
-                </small>
+            <div>
+              <div className="ledger-cell-primary">
+                {customer.name}
+                {tier.label !== 'Retail' && (
+                  <span className="ord-b2b" style={{ marginLeft: '6px', fontSize: '10px' }}>{tier.label}</span>
+                )}
+              </div>
+              <div className="ledger-cell-secondary" style={{ fontSize: '11px', marginTop: '2px' }}>
+                {customer.phone || 'No phone'} {customer.city ? `· ${customer.city}` : ''}
               </div>
             </div>
           )
         },
       },
       {
-        key: 'contact',
-        header: 'Contact Info',
+        key: 'type',
+        header: 'Type / Group',
+        priority: 'medium',
         render: (customer) => (
-          <div>
-            <strong className="cust-contact">
-              <CustLocalIcon name="phone" />
-              {customer.phone || 'No phone'}
-            </strong>
-            <small style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'var(--text-soft)', fontSize: 'var(--fs-xs)', marginTop: 2 }}>
-              <CustLocalIcon name="mail" />
-              {customer.email || 'No email'}
-            </small>
-          </div>
+          <span className="ledger-cell-secondary">
+            {TYPE_LABEL[customer.customerType] || 'Retail Customer'}
+          </span>
         ),
       },
       {
         key: 'totalPurchases',
-        header: 'Lifetime Purchases',
+        header: 'Total Cost',
         align: 'right',
+        priority: 'high',
         render: (customer) => {
           const orders = orderCountByCustomer.get(customer.customerId) || 0
           return (
-            <div className="cust-spend" style={{ textAlign: 'right' }}>
-              <strong>{money(customer.totalPurchases)}</strong>
-              <small style={{ display: 'block' }}>
-                {orders} order{orders === 1 ? '' : 's'}
-              </small>
+            <div style={{ textAlign: 'right' }}>
+              <span className="ledger-cell-cost">{money(customer.totalPurchases)}</span>
+              <div className="ledger-cell-secondary" style={{ fontSize: '11px', marginTop: '2px' }}>
+                {orders} {orders === 1 ? 'order' : 'orders'}
+              </div>
             </div>
-          )
-        },
-      },
-      {
-        key: 'outstandingBalance',
-        header: 'Credit / Dues',
-        render: (customer) => {
-          const due = Number(customer.outstandingBalance || 0)
-          return (
-            <Badge tone={due > 0 ? 'warning' : 'success'}>
-              {due > 0 ? `${money(due)} due` : `${money(0)} clear`}
-            </Badge>
           )
         },
       },
       {
         key: 'status',
         header: 'Status',
-        render: (customer) => (
-          <Badge tone={customer.status === 'active' ? 'success' : 'neutral'}>{customer.status}</Badge>
-        ),
+        priority: 'high',
+        align: 'center',
+        render: (customer) => {
+          const due = Number(customer.outstandingBalance || 0)
+          let pillClass = 'status-delivered'
+          let label = 'Active'
+          if (customer.status === 'archived') {
+            pillClass = 'status-danger'
+            label = 'Archived'
+          } else if (due > 0) {
+            pillClass = 'status-pending'
+            label = `Due: ${money(due)}`
+          }
+          return <span className={`ledger-status-pill ${pillClass}`}>{label}</span>
+        },
       },
       {
         key: 'actions',
-        header: 'Actions',
+        header: 'Action',
         align: 'right',
-        render: (customer) => {
-          const due = Number(customer.outstandingBalance || 0)
-          return (
-            <div className="cust-row-actions">
-              {due > 0 ? (
-                <Button size="sm" variant="secondary" onClick={() => onNavigate?.('Payments')}>
-                  Collect Due
-                </Button>
-              ) : (
-                <Button size="sm" variant="primary" onClick={() => onNavigate?.('POS / Billing')}>
-                  New Sale
-                </Button>
-              )}
-              <Button
-                size="sm"
-                variant="ghost"
-                icon={<CustLocalIcon name="eye" />}
-                aria-label={`View ${customer.name}`}
-                onClick={() => setViewingCustomer(customer)}
-              />
-              <Button
-                size="sm"
-                variant="secondary"
-                icon={<CustLocalIcon name="edit" />}
-                aria-label={`Edit ${customer.name}`}
-                onClick={() => openForm(customer)}
-              />
-              {customer.status === 'active' && (
-                <Button
-                  size="sm"
-                  variant="danger"
-                  aria-label={`Archive ${customer.name}`}
-                  onClick={() => archiveCustomer(customer)}
-                >
-                  ×
-                </Button>
-              )}
-            </div>
-          )
-        },
+        priority: 'high',
+        render: (customer) => (
+          <div className="ledger-actions-group" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              className="ledger-action-icon action-edit"
+              onClick={() => openForm(customer)}
+              title="Edit Customer"
+              aria-label="Edit Customer"
+            >
+              <Icon name="edit" size={17} />
+            </button>
+            <button
+              type="button"
+              className="ledger-action-icon action-view"
+              onClick={() => setViewingCustomer(customer)}
+              title="View Profile"
+              aria-label="View Profile"
+            >
+              <Icon name="eye" size={17} />
+            </button>
+            {customer.status === 'active' && (
+              <button
+                type="button"
+                className="ledger-action-icon action-delete"
+                onClick={() => archiveCustomer(customer)}
+                title="Archive Customer"
+                aria-label="Archive Customer"
+              >
+                <Icon name="trash" size={17} />
+              </button>
+            )}
+          </div>
+        ),
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -437,86 +430,141 @@ function Customers({ business, onNavigate }) {
 
       {message && <FormStatus status={message.type} message={message.text} />}
 
-      <StatGrid>
-        <StatCard
-          icon="cart"
-          label="Total Customers"
-          value={loading || error ? '—' : stats.total}
-          helpText={`${stats.retail} retail walk-in · ${stats.wholesale} wholesale B2B`}
-          tone="info"
-        />
-        <StatCard
-          icon="check"
-          label="Repeat Purchase Rate"
-          value={loading || error ? '—' : `${stats.repeatRate}%`}
-          helpText="Customers with more than one order"
-          tone="success"
-        />
-        <StatCard
-          icon="currency"
-          label="Total Customer Spend"
-          value={loading || error ? '—' : money(stats.totalSpend, 0)}
-          helpText={`Across all sales · avg ${money(stats.avgSpend, 0)} / cust`}
-          tone="success"
-        />
-        <StatCard
-          icon="alert"
-          label="Pending Credit / Dues"
-          value={loading || error ? '—' : money(stats.pendingDue, 0)}
-          helpText={`${stats.dueCount} accounts carrying open balance`}
-          tone={stats.pendingDue > 0 ? 'warning' : 'success'}
-        />
-      </StatGrid>
+      {/* 4 Pastel KPI Summary Cards */}
+      <div className="ledger-kpi-grid">
+        <div
+          className={`ledger-kpi-card theme-blue ${statusFilter === 'all' ? 'is-active' : ''}`}
+          onClick={() => setStatusFilter('all')}
+          role="button"
+          tabIndex={0}
+        >
+          <div className="ledger-kpi-bubble">
+            <Icon name="users" size={20} />
+          </div>
+          <div className="ledger-kpi-content">
+            <span className="ledger-kpi-label">Total</span>
+            <span className="ledger-kpi-val">{stats.total} Invoices</span>
+          </div>
+        </div>
 
-      <Toolbar
-        search={search}
-        onSearchChange={setSearch}
-        placeholder="Search by name, mobile, email, or city..."
-        filters={
-          <>
-            <Select
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
-              aria-label="Filter by type"
-            >
-              <option value="all">All types ({customers.length})</option>
-              {['retail', 'wholesale', 'dealer', 'contractor'].map((type) => (
-                <option key={type} value={type}>
-                  {TYPE_LABEL[type]}
-                </option>
-              ))}
-            </Select>
-            <Select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              aria-label="Filter by status"
-            >
-              <option value="active">Active customers</option>
-              <option value="archived">Archived customers</option>
-              <option value="all">All customers</option>
-            </Select>
-            <Select
-              value={cityFilter}
-              onChange={(e) => setCityFilter(e.target.value)}
-              aria-label="Filter by city"
-            >
-              <option value="all">All cities</option>
-              {cities.map((city) => (
-                <option key={city} value={city}>
-                  {city}
-                </option>
-              ))}
-            </Select>
-            <Button
-              size="md"
-              variant="secondary"
-              icon={<Icon name="refresh" />}
-              onClick={refetch}
-              aria-label="Refresh"
+        <div
+          className={`ledger-kpi-card theme-slate ${statusFilter === 'active' ? 'is-active' : ''}`}
+          onClick={() => setStatusFilter('active')}
+          role="button"
+          tabIndex={0}
+        >
+          <div className="ledger-kpi-bubble">
+            <Icon name="user-check" size={20} />
+          </div>
+          <div className="ledger-kpi-content">
+            <span className="ledger-kpi-label">Shipped</span>
+            <span className="ledger-kpi-val">{stats.active} Profiles</span>
+          </div>
+        </div>
+
+        <div
+          className="ledger-kpi-card theme-green"
+          role="button"
+          tabIndex={0}
+        >
+          <div className="ledger-kpi-bubble">
+            <Icon name="dollar" size={20} />
+          </div>
+          <div className="ledger-kpi-content">
+            <span className="ledger-kpi-label">Delivered</span>
+            <span className="ledger-kpi-val">{money(stats.totalSpend, 0)}</span>
+          </div>
+        </div>
+
+        <div
+          className={`ledger-kpi-card theme-amber ${stats.dueCount > 0 ? 'is-active' : ''}`}
+          onClick={() => setTypeFilter(typeFilter === 'wholesale' ? 'all' : 'wholesale')}
+          role="button"
+          tabIndex={0}
+        >
+          <div className="ledger-kpi-bubble">
+            <Icon name="pending" size={20} />
+          </div>
+          <div className="ledger-kpi-content">
+            <span className="ledger-kpi-label">Pending</span>
+            <span className="ledger-kpi-val">{money(stats.pendingDue, 0)}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Pill Search & Action Toolbar */}
+      <div className="ledger-toolbar">
+        <div className="ledger-toolbar-left">
+          <div className="ledger-search-box">
+            <input
+              type="text"
+              className="ledger-search-input"
+              placeholder="Search..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
             />
-          </>
-        }
-      />
+            <span className="ledger-search-icon">
+              <Icon name="search" size={17} />
+            </span>
+          </div>
+
+          <select
+            className="ledger-pill-select"
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value)}
+          >
+            <option value="all">All Types ({customers.length})</option>
+            {['retail', 'wholesale', 'dealer', 'contractor'].map((type) => (
+              <option key={type} value={type}>
+                {TYPE_LABEL[type]}
+              </option>
+            ))}
+          </select>
+
+          <select
+            className="ledger-pill-select"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="active">Active</option>
+            <option value="archived">Archived</option>
+            <option value="all">All Customers</option>
+          </select>
+
+          <select
+            className="ledger-pill-select"
+            value={cityFilter}
+            onChange={(e) => setCityFilter(e.target.value)}
+          >
+            <option value="all">All Cities</option>
+            {cities.map((city) => (
+              <option key={city} value={city}>
+                {city}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="ledger-toolbar-right">
+          <button
+            type="button"
+            className="ledger-btn-secondary"
+            onClick={exportCsv}
+            disabled={loading || !!error || !customers.length}
+          >
+            <Icon name="download" size={15} />
+            <span>Export</span>
+          </button>
+          <button
+            type="button"
+            className="ledger-btn-primary"
+            onClick={() => openForm()}
+          >
+            <Icon name="plus" size={16} />
+            <span>+ New Customer</span>
+          </button>
+        </div>
+      </div>
 
       <DataTable
         columns={columns}

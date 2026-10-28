@@ -4,16 +4,13 @@ import { productApi } from '../../api/productApi.js'
 import { customerApi } from '../../api/customerApi.js'
 import { useResource } from '../../hooks/useResource.js'
 import { PageHeader } from '../../components/ui/PageHeader.jsx'
-import { StatGrid, StatCard } from '../../components/ui/Card.jsx'
-import { Toolbar } from '../../components/ui/Toolbar.jsx'
-import { Tabs } from '../../components/ui/Tabs.jsx'
 import { DataTable } from '../../components/ui/DataTable.jsx'
-import { Badge } from '../../components/ui/Badge.jsx'
 import { Button } from '../../components/ui/Button.jsx'
 import { Modal } from '../../components/ui/Modal.jsx'
 import { Field, Input, Select } from '../../components/ui/FormControls.jsx'
 import CreditSalesList from './CreditSalesPage.jsx'
 import OrderDetails from './OrderDetailsModal.jsx'
+import { Icon } from '../../components/ui/icons.jsx'
 import './SalesOrdersPage.css'
 
 const emptyItem = () => ({
@@ -57,15 +54,6 @@ const TABS = [
   },
 ]
 
-const FULFILLMENT = (order) => {
-  if (order.status === 'Completed')
-    return { label: 'Completed · handed over', tone: 'success' }
-  if (order.status === 'Cancelled')
-    return { label: 'Cancelled', tone: 'danger' }
-  if (order.paymentStatus === 'Paid')
-    return { label: 'Ready to pack', tone: 'info' }
-  return { label: 'Awaiting payment', tone: 'warning' }
-}
 
 function SalesOrders({ business = {}, creditSales = false, section = 'Credit Sales' }) {
   const load = useCallback(
@@ -329,21 +317,7 @@ function SalesOrders({ business = {}, creditSales = false, section = 'Credit Sal
     }
   }, [orders])
 
-  const tabCounts = useMemo(() => {
-    const result = {}
-    for (const { id, match } of TABS) result[id] = orders.filter(match).length
-    return result
-  }, [orders])
 
-  const tabsConfig = useMemo(
-    () =>
-      TABS.map((t) => ({
-        id: t.id,
-        label: t.label,
-        count: tabCounts[t.id] ?? 0,
-      })),
-    [tabCounts]
-  )
 
   const channels = [
     { id: 'all', label: 'All channels' },
@@ -434,43 +408,18 @@ function SalesOrders({ business = {}, creditSales = false, section = 'Credit Sal
     setTimeout(() => URL.revokeObjectURL(url), 1000)
   }
 
-  const settlement = (order) => {
-    const method = order.paymentSummary?.[0]?.method
-    if (order.paymentStatus === 'Paid')
-      return { label: method ? `Paid · ${method}` : 'Paid', tone: 'success' }
-    if (order.paymentStatus === 'Partially Paid')
-      return { label: 'Part-paid', tone: 'warning' }
-    const terms = customerById.get(order.customerId)?.paymentTerms
-    if (terms && terms !== 'Due on receipt')
-      return { label: `Credit · ${terms}`, tone: 'warning' }
-    return { label: 'Unpaid', tone: 'danger' }
-  }
 
   const columns = [
     {
       key: 'orderNumber',
-      header: 'Order & Date',
+      header: 'Id',
       priority: 'high',
-      mobileLabel: 'Order',
-      render: (order) => {
-        const channel = channelOf(order)
-        return (
-          <div className="ord-cell-primary">
-            <strong className="ord-num">
-              {order.invoiceNumber || order.orderNumber}
-            </strong>
-            <small className="ord-cell-sub">
-              {new Date(order.createdAt).toLocaleString('en-GB', {
-                day: '2-digit',
-                month: 'short',
-                hour: '2-digit',
-                minute: '2-digit',
-              })}{' '}
-              · {order.cashierName || (channel === 'pos' ? 'POS counter' : 'Sales desk')}
-            </small>
-          </div>
-        )
-      },
+      mobileLabel: 'Id',
+      render: (order) => (
+        <span className="ledger-cell-id">
+          #{order.invoiceNumber || order.orderNumber}
+        </span>
+      ),
     },
     {
       key: 'customerName',
@@ -479,42 +428,48 @@ function SalesOrders({ business = {}, creditSales = false, section = 'Credit Sal
       mobileLabel: 'Customer',
       render: (order) => {
         const customer = customerById.get(order.customerId)
-        const gstin = customer?.gstin || order.customerSnapshot?.gstin
         return (
-          <div className="credit-customer-cell">
-            <strong>
+          <div>
+            <div className="ledger-cell-primary">
               {order.customerName || 'Walk-in customer'}
-              {order.billingType === 'wholesale' && <span className="ord-b2b">B2B</span>}
-            </strong>
-            <small className="ord-cell-sub">
-              {customer?.phone ||
-                order.customerSnapshot?.phone ||
-                (gstin ? `GSTIN ${gstin}` : 'No contact logged')}
-            </small>
+              {order.billingType === 'wholesale' && (
+                <span className="ord-b2b" style={{ marginLeft: '6px', fontSize: '10px' }}>B2B</span>
+              )}
+            </div>
+            <div className="ledger-cell-secondary" style={{ fontSize: '11px', marginTop: '2px' }}>
+              {customer?.phone || order.customerSnapshot?.phone || 'Direct Sale'}
+            </div>
           </div>
         )
       },
     },
     {
-      key: 'channel',
-      header: 'Channel',
+      key: 'dateChannel',
+      header: 'Date & Channel',
       priority: 'medium',
-      mobileLabel: 'Channel',
+      mobileLabel: 'Date',
       render: (order) => {
         const channel = channelOf(order)
-        const tone = channel === 'wholesale' ? 'warning' : 'info'
-        const label =
-          channel === 'pos'
-            ? 'Retail POS'
-            : channel === 'wholesale'
-              ? 'Wholesale order'
-              : 'Retail order'
-        return <Badge tone={tone}>{label}</Badge>
+        const channelLabel = channel === 'pos' ? 'POS' : channel === 'wholesale' ? 'Wholesale' : 'Desk'
+        return (
+          <div>
+            <div className="ledger-cell-secondary">
+              {new Date(order.createdAt).toLocaleDateString('en-GB', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric',
+              })}
+            </div>
+            <div className="ledger-cell-secondary" style={{ fontSize: '11px', marginTop: '2px', color: '#0084ff', fontWeight: 600 }}>
+              {channelLabel}
+            </div>
+          </div>
+        )
       },
     },
     {
       key: 'items',
-      header: 'Purchased Items',
+      header: 'Items',
       priority: 'medium',
       mobileLabel: 'Items',
       render: (order) => {
@@ -522,112 +477,93 @@ function SalesOrders({ business = {}, creditSales = false, section = 'Credit Sal
           (sumVal, item) => sumVal + Number(item.quantity || 0),
           0
         )
-        const skuNames = (order.items || [])
-          .map((item) => item.productName || item.name)
-          .filter(Boolean)
-          .slice(0, 2)
-          .join(', ')
         return (
-          <div className="ord-cell-primary">
-            <strong>
-              {order.items?.length || 0} item{order.items?.length === 1 ? '' : 's'} ·{' '}
-              {units} units
-            </strong>
-            <small className="ord-cell-sub">
-              {skuNames || 'Line items on invoice'}
-            </small>
-          </div>
+          <span className="ledger-cell-secondary">
+            {order.items?.length || 0} items ({units} units)
+          </span>
         )
       },
     },
     {
       key: 'totalAmount',
-      header: 'Grand Total',
+      header: 'Total Cost',
       priority: 'high',
       align: 'right',
       mobileLabel: 'Total',
-      render: (order) => {
-        const gst =
-          Number(order.cgst || 0) +
-            Number(order.sgst || 0) +
-            Number(order.igst || 0) || Number(order.tax || 0)
-        return (
-          <div className="ord-amount-cell">
-            <strong>{money(order.totalAmount)}</strong>
-            <small className="ord-cell-sub">
-              {gst > 0 ? `Incl. ${money(gst)} GST` : 'GST exempt'}
-            </small>
-          </div>
-        )
-      },
+      render: (order) => (
+        <div style={{ textAlign: 'right' }}>
+          <span className="ledger-cell-cost">{money(order.totalAmount)}</span>
+          {order.paymentStatus !== 'Paid' && (
+            <div className="ledger-cell-secondary" style={{ fontSize: '11px', color: '#f59e0b', marginTop: '2px' }}>
+              Due: {money(order.balanceDue || order.totalAmount)}
+            </div>
+          )}
+        </div>
+      ),
     },
     {
-      key: 'paymentStatus',
-      header: 'Payment Status',
+      key: 'status',
+      header: 'Status',
       priority: 'high',
-      mobileLabel: 'Payment',
+      align: 'center',
+      mobileLabel: 'Status',
       render: (order) => {
-        const pay = settlement(order)
-        return (
-          <Badge tone={pay.tone} dot>
-            {pay.label}
-          </Badge>
-        )
-      },
-    },
-    {
-      key: 'fulfillment',
-      header: 'Fulfilment',
-      priority: 'medium',
-      mobileLabel: 'Fulfilment',
-      render: (order) => {
-        const fulfil = FULFILLMENT(order)
-        return <Badge tone={fulfil.tone}>{fulfil.label}</Badge>
+        let pillClass = 'status-pending'
+        let label = order.status || 'Pending'
+        if (order.status === 'Completed') {
+          pillClass = 'status-delivered'
+          label = 'Delivered'
+        } else if (order.status === 'Cancelled') {
+          pillClass = 'status-danger'
+          label = 'Cancelled'
+        } else if (order.paymentStatus === 'Paid') {
+          pillClass = 'status-shipped'
+          label = 'Shipped'
+        } else {
+          pillClass = 'status-pending'
+          label = 'Pending'
+        }
+        return <span className={`ledger-status-pill ${pillClass}`}>{label}</span>
       },
     },
     {
       key: 'actions',
-      header: 'Actions',
+      header: 'Action',
       priority: 'high',
       align: 'right',
-      mobileLabel: 'Actions',
+      mobileLabel: 'Action',
       render: (order) => (
-        <div className="ord-actions-cell" onClick={(e) => e.stopPropagation()}>
-          <Button
-            variant="ghost"
-            size="sm"
+        <div className="ledger-actions-group" onClick={(e) => e.stopPropagation()}>
+          {order.status !== 'Completed' && order.status !== 'Cancelled' && (
+            <button
+              type="button"
+              className="ledger-action-icon action-edit"
+              onClick={() => openForm(order)}
+              title="Edit Order"
+              aria-label="Edit Order"
+            >
+              <Icon name="edit" size={17} />
+            </button>
+          )}
+          <button
+            type="button"
+            className="ledger-action-icon action-view"
             onClick={() => setViewingOrder(order)}
             title="View Invoice"
+            aria-label="View Invoice"
           >
-            Invoice
-          </Button>
+            <Icon name="eye" size={17} />
+          </button>
           {order.status !== 'Completed' && order.status !== 'Cancelled' && (
-            <>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => openForm(order)}
-                title="Edit Order"
-              >
-                Edit
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => completeOrder(order)}
-                title="Complete & Deliver"
-              >
-                Complete
-              </Button>
-              <Button
-                variant="danger"
-                size="sm"
-                onClick={() => cancelOrder(order)}
-                title="Cancel Order"
-              >
-                Cancel
-              </Button>
-            </>
+            <button
+              type="button"
+              className="ledger-action-icon action-delete"
+              onClick={() => cancelOrder(order)}
+              title="Cancel Order"
+              aria-label="Cancel Order"
+            >
+              <Icon name="close" size={17} />
+            </button>
           )}
         </div>
       ),
@@ -719,100 +655,130 @@ function SalesOrders({ business = {}, creditSales = false, section = 'Credit Sal
         </div>
       )}
 
-      <StatGrid>
-        <StatCard
-          label="Today's Sales"
-          value={loading || error ? '—' : money(stats.todaySales)}
-          delta={stats.salesDelta !== null ? `${stats.salesDelta >= 0 ? '+' : ''}${stats.salesDelta}%` : undefined}
-          deltaType={stats.salesDelta !== null && stats.salesDelta >= 0 ? 'up' : 'down'}
-          subtext={`${stats.todayCount} orders today · Avg ${money(stats.avgOrder, 0)}`}
-          tone="primary"
-        />
-        <StatCard
-          label="In Fulfilment / Dispatch"
-          value={loading || error ? '—' : `${stats.inFulfilment} orders`}
-          subtext={`${stats.fulfilUnits} units waiting to be packed & dispatched`}
-          tone="blue"
-        />
-        <StatCard
-          label="Awaiting Payment"
-          value={loading || error ? '—' : money(stats.awaitingAmount)}
-          subtext={`${stats.awaitingCount} open credit orders with unpaid balances`}
-          tone={stats.awaitingCount > 0 ? 'amber' : 'neutral'}
-        />
-        <StatCard
-          label="Fulfilment Rate"
-          value={loading || error ? '—' : `${stats.fulfilRate}%`}
-          subtext={`${stats.completed} delivered out of non-cancelled orders`}
-          tone="emerald"
-        />
-      </StatGrid>
-
-      <div className="ord-pipeline-banner">
-        <div className="ord-pipeline-icon">✓</div>
-        <div className="ord-pipeline-content">
-          <div className="ord-pipeline-title">Sales Pipeline &amp; Inventory Sync</div>
-          <div className="ord-pipeline-desc">
-            Orders reserve warehouse stock as soon as they're created. Completing an
-            order deducts stock and generates the customer invoice.
+      {/* 4 Pastel KPI Summary Cards */}
+      <div className="ledger-kpi-grid">
+        <div
+          className={`ledger-kpi-card theme-blue ${tab === 'all' ? 'is-active' : ''}`}
+          onClick={() => setTab('all')}
+          role="button"
+          tabIndex={0}
+        >
+          <div className="ledger-kpi-bubble">
+            <Icon name="list" size={20} />
           </div>
-          <div className="ord-pipeline-legend">
-            <span className="ord-legend-item">
-              <span className="ord-legend-dot green" />
-              Completed = paid &amp; handed over
-            </span>
-            <span className="ord-legend-item">
-              <span className="ord-legend-dot blue" />
-              Processing = packing / dispatch
-            </span>
-            <span className="ord-legend-item">
-              <span className="ord-legend-dot amber" />
-              Pending = unpaid / on credit
-            </span>
+          <div className="ledger-kpi-content">
+            <span className="ledger-kpi-label">Total</span>
+            <span className="ledger-kpi-val">{orders.length} Invoices</span>
+          </div>
+        </div>
+
+        <div
+          className={`ledger-kpi-card theme-slate ${tab === 'processing' ? 'is-active' : ''}`}
+          onClick={() => setTab('processing')}
+          role="button"
+          tabIndex={0}
+        >
+          <div className="ledger-kpi-bubble">
+            <Icon name="truck" size={20} />
+          </div>
+          <div className="ledger-kpi-content">
+            <span className="ledger-kpi-label">Shipped</span>
+            <span className="ledger-kpi-val">{stats.inFulfilment} Invoices</span>
+          </div>
+        </div>
+
+        <div
+          className={`ledger-kpi-card theme-green ${tab === 'completed' ? 'is-active' : ''}`}
+          onClick={() => setTab('completed')}
+          role="button"
+          tabIndex={0}
+        >
+          <div className="ledger-kpi-bubble">
+            <Icon name="dollar" size={20} />
+          </div>
+          <div className="ledger-kpi-content">
+            <span className="ledger-kpi-label">Delivered</span>
+            <span className="ledger-kpi-val">{money(stats.todaySales)}</span>
+          </div>
+        </div>
+
+        <div
+          className={`ledger-kpi-card theme-amber ${tab === 'pending' ? 'is-active' : ''}`}
+          onClick={() => setTab('pending')}
+          role="button"
+          tabIndex={0}
+        >
+          <div className="ledger-kpi-bubble">
+            <Icon name="pending" size={20} />
+          </div>
+          <div className="ledger-kpi-content">
+            <span className="ledger-kpi-label">Pending</span>
+            <span className="ledger-kpi-val">{stats.awaitingCount} Invoices</span>
           </div>
         </div>
       </div>
 
-      <Toolbar
-        searchValue={search}
-        onSearchChange={setSearch}
-        searchPlaceholder="Search order, invoice, customer, or item (Ctrl+K)"
-        filters={
-          <div className="ord-toolbar-filters">
-            <Tabs tabs={tabsConfig} activeTab={tab} onChange={setTab} />
-            <select
-              className="ord-select"
-              value={channelFilter}
-              onChange={(e) => setChannelFilter(e.target.value)}
-              aria-label="Filter by channel"
-            >
-              {channels.map((channel) => (
-                <option key={channel.id} value={channel.id}>
-                  {channel.label}
-                </option>
-              ))}
-            </select>
-            <select
-              className="ord-select"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              aria-label="Filter by status"
-            >
-              <option value="all">All statuses</option>
-              {['Pending', 'Completed', 'Cancelled'].map((status) => (
-                <option key={status} value={status}>
-                  {status}
-                </option>
-              ))}
-            </select>
+      {/* Pill Search & Action Toolbar */}
+      <div className="ledger-toolbar">
+        <div className="ledger-toolbar-left">
+          <div className="ledger-search-box">
+            <input
+              ref={searchRef}
+              type="text"
+              className="ledger-search-input"
+              placeholder="Search..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <span className="ledger-search-icon">
+              <Icon name="search" size={17} />
+            </span>
           </div>
-        }
-        actions={
-          <Button variant="secondary" size="sm" onClick={refetch} disabled={loading}>
-            Refresh
-          </Button>
-        }
-      />
+
+          <select
+            className="ledger-pill-select"
+            value={channelFilter}
+            onChange={(e) => setChannelFilter(e.target.value)}
+          >
+            {channels.map((ch) => (
+              <option key={ch.id} value={ch.id}>
+                {ch.label}
+              </option>
+            ))}
+          </select>
+
+          <select
+            className="ledger-pill-select"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="all">All Statuses</option>
+            <option value="Pending">Pending</option>
+            <option value="Completed">Completed</option>
+            <option value="Cancelled">Cancelled</option>
+          </select>
+        </div>
+
+        <div className="ledger-toolbar-right">
+          <button
+            type="button"
+            className="ledger-btn-secondary"
+            onClick={exportCsv}
+            disabled={loading || !!error || !orders.length}
+          >
+            <Icon name="download" size={15} />
+            <span>Export</span>
+          </button>
+          <button
+            type="button"
+            className="ledger-btn-primary"
+            onClick={() => openForm()}
+          >
+            <Icon name="plus" size={16} />
+            <span>+ New Order</span>
+          </button>
+        </div>
+      </div>
 
       <DataTable
         columns={columns}

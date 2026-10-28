@@ -4,13 +4,9 @@ import { productApi } from '../../api/productApi.js'
 import { supplierApi } from '../../api/supplierApi.js'
 import { useResource } from '../../hooks/useResource.js'
 import { PageHeader } from '../../components/ui/PageHeader.jsx'
-import { StatGrid, StatCard } from '../../components/ui/Card.jsx'
-import { Toolbar } from '../../components/ui/Toolbar.jsx'
-import { Tabs } from '../../components/ui/Tabs.jsx'
 import { DataTable } from '../../components/ui/DataTable.jsx'
 import { Modal } from '../../components/ui/Modal.jsx'
 import { Button } from '../../components/ui/Button.jsx'
-import { Badge } from '../../components/ui/Badge.jsx'
 import { Field, Input, Select, Textarea } from '../../components/ui/FormControls.jsx'
 import { FormStatus } from '../../components/ui/Feedback.jsx'
 import { Icon } from '../../components/ui/icons.jsx'
@@ -56,15 +52,6 @@ const TABS = [
   { id: 'closed', label: 'Received & Closed', match: (o) => o.status === 'Received' || o.status === 'Cancelled' },
 ]
 
-const FULFILLMENT = {
-  Draft: { label: 'Draft', tone: 'neutral' },
-  Pending: { label: 'Pending approval', tone: 'warning' },
-  Approved: { label: 'Approved', tone: 'info' },
-  Ordered: { label: 'In transit', tone: 'info' },
-  'Partially Received': { label: 'Partially received', tone: 'warning' },
-  Received: { label: 'Fully received', tone: 'success' },
-  Cancelled: { label: 'Cancelled', tone: 'danger' },
-}
 
 const startOfToday = () => {
   const d = new Date()
@@ -84,8 +71,6 @@ function PurchaseOrders({ business, onNavigate }) {
   const [tab, setTab] = useState('all')
   const [supplierFilter, setSupplierFilter] = useState('all')
   const [paymentFilter, setPaymentFilter] = useState('all')
-  const [from, setFrom] = useState('')
-  const [to, setTo] = useState('')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
   const [menu, setMenu] = useState(null)
@@ -233,14 +218,6 @@ function PurchaseOrders({ business, onNavigate }) {
     [openForm],
   )
 
-  const fromTime = from ? new Date(`${from}T00:00:00`).getTime() : null
-  const toTime = to ? new Date(`${to}T23:59:59.999`).getTime() : null
-
-  const tabCounts = useMemo(() => {
-    const result = {}
-    for (const { id, match } of TABS) result[id] = orders.filter(match).length
-    return result
-  }, [orders])
 
   const stats = useMemo(() => {
     const today = startOfToday()
@@ -294,9 +271,7 @@ function PurchaseOrders({ business, onNavigate }) {
       if (!matchTab(order)) return false
       if (supplierFilter !== 'all' && order.supplierId !== supplierFilter) return false
       if (paymentFilter !== 'all' && order.paymentStatus !== paymentFilter) return false
-      const created = new Date(order.createdAt).getTime()
-      if (fromTime && created < fromTime) return false
-      if (toTime && created > toTime) return false
+
       if (
         query &&
         !`${order.orderNumber} ${order.supplierName} ${order.status} ${order.items.map((item) => item.productName).join(' ')}`
@@ -356,37 +331,6 @@ function PurchaseOrders({ business, onNavigate }) {
     }
   }
 
-  const settlement = (order) => {
-    if (order.paymentStatus === 'Paid') return { label: 'Paid in full', tone: 'success' }
-    if (order.paymentStatus === 'Partially Paid') return { label: 'Partial payment', tone: 'warning' }
-    const terms = supplierById.get(order.supplierId)?.paymentTerms
-    if (terms && terms !== 'Due on receipt') return { label: `${terms} terms`, tone: 'neutral' }
-    return { label: 'Unpaid', tone: 'danger' }
-  }
-
-  const poTag = (order, eta) => {
-    if (order.status === 'Cancelled') return 'Cancelled order'
-    if (eta.tone === 'rose') return 'SLA breach warning'
-    if (order.status === 'Draft') return 'Draft — not sent'
-    return order.createdBy ? `Raised by ${order.createdBy}` : 'Manual entry'
-  }
-
-  const primaryAction = (order) => {
-    switch (order.status) {
-      case 'Draft':
-      case 'Pending':
-        return { label: 'Approve PO', variant: 'secondary', run: () => updateStatus(order, 'Approved') }
-      case 'Approved':
-        return { label: 'Mark ordered', variant: 'secondary', run: () => updateStatus(order, 'Ordered') }
-      case 'Ordered':
-      case 'Partially Received':
-        return { label: 'Receive inward', variant: 'primary', run: () => onNavigate?.('Receiving') }
-      case 'Received':
-        return { label: 'View GRN log', variant: 'ghost', run: () => onNavigate?.('Receiving') }
-      default:
-        return { label: 'Duplicate', variant: 'ghost', run: () => duplicateOrder(order) }
-    }
-  }
 
   const exportCsv = () => {
     const escapeCell = (value) => {
@@ -427,145 +371,147 @@ function PurchaseOrders({ business, onNavigate }) {
     () => [
       {
         key: 'orderNumber',
-        header: 'PO Identifier',
+        header: 'Id',
+        priority: 'high',
+        render: (order) => (
+          <span className="ledger-cell-id">
+            #{order.orderNumber}
+          </span>
+        ),
+      },
+      {
+        key: 'supplierName',
+        header: 'Supplier',
+        priority: 'high',
         render: (order) => {
-          const fulfil = FULFILLMENT[order.status] || { label: order.status, tone: 'neutral' }
-          const eta = etaInfo(order)
+          const supplier = supplierById.get(order.supplierId)
           return (
-            <div className="po-id">
-              <span className={`po-dot ${fulfil.tone === 'info' ? 'blue' : fulfil.tone === 'success' ? 'green' : fulfil.tone === 'warning' ? 'amber' : fulfil.tone === 'danger' ? 'rose' : ''}`} />
-              <div>
-                <strong>{order.orderNumber}</strong>
-                <small>{poTag(order, eta)}</small>
+            <div>
+              <div className="ledger-cell-primary">{order.supplierName}</div>
+              <div className="ledger-cell-secondary" style={{ fontSize: '11px', marginTop: '2px' }}>
+                {[supplier?.contactPerson, supplier?.phone].filter(Boolean).join(' · ') || 'Vendor'}
               </div>
             </div>
           )
         },
       },
       {
-        key: 'supplierName',
-        header: 'Supplier & Contact',
-        render: (order) => {
-          const supplier = supplierById.get(order.supplierId)
-          return (
-            <div>
-              <strong className="po-supplier">{order.supplierName}</strong>
-              <small style={{ color: 'var(--text-soft)', fontSize: 'var(--fs-xs)' }}>
-                {[supplier?.contactPerson, supplier?.phone].filter(Boolean).join(' · ') ||
-                  supplier?.email ||
-                  'No contact on file'}
-              </small>
-            </div>
-          )
-        },
-      },
-      {
         key: 'timeline',
-        header: 'Timeline / ETA',
+        header: 'Date & ETA',
+        priority: 'medium',
         render: (order) => {
           const eta = etaInfo(order)
           return (
-            <div className="po-timeline">
-              <span>
-                Ordered{' '}
-                {new Date(order.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
-              </span>
-              <small className={`po-eta ${eta.tone}`}>{eta.text}</small>
+            <div>
+              <div className="ledger-cell-secondary">
+                {new Date(order.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+              </div>
+              <div className="ledger-cell-secondary" style={{ fontSize: '11px', marginTop: '2px', color: eta.tone === 'rose' ? '#ef4444' : '#0084ff', fontWeight: 600 }}>
+                {eta.text}
+              </div>
             </div>
           )
         },
       },
       {
         key: 'items',
-        header: 'Items / SKUs',
+        header: 'Items',
+        priority: 'medium',
         render: (order) => {
           const units = order.items.reduce((sum, item) => sum + Number(item.quantity || 0), 0)
-          const skuNames = order.items.map((item) => item.productName).filter(Boolean).slice(0, 3).join(', ')
           return (
-            <div>
-              <strong>{units.toLocaleString('en-IN')} units</strong>
-              <small style={{ display: 'block', color: 'var(--text-soft)', fontSize: 'var(--fs-xs)' }}>
-                {order.items.length} SKU{order.items.length === 1 ? '' : 's'}
-                {skuNames ? `: ${skuNames}` : ''}
-              </small>
-            </div>
+            <span className="ledger-cell-secondary">
+              {order.items.length} items ({units} units)
+            </span>
           )
         },
       },
       {
         key: 'totalAmount',
-        header: 'Committed Value',
+        header: 'Total Cost',
         align: 'right',
-        render: (order) => {
-          const gst = order.items.reduce((sum, item) => sum + Number(item.tax || 0), 0)
-          return (
-            <div className="po-value" style={{ textAlign: 'right' }}>
-              <strong>{money(order.totalAmount)}</strong>
-              <small>GST {money(gst)}</small>
-            </div>
-          )
-        },
-      },
-      {
-        key: 'paymentStatus',
-        header: 'Settlement',
-        render: (order) => {
-          const pay = settlement(order)
-          return <Badge tone={pay.tone}>{pay.label}</Badge>
-        },
+        priority: 'high',
+        render: (order) => (
+          <div style={{ textAlign: 'right' }}>
+            <span className="ledger-cell-cost">{money(order.totalAmount)}</span>
+            {order.paymentStatus !== 'Paid' && (
+              <div className="ledger-cell-secondary" style={{ fontSize: '11px', color: '#f59e0b', marginTop: '2px' }}>
+                {order.paymentStatus || 'Unpaid'}
+              </div>
+            )}
+          </div>
+        ),
       },
       {
         key: 'status',
-        header: 'Fulfillment Status',
+        header: 'Status',
+        priority: 'high',
+        align: 'center',
         render: (order) => {
-          const fulfil = FULFILLMENT[order.status] || { label: order.status, tone: 'neutral' }
-          return <Badge tone={fulfil.tone}>{fulfil.label}</Badge>
+          let pillClass = 'status-pending'
+          let label = order.status || 'Pending'
+          if (order.status === 'Received') {
+            pillClass = 'status-delivered'
+            label = 'Delivered'
+          } else if (order.status === 'Ordered' || order.status === 'Partially Received') {
+            pillClass = 'status-shipped'
+            label = 'Shipped'
+          } else if (order.status === 'Cancelled') {
+            pillClass = 'status-danger'
+            label = 'Cancelled'
+          } else {
+            pillClass = 'status-pending'
+            label = 'Pending'
+          }
+          return <span className={`ledger-status-pill ${pillClass}`}>{label}</span>
         },
       },
       {
         key: 'actions',
-        header: 'Actions',
+        header: 'Action',
         align: 'right',
-        render: (order) => {
-          const action = primaryAction(order)
-          return (
-            <div className="po-row-actions">
-              <Button size="sm" variant={action.variant} onClick={action.run}>
-                {action.label}
-              </Button>
+        priority: 'high',
+        render: (order) => (
+          <div className="ledger-actions-group" onClick={(e) => e.stopPropagation()}>
+            {order.status !== 'Received' && order.status !== 'Cancelled' && (
               <button
                 type="button"
-                className="po-menu-btn"
-                aria-label={`More actions for ${order.orderNumber}`}
-                aria-expanded={menu?.id === order.purchaseOrderId}
-                onClick={(event) => {
-                  const rect = event.currentTarget.getBoundingClientRect()
-                  setMenu((current) =>
-                    current?.id === order.purchaseOrderId
-                      ? null
-                      : { id: order.purchaseOrderId, order, x: rect.right, y: rect.bottom + 4 },
-                  )
-                }}
+                className="ledger-action-icon action-edit"
+                onClick={() => openForm(order)}
+                title="Edit Order"
+                aria-label="Edit Order"
               >
-                ⋮
+                <Icon name="edit" size={17} />
               </button>
-            </div>
-          )
-        },
+            )}
+            <button
+              type="button"
+              className="ledger-action-icon action-view"
+              onClick={() => (setViewingOrder ? setViewingOrder(order) : openForm(order))}
+              title="View PO Details"
+              aria-label="View PO Details"
+            >
+              <Icon name="eye" size={17} />
+            </button>
+            {order.status !== 'Received' && order.status !== 'Cancelled' && (
+              <button
+                type="button"
+                className="ledger-action-icon action-delete"
+                onClick={() => updateStatus(order, 'Cancelled')}
+                title="Cancel PO"
+                aria-label="Cancel PO"
+              >
+                <Icon name="close" size={17} />
+              </button>
+            )}
+          </div>
+        ),
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [supplierById, menu, money],
+    [supplierById, money],
   )
 
-  const tabItems = useMemo(
-    () =>
-      TABS.map((option) => ({
-        id: option.id,
-        label: `${option.label} (${tabCounts[option.id] || 0})`,
-      })),
-    [tabCounts],
-  )
 
   return (
     <section className="po-page" aria-labelledby="po-title">
@@ -634,92 +580,133 @@ function PurchaseOrders({ business, onNavigate }) {
         </ol>
       </div>
 
-      <StatGrid>
-        <StatCard
-          icon="cart"
-          label="Total Active POs"
-          value={loading || error ? '—' : stats.total}
-          helpText={`${stats.inTransit} In Transit · ${stats.pendingApproval} Pending Approval · ${stats.delivered} Delivered`}
-          badge={stats.newThisWeek > 0 ? `+${stats.newThisWeek} this week` : null}
-          tone="info"
-        />
-        <StatCard
-          icon="currency"
-          label="Committed Procurement Value"
-          value={loading || error ? '—' : money(stats.committedValue)}
-          helpText={`${stats.cycleDelta === null ? 'First cycle' : `${stats.cycleDelta >= 0 ? '+' : ''}${stats.cycleDelta}% vs last`} · ${stats.supplierCount} suppliers`}
-          tone="success"
-        />
-        <StatCard
-          icon="alert"
-          label="Pending Inward Receiving"
-          value={loading || error ? '—' : stats.awaiting}
-          helpText="Awaiting dock verification and GRN sign-off"
-          badge={stats.overdue > 0 ? `${stats.overdue} Critical Overdue` : null}
-          tone={stats.overdue > 0 ? 'danger' : 'warning'}
-        />
-        <StatCard
-          icon="truck"
-          label="Supplier Fulfillment SLA"
-          value={loading || error ? '—' : `${stats.slaPct}%`}
-          helpText={`Avg lead time ${stats.avgLead.toFixed(1)}d`}
-          tone="success"
-        />
-      </StatGrid>
+      {/* 4 Pastel KPI Summary Cards */}
+      <div className="ledger-kpi-grid">
+        <div
+          className={`ledger-kpi-card theme-blue ${tab === 'all' ? 'is-active' : ''}`}
+          onClick={() => resetTo(setTab)('all')}
+          role="button"
+          tabIndex={0}
+        >
+          <div className="ledger-kpi-bubble">
+            <Icon name="list" size={20} />
+          </div>
+          <div className="ledger-kpi-content">
+            <span className="ledger-kpi-label">Total</span>
+            <span className="ledger-kpi-val">{stats.total} Invoices</span>
+          </div>
+        </div>
 
-      <Tabs items={tabItems} activeId={tab} onChange={resetTo(setTab)} />
+        <div
+          className={`ledger-kpi-card theme-slate ${tab === 'transit' ? 'is-active' : ''}`}
+          onClick={() => resetTo(setTab)('transit')}
+          role="button"
+          tabIndex={0}
+        >
+          <div className="ledger-kpi-bubble">
+            <Icon name="truck" size={20} />
+          </div>
+          <div className="ledger-kpi-content">
+            <span className="ledger-kpi-label">Shipped</span>
+            <span className="ledger-kpi-val">{stats.inTransit} Invoices</span>
+          </div>
+        </div>
 
-      <Toolbar
-        search={search}
-        onSearchChange={resetTo(setSearch)}
-        placeholder="Filter by PO number, supplier, or item SKU..."
-        filters={
-          <>
-            <Select
-              value={supplierFilter}
-              onChange={(e) => resetTo(setSupplierFilter)(e.target.value)}
-              aria-label="Filter by supplier"
-            >
-              <option value="all">All suppliers ({suppliers.length} active)</option>
-              {suppliers.map((supplier) => (
-                <option key={supplier.supplierId} value={supplier.supplierId}>
-                  {supplier.supplierName}
-                </option>
-              ))}
-            </Select>
-            <Select
-              value={paymentFilter}
-              onChange={(e) => resetTo(setPaymentFilter)(e.target.value)}
-              aria-label="Filter by payment status"
-            >
-              <option value="all">All payment statuses</option>
-              {['Unpaid', 'Partially Paid', 'Paid'].map((status) => (
-                <option key={status} value={status}>
-                  {status}
-                </option>
-              ))}
-            </Select>
-            <div className="po-range">
-              <PoLocalIcon name="calendar" />
-              <input
-                type="date"
-                value={from}
-                max={to || undefined}
-                onChange={(event) => resetTo(setFrom)(event.target.value)}
-                aria-label="From date"
-              />
-              <em>–</em>
-              <input
-                type="date"
-                value={to}
-                min={from || undefined}
-                onChange={(event) => resetTo(setTo)(event.target.value)}
-                aria-label="To date"
-              />
-            </div>
-          </>
-        }
-      />
+        <div
+          className={`ledger-kpi-card theme-green ${tab === 'closed' ? 'is-active' : ''}`}
+          onClick={() => resetTo(setTab)('closed')}
+          role="button"
+          tabIndex={0}
+        >
+          <div className="ledger-kpi-bubble">
+            <Icon name="dollar" size={20} />
+          </div>
+          <div className="ledger-kpi-content">
+            <span className="ledger-kpi-label">Delivered</span>
+            <span className="ledger-kpi-val">{money(stats.committedValue)}</span>
+          </div>
+        </div>
+
+        <div
+          className={`ledger-kpi-card theme-amber ${tab === 'pending' ? 'is-active' : ''}`}
+          onClick={() => resetTo(setTab)('pending')}
+          role="button"
+          tabIndex={0}
+        >
+          <div className="ledger-kpi-bubble">
+            <Icon name="pending" size={20} />
+          </div>
+          <div className="ledger-kpi-content">
+            <span className="ledger-kpi-label">Pending</span>
+            <span className="ledger-kpi-val">{stats.pendingApproval + stats.awaiting} Invoices</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Pill Search & Action Toolbar */}
+      <div className="ledger-toolbar">
+        <div className="ledger-toolbar-left">
+          <div className="ledger-search-box">
+            <input
+              ref={searchRef}
+              type="text"
+              className="ledger-search-input"
+              placeholder="Search..."
+              value={search}
+              onChange={(e) => resetTo(setSearch)(e.target.value)}
+            />
+            <span className="ledger-search-icon">
+              <Icon name="search" size={17} />
+            </span>
+          </div>
+
+          <select
+            className="ledger-pill-select"
+            value={supplierFilter}
+            onChange={(e) => resetTo(setSupplierFilter)(e.target.value)}
+          >
+            <option value="all">All Suppliers ({suppliers.length})</option>
+            {suppliers.map((s) => (
+              <option key={s.supplierId} value={s.supplierId}>
+                {s.supplierName}
+              </option>
+            ))}
+          </select>
+
+          <select
+            className="ledger-pill-select"
+            value={paymentFilter}
+            onChange={(e) => resetTo(setPaymentFilter)(e.target.value)}
+          >
+            <option value="all">All Payment Statuses</option>
+            {['Unpaid', 'Partially Paid', 'Paid'].map((st) => (
+              <option key={st} value={st}>
+                {st}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="ledger-toolbar-right">
+          <button
+            type="button"
+            className="ledger-btn-secondary"
+            onClick={exportCsv}
+            disabled={loading || !!error || !orders.length}
+          >
+            <Icon name="download" size={15} />
+            <span>Export</span>
+          </button>
+          <button
+            type="button"
+            className="ledger-btn-primary"
+            onClick={() => openForm()}
+          >
+            <Icon name="plus" size={16} />
+            <span>+ New Order</span>
+          </button>
+        </div>
+      </div>
 
       <DataTable
         columns={columns}

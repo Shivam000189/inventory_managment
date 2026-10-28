@@ -5,12 +5,9 @@ import { paymentApi } from '../../api/paymentApi.js'
 import { productApi } from '../../api/productApi.js'
 import { useResource } from '../../hooks/useResource.js'
 import { PageHeader } from '../../components/ui/PageHeader.jsx'
-import { StatGrid, StatCard } from '../../components/ui/Card.jsx'
-import { Toolbar } from '../../components/ui/Toolbar.jsx'
 import { DataTable } from '../../components/ui/DataTable.jsx'
 import { Modal } from '../../components/ui/Modal.jsx'
 import { Button } from '../../components/ui/Button.jsx'
-import { Badge } from '../../components/ui/Badge.jsx'
 import { Field, Input, Select, Textarea } from '../../components/ui/FormControls.jsx'
 import { FormStatus } from '../../components/ui/Feedback.jsx'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog.jsx'
@@ -67,7 +64,7 @@ function Suppliers({ business, onNavigate, canNavigate }) {
       ]),
     [],
   )
-  const { data, loading, error, refetch, setData } = useResource(load, [], [[], [], [], []])
+  const { data, loading, error, setData } = useResource(load, [], [[], [], [], []])
   const [suppliers, purchaseOrders, payments, products] = data
 
   const [search, setSearch] = useState('')
@@ -365,22 +362,29 @@ function Suppliers({ business, onNavigate, canNavigate }) {
   const columns = useMemo(
     () => [
       {
+        key: 'supplierId',
+        header: 'Id',
+        priority: 'high',
+        render: (supplier) => (
+          <span className="ledger-cell-id">
+            #{String(supplier.supplierId || '').slice(-6).toUpperCase() || 'SUP'}
+          </span>
+        ),
+      },
+      {
         key: 'supplierName',
         header: 'Supplier',
+        priority: 'high',
         render: (supplier) => {
           const entry = meta.get(supplier.supplierId) || {}
           return (
-            <div className="sup-name">
-              <span className="sup-avatar">{supplier.supplierName[0].toUpperCase()}</span>
-              <div>
-                <strong>
-                  {supplier.supplierName}
-                  {entry.category && <span className="sup-cat">{entry.category}</span>}
-                </strong>
-                <small>
-                  <SupLocalIcon name="pin" />
-                  {[supplier.city, supplier.state].filter(Boolean).join(', ') || 'Location not set'}
-                </small>
+            <div>
+              <div className="ledger-cell-primary">
+                {supplier.supplierName}
+                {entry.category && <span className="ord-b2b" style={{ marginLeft: '6px', fontSize: '10px' }}>{entry.category}</span>}
+              </div>
+              <div className="ledger-cell-secondary" style={{ fontSize: '11px', marginTop: '2px' }}>
+                {[supplier.city, supplier.state].filter(Boolean).join(', ') || 'Local'}
               </div>
             </div>
           )
@@ -388,30 +392,36 @@ function Suppliers({ business, onNavigate, canNavigate }) {
       },
       {
         key: 'contact',
-        header: 'Contact',
+        header: 'Contact Person',
+        priority: 'medium',
         render: (supplier) => (
           <div>
-            <strong>{supplier.contactPerson || 'No contact person'}</strong>
-            <small style={{ display: 'block', color: 'var(--text-soft)', fontSize: 'var(--fs-xs)' }}>
-              {supplier.phone}
-              {supplier.email ? ` • ${supplier.email}` : ''}
-            </small>
+            <div className="ledger-cell-primary">{supplier.contactPerson || 'Vendor'}</div>
+            <div className="ledger-cell-secondary" style={{ fontSize: '11px', marginTop: '2px' }}>
+              {supplier.phone} {supplier.email ? `· ${supplier.email}` : ''}
+            </div>
           </div>
         ),
       },
       {
         key: 'payment',
-        header: 'Payment',
+        header: 'Total Cost / Outstanding',
+        align: 'right',
+        priority: 'high',
         render: (supplier) => {
-          const entry = meta.get(supplier.supplierId) || {
-            outstanding: 0,
-            payLabel: 'No orders',
-            payTone: 'neutral',
-          }
+          const entry = meta.get(supplier.supplierId) || { total: 0, outstanding: 0, orders: 0 }
           return (
-            <div className="sup-pay">
-              <Badge tone={entry.payTone}>{entry.payLabel}</Badge>
-              <small style={{ display: 'block', marginTop: 3 }}>Due {money(entry.outstanding)}</small>
+            <div style={{ textAlign: 'right' }}>
+              <span className="ledger-cell-cost">{money(entry.total)}</span>
+              {entry.outstanding > 0 ? (
+                <div className="ledger-cell-secondary" style={{ fontSize: '11px', color: '#f59e0b', marginTop: '2px' }}>
+                  Due: {money(entry.outstanding)}
+                </div>
+              ) : (
+                <div className="ledger-cell-secondary" style={{ fontSize: '11px', color: '#10b981', marginTop: '2px' }}>
+                  Settled
+                </div>
+              )}
             </div>
           )
         },
@@ -419,26 +429,57 @@ function Suppliers({ business, onNavigate, canNavigate }) {
       {
         key: 'status',
         header: 'Status',
-        render: (supplier) => (
-          <Badge tone={supplier.status === 'active' ? 'success' : 'neutral'}>{supplier.status}</Badge>
-        ),
+        priority: 'high',
+        align: 'center',
+        render: (supplier) => {
+          const entry = meta.get(supplier.supplierId) || {}
+          let pillClass = 'status-delivered'
+          let label = 'Active'
+          if (supplier.status === 'archived') {
+            pillClass = 'status-danger'
+            label = 'Archived'
+          } else if (entry.outstanding > 0) {
+            pillClass = 'status-pending'
+            label = `Due: ${money(entry.outstanding)}`
+          }
+          return <span className={`ledger-status-pill ${pillClass}`}>{label}</span>
+        },
       },
       {
         key: 'actions',
-        header: 'Actions',
+        header: 'Action',
         align: 'right',
+        priority: 'high',
         render: (supplier) => (
-          <div className="sup-row-actions">
-            <Button size="sm" variant="ghost" onClick={() => setViewingSupplier(supplier)}>
-              View
-            </Button>
-            <Button size="sm" variant="secondary" onClick={() => openForm(supplier)}>
-              Edit
-            </Button>
+          <div className="ledger-actions-group" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              className="ledger-action-icon action-edit"
+              onClick={() => openForm(supplier)}
+              title="Edit Supplier"
+              aria-label="Edit Supplier"
+            >
+              <Icon name="edit" size={17} />
+            </button>
+            <button
+              type="button"
+              className="ledger-action-icon action-view"
+              onClick={() => setViewingSupplier(supplier)}
+              title="View Supplier"
+              aria-label="View Supplier"
+            >
+              <Icon name="eye" size={17} />
+            </button>
             {supplier.status === 'active' && (
-              <Button size="sm" variant="danger" onClick={() => archiveSupplier(supplier)}>
-                Archive
-              </Button>
+              <button
+                type="button"
+                className="ledger-action-icon action-delete"
+                onClick={() => archiveSupplier(supplier)}
+                title="Archive Supplier"
+                aria-label="Archive Supplier"
+              >
+                <Icon name="trash" size={17} />
+              </button>
             )}
           </div>
         ),
@@ -453,7 +494,7 @@ function Suppliers({ business, onNavigate, canNavigate }) {
       <PageHeader
         kicker={`Manage your suppliers • ${business?.name || 'Workspace'} vendor ledger`}
         title="Suppliers"
-        badge={<Badge tone="warning">{stats.active} active vendors</Badge>}
+        badge={`${stats.active} active vendors`}
         subtitle="Directory of every vendor you buy from — their contact details, agreed payment terms, and current credit balances."
         actions={
           <>
@@ -508,79 +549,127 @@ function Suppliers({ business, onNavigate, canNavigate }) {
         </ol>
       </details>
 
-      <StatGrid>
-        <StatCard
-          icon="cart"
-          label="Total Suppliers"
-          value={loading || error ? '—' : stats.total}
-          helpText={`${stats.gstPct}% with GST / tax number on file`}
-          badge={stats.newCount > 0 ? `+${stats.newCount} new` : null}
-          tone="info"
-        />
-        <StatCard
-          icon="currency"
-          label="Outstanding Payables"
-          value={loading || error ? '—' : money(stats.outstanding)}
-          helpText={`Due across ${stats.dueAccounts} active accounts`}
-          tone={stats.outstanding > 0 ? 'danger' : 'success'}
-        />
-        <StatCard
-          icon="clipboard"
-          label="Completed POs (YTD)"
-          value={loading || error ? '—' : stats.completedPos}
-          helpText={`Avg fulfilment: ${stats.fulfilDays.toFixed(1)} days`}
-          tone="info"
-        />
-        <StatCard
-          icon="shield"
-          label="Vendor SLA Fulfilment"
-          value={loading || error ? '—' : `${stats.slaPct.toFixed(1)}%`}
-          helpText={
-            stats.lateThisYear === 0
-              ? 'Zero late deliveries this year'
-              : `${stats.lateThisYear} late deliveries this year`
-          }
-          tone="success"
-        />
-      </StatGrid>
+      {/* 4 Pastel KPI Summary Cards */}
+      <div className="ledger-kpi-grid">
+        <div
+          className={`ledger-kpi-card theme-blue ${statusFilter === 'all' ? 'is-active' : ''}`}
+          onClick={() => withReset(setStatusFilter)('all')}
+          role="button"
+          tabIndex={0}
+        >
+          <div className="ledger-kpi-bubble">
+            <Icon name="users" size={20} />
+          </div>
+          <div className="ledger-kpi-content">
+            <span className="ledger-kpi-label">Total</span>
+            <span className="ledger-kpi-val">{stats.total} Invoices</span>
+          </div>
+        </div>
 
-      <Toolbar
-        search={search}
-        onSearchChange={withReset(setSearch)}
-        placeholder="Search by supplier, contact, or city..."
-        filters={
-          <>
-            <Select
-              value={statusFilter}
-              onChange={(e) => withReset(setStatusFilter)(e.target.value)}
-              aria-label="Filter by status"
-            >
-              <option value="active">Active suppliers</option>
-              <option value="archived">Archived suppliers</option>
-              <option value="all">All suppliers</option>
-            </Select>
-            <Select
-              value={categoryFilter}
-              onChange={(e) => withReset(setCategoryFilter)(e.target.value)}
-              aria-label="Filter by category"
-            >
-              <option value="all">All categories</option>
-              {categories.map((category) => (
-                <option key={category} value={category}>
-                  {category}
-                </option>
-              ))}
-            </Select>
-            <Button
-              size="md"
-              variant="secondary"
-              icon={<Icon name="refresh" />}
-              onClick={refetch}
-              aria-label="Refresh suppliers"
+        <div
+          className={`ledger-kpi-card theme-slate ${statusFilter === 'active' ? 'is-active' : ''}`}
+          onClick={() => withReset(setStatusFilter)('active')}
+          role="button"
+          tabIndex={0}
+        >
+          <div className="ledger-kpi-bubble">
+            <Icon name="user-check" size={20} />
+          </div>
+          <div className="ledger-kpi-content">
+            <span className="ledger-kpi-label">Shipped</span>
+            <span className="ledger-kpi-val">{stats.active} Vendors</span>
+          </div>
+        </div>
+
+        <div
+          className="ledger-kpi-card theme-green"
+          role="button"
+          tabIndex={0}
+        >
+          <div className="ledger-kpi-bubble">
+            <Icon name="check" size={20} />
+          </div>
+          <div className="ledger-kpi-content">
+            <span className="ledger-kpi-label">Delivered</span>
+            <span className="ledger-kpi-val">{stats.completedPos} Orders</span>
+          </div>
+        </div>
+
+        <div
+          className={`ledger-kpi-card theme-amber ${stats.dueAccounts > 0 ? 'is-active' : ''}`}
+          role="button"
+          tabIndex={0}
+        >
+          <div className="ledger-kpi-bubble">
+            <Icon name="pending" size={20} />
+          </div>
+          <div className="ledger-kpi-content">
+            <span className="ledger-kpi-label">Pending</span>
+            <span className="ledger-kpi-val">{money(stats.outstanding)}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Pill Search & Action Toolbar */}
+      <div className="ledger-toolbar">
+        <div className="ledger-toolbar-left">
+          <div className="ledger-search-box">
+            <input
+              type="text"
+              className="ledger-search-input"
+              placeholder="Search..."
+              value={search}
+              onChange={(e) => withReset(setSearch)(e.target.value)}
             />
-          </>
-        }
-      />
+            <span className="ledger-search-icon">
+              <Icon name="search" size={17} />
+            </span>
+          </div>
+
+          <select
+            className="ledger-pill-select"
+            value={statusFilter}
+            onChange={(e) => withReset(setStatusFilter)(e.target.value)}
+          >
+            <option value="active">Active Suppliers</option>
+            <option value="archived">Archived Suppliers</option>
+            <option value="all">All Suppliers</option>
+          </select>
+
+          <select
+            className="ledger-pill-select"
+            value={categoryFilter}
+            onChange={(e) => withReset(setCategoryFilter)(e.target.value)}
+          >
+            <option value="all">All Categories</option>
+            {categories.map((cat) => (
+              <option key={cat} value={cat}>
+                {cat}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="ledger-toolbar-right">
+          <button
+            type="button"
+            className="ledger-btn-secondary"
+            onClick={exportCsv}
+            disabled={loading || !!error || !suppliers.length}
+          >
+            <Icon name="download" size={15} />
+            <span>Export</span>
+          </button>
+          <button
+            type="button"
+            className="ledger-btn-primary"
+            onClick={() => openForm()}
+          >
+            <Icon name="plus" size={16} />
+            <span>+ New Supplier</span>
+          </button>
+        </div>
+      </div>
 
       <DataTable
         columns={columns}

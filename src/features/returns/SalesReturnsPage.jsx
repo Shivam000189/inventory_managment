@@ -2,12 +2,13 @@ import { useCallback, useMemo, useRef, useState } from 'react'
 import { returnApi } from '../../api/returnApi.js'
 import { useResource } from '../../hooks/useResource.js'
 import { PageHeader } from '../../components/ui/PageHeader.jsx'
-import { StatGrid, StatCard, Card } from '../../components/ui/Card.jsx'
+import { Card } from '../../components/ui/Card.jsx'
 import { DataTable } from '../../components/ui/DataTable.jsx'
 import { Button } from '../../components/ui/Button.jsx'
 import { Field, Input, Select } from '../../components/ui/FormControls.jsx'
 import { Badge } from '../../components/ui/Badge.jsx'
 import { Modal } from '../../components/ui/Modal.jsx'
+import { Icon } from '../../components/ui/icons.jsx'
 import './ReturnsPage.css'
 
 const reasons = [
@@ -282,41 +283,51 @@ export default function SalesReturnsPage({ business = {}, account = {} }) {
   const columns = [
     {
       key: 'returnId',
-      header: 'Return ID & Customer',
+      header: 'Id',
       render: (record) => (
-        <div>
-          <span className="font-semibold text-main">{record.returnId}</span>
-          <small className="block text-muted">
-            {record.orderNumber} · {record.customerName || 'Walk-in Customer'}
-          </small>
-        </div>
+        <span className="ledger-cell-id">
+          #{record.returnId || 'RET'}
+        </span>
       ),
       mobileLabel: 'Return ID',
+    },
+    {
+      key: 'customer',
+      header: 'Customer & Order',
+      render: (record) => (
+        <div>
+          <span className="ledger-cell-primary">{record.customerName || 'Walk-in Customer'}</span>
+          <span className="ledger-cell-secondary">
+            Order: {record.orderNumber || '—'}
+          </span>
+        </div>
+      ),
+      mobileLabel: 'Customer',
     },
     {
       key: 'product',
       header: 'Product & Units',
       render: (record) => (
         <div>
-          <span className="font-medium text-main">{record.productName}</span>
-          <small className="block text-muted">
+          <span className="ledger-cell-primary">{record.productName}</span>
+          <span className="ledger-cell-secondary">
             {record.productSku || 'No SKU'} · {record.quantity} units
-          </small>
+          </span>
         </div>
       ),
       mobileLabel: 'Product',
     },
     {
       key: 'value',
-      header: 'Value & Condition',
+      header: 'Return Value',
       render: (record) => (
         <div>
-          <span className="font-medium text-main">
+          <span className="ledger-cell-cost">
             {money(business.currency, record.returnValue || record.refundAmount)}
           </span>
-          <small className="block text-muted">
-            {record.reason} · {record.condition || 'Legacy return'}
-          </small>
+          <span className="ledger-cell-secondary">
+            {record.reason} · {record.condition || 'Sellable'}
+          </span>
         </div>
       ),
       mobileLabel: 'Value',
@@ -324,26 +335,32 @@ export default function SalesReturnsPage({ business = {}, account = {} }) {
     {
       key: 'refundStatus',
       header: 'Refund Status',
-      render: (record) => (
-        <Badge
-          tone={
-            record.refundStatus === 'Refunded'
-              ? 'success'
-              : record.refundStatus === 'Failed'
-                ? 'danger'
-                : 'warning'
-          }
-        >
-          {record.refundStatus || 'Not Required'}
-        </Badge>
-      ),
+      render: (record) => {
+        const status = record.refundStatus || 'Not Required'
+        const color =
+          status === 'Refunded'
+            ? '#10b981'
+            : status === 'Failed'
+              ? '#ef4444'
+              : status.toLowerCase().includes('pending') || status.toLowerCase().includes('partial')
+                ? '#f59e0b'
+                : '#0084ff'
+        return (
+          <span
+            className="ledger-status-pill"
+            style={{ backgroundColor: color }}
+          >
+            {status}
+          </span>
+        )
+      },
       mobileLabel: 'Refund',
     },
     {
       key: 'date',
       header: 'Date',
       render: (record) => (
-        <span className="text-soft text-sm">
+        <span className="ledger-cell-secondary">
           {new Date(record.createdAt).toLocaleDateString()}
         </span>
       ),
@@ -351,16 +368,19 @@ export default function SalesReturnsPage({ business = {}, account = {} }) {
     },
     {
       key: 'actions',
-      header: '',
+      header: 'Action',
       align: 'right',
       render: (record) => (
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={() => setSelectedReturn(record)}
-        >
-          View Details
-        </Button>
+        <div className="ledger-actions-group">
+          <button
+            type="button"
+            className="ledger-action-icon view"
+            title="View Details"
+            onClick={() => setSelectedReturn(record)}
+          >
+            <Icon name="search" size={14} />
+          </button>
+        </div>
       ),
       mobileLabel: 'Actions',
     },
@@ -392,34 +412,57 @@ export default function SalesReturnsPage({ business = {}, account = {} }) {
         </div>
       )}
 
-      <StatGrid columns={4}>
-        <StatCard
-          title="Total returns today"
-          value={`${returnsToday.length} returns`}
-          subtext={`${money(business.currency, returnsToday.reduce((sum, r) => sum + Number(r.returnValue || r.refundAmount || 0), 0))} return value`}
-          icon="arrow-path"
-        />
-        <StatCard
-          title="Pending inspection"
-          value={`${pendingInspection} items`}
-          subtext="Awaiting QA check before refund release"
-          deltaType={pendingInspection ? 'warning' : 'neutral'}
-          icon="clock"
-        />
-        <StatCard
-          title="Approved & restocked"
-          value={`${restockedItems} units`}
-          subtext="Sellable stock returned to ledger"
-          deltaType="positive"
-          icon="box"
-        />
-        <StatCard
-          title="Refund method split"
-          value={`${upiShare}% refunded`}
-          subtext={`${100 - upiShare}% settled as store credit`}
-          icon="chart"
-        />
-      </StatGrid>
+      {/* 4 Pastel KPI Summary Cards */}
+      <div className="ledger-kpi-grid">
+        <div className="ledger-kpi-card blue">
+          <div className="ledger-kpi-icon-bubble">
+            <Icon name="return" size={20} />
+          </div>
+          <div className="ledger-kpi-content">
+            <span className="ledger-kpi-label">Total Returns</span>
+            <span className="ledger-kpi-value">{returnsToday.length} today</span>
+            <span className="ledger-kpi-subtext">
+              {returns.length} all time
+            </span>
+          </div>
+        </div>
+
+        <div className="ledger-kpi-card slate">
+          <div className="ledger-kpi-icon-bubble">
+            <Icon name="truck" size={20} />
+          </div>
+          <div className="ledger-kpi-content">
+            <span className="ledger-kpi-label">Restocked Units</span>
+            <span className="ledger-kpi-value">{restockedItems} units</span>
+            <span className="ledger-kpi-subtext">Restocked to ledger</span>
+          </div>
+        </div>
+
+        <div className="ledger-kpi-card green">
+          <div className="ledger-kpi-icon-bubble">
+            <Icon name="dollar" size={20} />
+          </div>
+          <div className="ledger-kpi-content">
+            <span className="ledger-kpi-label">Refund Settlement</span>
+            <span className="ledger-kpi-value">
+              {money(business.currency, returnsToday.reduce((sum, r) => sum + Number(r.returnValue || r.refundAmount || 0), 0))}
+            </span>
+            <span className="ledger-kpi-subtext">{upiShare}% refunded · {100 - upiShare}% credit</span>
+          </div>
+        </div>
+
+        <div className="ledger-kpi-card amber">
+          <div className="ledger-kpi-icon-bubble">
+            <Icon name="pending" size={20} />
+          </div>
+          <div className="ledger-kpi-content">
+            <span className="ledger-kpi-label">Pending Inspection</span>
+            <span className="ledger-kpi-value">{pendingInspection} items</span>
+            <span className="ledger-kpi-subtext">Awaiting QA verification</span>
+          </div>
+        </div>
+      </div>
+
 
       {/* Progress chips */}
       <div className="ret-progress-bar">
@@ -765,14 +808,22 @@ export default function SalesReturnsPage({ business = {}, account = {} }) {
 
       {/* Audit History */}
       <Card title="Sales Returns Audit Log" subtitle="Search and filter through historical sales returns and refund settlements">
-        <div className="returns-filter-bar">
-          <Input
-            aria-label="Search returns"
-            value={filters.search}
-            onChange={(e) => updateFilter('search', e.target.value)}
-            placeholder="Search return ID, order, customer, product..."
-          />
-          <Select
+        <div className="ledger-toolbar" style={{ marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.625rem' }}>
+          <div className="ledger-search-box" style={{ flex: '1 1 240px' }}>
+            <span className="ledger-search-icon">
+              <Icon name="search" size={14} />
+            </span>
+            <input
+              type="text"
+              className="ledger-search-input"
+              aria-label="Search returns"
+              value={filters.search}
+              onChange={(e) => updateFilter('search', e.target.value)}
+              placeholder="Search return ID, order, customer, product..."
+            />
+          </div>
+          <select
+            className="ledger-pill-select"
             aria-label="Return status"
             value={filters.status}
             onChange={(e) => updateFilter('status', e.target.value)}
@@ -781,8 +832,9 @@ export default function SalesReturnsPage({ business = {}, account = {} }) {
             <option value="Pending">Pending</option>
             <option value="Completed">Completed</option>
             <option value="Cancelled">Cancelled</option>
-          </Select>
-          <Select
+          </select>
+          <select
+            className="ledger-pill-select"
             aria-label="Refund status"
             value={filters.refundStatus}
             onChange={(e) => updateFilter('refundStatus', e.target.value)}
@@ -793,8 +845,9 @@ export default function SalesReturnsPage({ business = {}, account = {} }) {
             <option value="Partially Refunded">Partially Refunded</option>
             <option value="Refunded">Refunded</option>
             <option value="Failed">Failed</option>
-          </Select>
-          <Select
+          </select>
+          <select
+            className="ledger-pill-select"
             aria-label="Filter reason"
             value={filters.reason}
             onChange={(e) => updateFilter('reason', e.target.value)}
@@ -803,8 +856,9 @@ export default function SalesReturnsPage({ business = {}, account = {} }) {
             {reasons.map((r) => (
               <option key={r} value={r}>{r}</option>
             ))}
-          </Select>
-          <Select
+          </select>
+          <select
+            className="ledger-pill-select"
             aria-label="Filter condition"
             value={filters.condition}
             onChange={(e) => updateFilter('condition', e.target.value)}
@@ -813,7 +867,7 @@ export default function SalesReturnsPage({ business = {}, account = {} }) {
             {conditions.map((c) => (
               <option key={c} value={c}>{c}</option>
             ))}
-          </Select>
+          </select>
         </div>
 
         <DataTable
