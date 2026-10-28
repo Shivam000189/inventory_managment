@@ -842,6 +842,113 @@
   line-height: 1.2;
 }
 
+.modern-user-chevron {
+  transition: transform 0.2s ease;
+}
+
+.modern-user-badge-trigger.active .modern-user-chevron {
+  transform: rotate(180deg);
+}
+
+.modern-user-badge-trigger.active {
+  border-color: #0ea5e9;
+  box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.15);
+}
+
+/* === Compact User Profile Dropdown (matching reference design) === */
+.header-popover.modern-user-dropdown,
+.user-menu-wrap .modern-user-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  left: auto;
+  width: 175px;
+  min-width: 160px;
+  max-width: 200px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+  padding: 6px;
+  z-index: 1050;
+  display: flex;
+  flex-direction: column;
+  animation: fadeInUserDropdown 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
+}
+
+@keyframes fadeInUserDropdown {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.modern-user-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s ease, color 0.15s ease;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.modern-user-dropdown-item:hover,
+.modern-user-dropdown-item:focus-visible {
+  background: var(--surface-muted);
+  color: var(--ink);
+  outline: none;
+}
+
+.modern-user-dropdown-item .user-dropdown-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.modern-user-dropdown-item .user-icon-blue {
+  color: #0284c7;
+}
+
+.modern-user-dropdown-item.logout-item {
+  color: #e11d48;
+}
+
+.modern-user-dropdown-item.logout-item:hover,
+.modern-user-dropdown-item.logout-item:focus-visible {
+  background: rgba(225, 29, 72, 0.08);
+  color: #e11d48;
+}
+
+.modern-user-dropdown-item.logout-item .user-icon-red {
+  color: #e11d48;
+}
+
+.modern-user-dropdown-divider {
+  height: 1px;
+  background: var(--line);
+  margin: 4px 6px;
+}
+
 /* === Dashboard Content Layout === */
 .modern-dashboard-content {
   padding: 0 !important;
