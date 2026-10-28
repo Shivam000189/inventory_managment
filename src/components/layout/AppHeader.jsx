@@ -210,8 +210,6 @@ export default function AppHeader({
           <div
             className="header-popover-wrap user-menu-wrap"
             ref={userMenuRef}
-            onMouseEnter={() => setShowUserMenu(true)}
-            onMouseLeave={() => setShowUserMenu(false)}
           >
             <button
               className={`modern-user-badge-trigger ${showUserMenu ? "active" : ""}`}

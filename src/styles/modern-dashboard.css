@@ -844,6 +844,7 @@
 
 .modern-user-chevron {
   transition: transform 0.2s ease;
+  transform-origin: center center;
 }
 
 .modern-user-badge-trigger.active .modern-user-chevron {
@@ -855,24 +856,30 @@
   box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.15);
 }
 
+.user-menu-wrap {
+  position: relative !important;
+  display: inline-flex !important;
+  align-items: center !important;
+}
+
 /* === Compact User Profile Dropdown (matching reference design) === */
 .header-popover.modern-user-dropdown,
 .user-menu-wrap .modern-user-dropdown {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  left: auto;
-  width: 175px;
-  min-width: 160px;
-  max-width: 200px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
-  padding: 6px;
-  z-index: 1050;
-  display: flex;
-  flex-direction: column;
+  position: absolute !important;
+  top: calc(100% + 6px) !important;
+  right: 0 !important;
+  left: auto !important;
+  width: 170px !important;
+  min-width: 160px !important;
+  max-width: 190px !important;
+  background: var(--surface) !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.04) !important;
+  padding: 6px !important;
+  z-index: 1050 !important;
+  display: flex !important;
+  flex-direction: column !important;
   animation: fadeInUserDropdown 0.15s cubic-bezier(0.16, 1, 0.3, 1);
   box-sizing: border-box;
 }

@@ -46,6 +46,7 @@
 
 /* Account controls share the dashboard palette in both themes. */
 .dashboard-header:has(.header-popover) { z-index: 100; }
+.user-menu-wrap { position: relative; }
 .user-menu-wrap .user-chip:is(:hover, .active) { color: var(--text); border-color: var(--line-strong); background: var(--surface-muted); box-shadow: var(--sr-shadow-sm); }
 .user-menu-wrap .user-avatar { color: var(--orange); background: var(--orange-soft); }
 .user-menu-wrap .user-chevron { color: var(--muted); }
