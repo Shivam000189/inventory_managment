@@ -61,15 +61,27 @@ export function StatCard({
   const displayTitle = title || label
   const displaySubtitle = subtitle || helpText || subtext
 
+  const normalizedTone =
+    tone === 'info'
+      ? 'blue'
+      : tone === 'success'
+      ? 'green'
+      : tone === 'warning' || tone === 'amber'
+      ? 'yellow'
+      : tone === 'danger' || tone === 'red'
+      ? 'rose'
+      : tone
+
   const classes = [
     'ui-stat-card',
     'modern-kpi-card',
+    `tone-${normalizedTone}`,
     className,
   ]
     .filter(Boolean)
     .join(' ')
 
-  const bubbleClass = `ui-stat-bubble modern-kpi-icon-bubble bubble-${tone}`
+  const bubbleClass = `ui-stat-bubble modern-kpi-icon-bubble bubble-${normalizedTone}`
 
   return (
     <Component className={classes} {...componentProps} {...props}>

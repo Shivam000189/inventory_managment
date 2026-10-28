@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useMemo, useState } from 'react'
+import { Fragment, useCallback, useMemo } from 'react'
 import { Icon } from './icons.jsx'
 import { Button } from './Button.jsx'
 import './DataTable.css'
@@ -25,8 +25,6 @@ export function DataTable({
   pagination = null,
   className = '',
 }) {
-  const [mobileExpanded, setMobileExpanded] = useState([])
-
   const getRowKey = useCallback(
     (row, index) => {
       if (keyField && row[keyField] !== undefined) return row[keyField]
@@ -54,12 +52,6 @@ export function DataTable({
   const handleSelectAll = (e) => {
     if (!onSelectAll) return
     onSelectAll(e.target.checked)
-  }
-
-  const toggleMobileCardExpand = (key) => {
-    setMobileExpanded((prev) =>
-      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
-    )
   }
 
   // Loading State
@@ -161,10 +153,6 @@ export function DataTable({
       </div>
     )
   }
-
-  const primaryCol = columns[0]
-  const actionCol = columns.find((c) => c.key === 'actions' || c.key === 'action')
-  const detailCols = columns.filter((c) => c !== actionCol)
 
   return (
     <div className={`ui-data-table-container ${className}`}>
@@ -285,117 +273,34 @@ export function DataTable({
         </table>
       </div>
 
-      {/* 2. Mobile Stacked Cards (<= 640px) */}
-      <div className="ui-data-table-cards">
-        {data.map((row, index) => {
-          const rowKey = getRowKey(row, index)
-          const isSelected = selectedKeys.includes(rowKey)
-          const isCardExpanded = mobileExpanded.includes(rowKey)
-
-          return (
-            <article
-              key={rowKey}
-              className={`ui-table-card ${isSelected ? 'selected' : ''} ${isCardExpanded ? 'expanded' : ''}`}
-            >
-              {/* Card Head */}
-              <div className="ui-table-card-head">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
-                  {selectable && (
-                    <input
-                      type="checkbox"
-                      className="invoice-checkbox ui-checkbox"
-                      checked={isSelected}
-                      onChange={() => onSelectKey && onSelectKey(rowKey, row)}
-                      aria-label={`Select item ${rowKey}`}
-                    />
-                  )}
-                  <span className="ui-table-card-title">
-                    {primaryCol?.render
-                      ? primaryCol.render(row, index)
-                      : row[primaryCol?.key]}
-                  </span>
-                </div>
-              </div>
-
-              {/* Card Body */}
-              <div className="ui-table-card-body">
-                {detailCols.slice(1).map((col) => {
-                  const isLowPriority = col.priority === 'low' || col.priority >= 2
-                  const content = col.render ? col.render(row, index) : row[col.key]
-
-                  return (
-                    <div
-                      key={col.key}
-                      className={`ui-table-card-row ${isLowPriority ? 'ui-table-card-low-priority' : ''}`}
-                    >
-                      <span className="ui-table-card-label">
-                        {col.mobileLabel || col.header}
-                      </span>
-                      <span className="ui-table-card-value">{content}</span>
-                    </div>
-                  )
-                })}
-              </div>
-
-              {/* Expand details toggle if low-priority columns exist */}
-              {detailCols.some((c) => c.priority === 'low' || c.priority >= 2) && (
-                <button
-                  type="button"
-                  className="ui-table-card-toggle-btn"
-                  onClick={() => toggleMobileCardExpand(rowKey)}
-                >
-                  {isCardExpanded ? '↑ Hide extra details' : '↓ Show extra details'}
-                </button>
-              )}
-
-              {/* Actions Footer */}
-              {actionCol && (
-                <div className="ui-table-card-actions">
-                  {actionCol.render ? actionCol.render(row, index) : row[actionCol.key]}
-                </div>
-              )}
-            </article>
-          )
-        })}
-      </div>
-
-      {/* 3. Pagination Footer */}
+      {/* 2. Pagination Footer (Dashboard Overview Pill Buttons) */}
       {pagination && (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '12px var(--space-4)',
-            background: 'var(--surface)',
-            border: '1px solid var(--line)',
-            borderRadius: 'var(--radius-md)',
-            boxShadow: 'var(--shadow-sm)',
-            flexWrap: 'wrap',
-            gap: '12px',
-          }}
-        >
-          <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-soft)' }}>
-            Page {pagination.page} of {pagination.pages || 1}
-            {pagination.total !== undefined && ` (${pagination.total} items)`}
+        <div className="ui-data-table-pagination invoice-pagination">
+          <span className="ui-page-info">
+            Showing Page <strong className="invoice-page-num">{pagination.page}</strong> of{' '}
+            <strong className="invoice-page-num">{pagination.pages || 1}</strong>
+            {pagination.total !== undefined && ` (${pagination.total.toLocaleString()} records)`}
           </span>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <Button
-              size="sm"
-              variant="secondary"
+          <div className="ui-page-buttons invoice-page-buttons">
+            <button
+              type="button"
+              className="invoice-page-btn"
               disabled={pagination.page <= 1}
               onClick={() => pagination.onPageChange(pagination.page - 1)}
             >
               Previous
-            </Button>
-            <Button
-              size="sm"
-              variant="secondary"
+            </button>
+            <span className="invoice-page-num" style={{ margin: '0 4px', fontSize: '12px' }}>
+              {pagination.page} / {pagination.pages || 1}
+            </span>
+            <button
+              type="button"
+              className="invoice-page-btn"
               disabled={pagination.page >= (pagination.pages || 1)}
               onClick={() => pagination.onPageChange(pagination.page + 1)}
             >
               Next
-            </Button>
+            </button>
           </div>
         </div>
       )}

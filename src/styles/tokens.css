@@ -38,16 +38,20 @@
   --auth-brand-light: #8b5a34;
   --auth-brand-deep: #3d2414;
 
-  --success: #227a4e;
-  --success-soft: #e2f5e9;
-  --warning: #92640a;
-  --warning-soft: #fbeed7;
-  --danger: #b3402f;
-  --danger-soft: #fbe6e1;
-  --info: #2f6f8a;
-  --info-soft: #e3f1f5;
-  --purple: #6b4c8a;
-  --purple-soft: #f3eef8;
+  --success: #10b981;
+  --success-soft: #dcfce7;
+  --warning: #f59e0b;
+  --warning-soft: #fef3c7;
+  --danger: #ef4444;
+  --danger-soft: #fee2e2;
+  --info: #0084ff;
+  --info-soft: #e0f2fe;
+  --purple: #8b5cf6;
+  --purple-soft: #f3e8ff;
+  --cyan: #06b6d4;
+  --cyan-soft: #cffafe;
+  --rose: #f43f5e;
+  --rose-soft: #ffe4e6;
 
   /* --- Typography --- */
   --font-sans: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -167,16 +171,20 @@
   --auth-brand-light: #dab27e;
   --auth-brand-deep: #8b5a34;
 
-  --success: #3fbd82;
-  --success-soft: rgba(63, 189, 130, 0.12);
-  --warning: #f0b94a;
-  --warning-soft: rgba(240, 185, 74, 0.12);
-  --danger: #ea8c78;
-  --danger-soft: rgba(234, 140, 120, 0.12);
-  --info: #7cc3db;
-  --info-soft: rgba(124, 195, 219, 0.12);
-  --purple: #c7aee0;
-  --purple-soft: rgba(199, 174, 224, 0.12);
+  --success: #34d399;
+  --success-soft: rgba(16, 185, 129, 0.16);
+  --warning: #fbbf24;
+  --warning-soft: rgba(245, 158, 11, 0.16);
+  --danger: #f87171;
+  --danger-soft: rgba(239, 68, 68, 0.16);
+  --info: #38bdf8;
+  --info-soft: rgba(0, 132, 255, 0.16);
+  --purple: #c084fc;
+  --purple-soft: rgba(139, 92, 246, 0.16);
+  --cyan: #22d3ee;
+  --cyan-soft: rgba(6, 182, 212, 0.16);
+  --rose: #fb7185;
+  --rose-soft: rgba(244, 63, 94, 0.16);
 
   /* --- Shadows & Focus: Dark Mode --- */
   --sr-focus: 0 0 0 3px rgba(202, 160, 108, 0.3);

@@ -308,14 +308,29 @@ function Products({ business, account }) {
         render: (product) => {
           const isOut = product.currentStock === 0;
           const isLow = product.currentStock <= product.minimumStock;
+          const pct = Math.max(
+            4,
+            Math.min(
+              100,
+              Math.round((product.currentStock / Math.max(product.minimumStock * 3, 10)) * 100)
+            )
+          );
           return (
             <div className="product-stock-cell">
-              <span className={`product-stock-val ${isOut ? "out" : isLow ? "low" : "in"}`}>
-                {product.currentStock}
-              </span>
-              <Badge tone={isOut ? "danger" : isLow ? "warning" : "success"} size="sm">
-                {isOut ? "Out of stock" : isLow ? "Low stock" : "In stock"}
-              </Badge>
+              <div className="product-stock-header">
+                <span className={`product-stock-val ${isOut ? "out" : isLow ? "low" : "in"}`}>
+                  {product.currentStock}
+                </span>
+                <Badge tone={isOut ? "danger" : isLow ? "warning" : "success"} size="sm">
+                  {isOut ? "Out of stock" : isLow ? "Low stock" : "In stock"}
+                </Badge>
+              </div>
+              <div className="stock-meter-wrap" aria-hidden="true">
+                <span
+                  className={`stock-meter-fill ${isOut ? "out" : isLow ? "low" : "in"}`}
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
             </div>
           );
         },
@@ -336,30 +351,30 @@ function Products({ business, account }) {
       },
       {
         key: "actions",
-        header: "",
+        header: "Actions",
         mobileLabel: "Actions",
         align: "right",
         render: (product) => (
           <div className="product-row-actions">
             {canEdit && (
-              <Button
-                variant="ghost"
-                size="sm"
+              <button
+                type="button"
+                className="action-edit"
                 onClick={() => openForm(product)}
                 aria-label={`Edit ${product.name}`}
               >
                 Edit
-              </Button>
+              </button>
             )}
             {canDelete && (
-              <Button
-                variant="danger"
-                size="sm"
+              <button
+                type="button"
+                className="action-delete"
                 onClick={() => deleteProduct(product.productId)}
                 aria-label={`Delete ${product.name}`}
               >
                 Delete
-              </Button>
+              </button>
             )}
           </div>
         ),
