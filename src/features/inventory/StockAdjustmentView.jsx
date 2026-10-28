@@ -12,6 +12,7 @@ import {
   FormStatus,
   Icon,
 } from '../../components/ui/index.js'
+import { getProductAvatarClass } from './inventoryUtils.js'
 import './InventoryOperations.css'
 
 export default function StockAdjustmentView({
@@ -228,7 +229,9 @@ export default function StockAdjustmentView({
         mobileLabel: 'Product',
         render: (product) => (
           <div className="inventory-prod-cell">
-            <span className="inventory-prod-avatar">{product.name?.[0]?.toUpperCase()}</span>
+            <span className={`inventory-prod-avatar ${getProductAvatarClass(product.name)}`}>
+              {product.name?.[0]?.toUpperCase()}
+            </span>
             <div className="inventory-prod-info">
               <span className="inventory-prod-name">{product.name}</span>
               <span className="inventory-prod-meta">
@@ -254,16 +257,21 @@ export default function StockAdjustmentView({
         key: 'stock',
         header: 'Recorded Stock',
         mobileLabel: 'Stock',
-        render: (product) => (
-          <div>
-            <span className="inventory-qty-val">
-              {Number(product.currentStock || 0).toLocaleString('en-IN')}
-            </span>{' '}
-            <small style={{ color: 'var(--text-soft)', fontSize: '11px' }}>
-              {product.unit || 'units'}
-            </small>
-          </div>
-        ),
+        render: (product) => {
+          const stock = Number(product.currentStock || 0)
+          const minimum = Number(product.minimumStock || 10)
+          const state = stock === 0 ? 'out' : stock <= minimum ? 'low' : 'in'
+          return (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span className={`inventory-qty-val ${state}`}>
+                {stock.toLocaleString('en-IN')}
+              </span>
+              <small style={{ color: 'var(--text-soft)', fontSize: '11.5px', fontWeight: 600 }}>
+                {product.unit || 'units'}
+              </small>
+            </div>
+          )
+        },
       },
       {
         key: 'lastAdjust',
@@ -274,15 +282,9 @@ export default function StockAdjustmentView({
           if (!latest) return <span style={{ color: 'var(--text-soft)', fontSize: '12px' }}>Never</span>
           const variance = Number(latest.newStock || 0) - Number(latest.previousStock || 0)
           return (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-              <span
-                style={{
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  color: variance < 0 ? 'var(--danger)' : 'var(--success)',
-                }}
-              >
-                {variance > 0 ? `+${variance}` : variance} {product.unit || 'units'}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span className={`inventory-qty-val ${variance < 0 ? 'out' : variance > 0 ? 'in' : 'adjust'}`}>
+                {variance > 0 ? `+${variance}` : variance}
               </span>
               <small style={{ color: 'var(--text-soft)', fontSize: '11px' }}>
                 {latest.reason || 'Reconciled'}
@@ -301,7 +303,7 @@ export default function StockAdjustmentView({
           const isOut = stock === 0
           const isLow = stock <= minimum && !isOut
           return (
-            <Badge tone={isOut ? 'danger' : isLow ? 'warning' : 'success'}>
+            <Badge tone={isOut ? 'danger' : isLow ? 'warning' : 'success'} dot>
               {isOut ? 'Out of Stock' : isLow ? 'Low Stock' : 'In Stock'}
             </Badge>
           )
@@ -360,34 +362,34 @@ export default function StockAdjustmentView({
             value={summary.entries.length}
             helpText="Total adjustments recorded"
             icon="clock"
-            tone="blue"
+            tone="purple"
           />
           <StatCard
             label="Net Variance"
             value={`${summary.netVariance >= 0 ? '+' : ''}${summary.netVariance} units`}
             helpText="Physical count variance"
             icon="variance"
-            tone={summary.netVariance < 0 ? 'warning' : 'success'}
+            tone={summary.netVariance < 0 ? 'rose' : summary.netVariance > 0 ? 'green' : 'neutral'}
           />
           <StatCard
             label="Flagged for Audit"
             value={summary.flaggedCount}
             helpText="SKUs with low or zero balance"
-            icon="alert"
-            tone={summary.flaggedCount > 0 ? 'warning' : 'neutral'}
+            icon="warning"
+            tone={summary.flaggedCount > 0 ? 'yellow' : 'neutral'}
           />
           <StatCard
             label="Valuation Impact"
             value={formatMoney(summary.valueImpact)}
             helpText="Net inventory cost difference"
             icon="trending-up"
-            tone={summary.valueImpact < 0 ? 'danger' : 'success'}
+            tone={summary.valueImpact < 0 ? 'rose' : summary.valueImpact > 0 ? 'green' : 'neutral'}
           />
         </StatGrid>
       )}
 
       {/* Adjustment Terminal Card */}
-      <section className="inventory-terminal-card" aria-labelledby="adjust-title">
+      <section className="inventory-terminal-card terminal-adjust" aria-labelledby="adjust-title">
         <div className="inventory-terminal-header">
           <div className="inventory-terminal-title-wrap">
             <div className="inventory-terminal-icon adjust">
@@ -396,7 +398,7 @@ export default function StockAdjustmentView({
             <div>
               <h3 id="adjust-title" className="inventory-terminal-title">
                 Record Stock Count Adjustment
-                <Badge tone="warning">Audit Reconciliation</Badge>
+                <Badge tone="warning" dot>Audit Reconciliation</Badge>
               </h3>
             </div>
           </div>
@@ -498,7 +500,7 @@ export default function StockAdjustmentView({
           </div>
 
           <div className="inventory-context-row">
-            <div className="inventory-context-tile">
+            <div className={`inventory-context-tile ${selectedVariance < 0 ? 'tile-rose' : selectedVariance > 0 ? 'tile-green' : 'tile-yellow'}`}>
               <span className="inventory-context-icon">⚖️</span>
               <div className="inventory-context-details">
                 <span className="inventory-context-label">Calculated Variance</span>
@@ -523,7 +525,7 @@ export default function StockAdjustmentView({
                 </span>
               </div>
             </div>
-            <div className="inventory-context-tile">
+            <div className={`inventory-context-tile ${selectedVariance < 0 ? 'tile-rose' : selectedVariance > 0 ? 'tile-green' : 'tile-purple'}`}>
               <span className="inventory-context-icon">💰</span>
               <div className="inventory-context-details">
                 <span className="inventory-context-label">Financial Value Variance</span>
@@ -534,7 +536,7 @@ export default function StockAdjustmentView({
                 </span>
               </div>
             </div>
-            <div className="inventory-context-tile">
+            <div className="inventory-context-tile tile-blue">
               <span className="inventory-context-icon">👤</span>
               <div className="inventory-context-details">
                 <span className="inventory-context-label">Auditing User</span>

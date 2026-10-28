@@ -19,6 +19,7 @@ import {
   FormStatus,
 } from "../../components/ui/index.js";
 import ProductImportPage from "../product-import/ProductImportPage.jsx";
+import { getProductAvatarClass } from "../inventory/inventoryUtils.js";
 import "./ProductsPage.css";
 
 function Products({ business, account }) {
@@ -266,7 +267,9 @@ function Products({ business, account }) {
 
           return (
             <div className="product-info-cell">
-              <span className="product-avatar">{product.name?.[0]?.toUpperCase() || "P"}</span>
+              <span className={`product-avatar ${getProductAvatarClass(product.name)}`}>
+                {product.name?.[0]?.toUpperCase() || "P"}
+              </span>
               <div className="product-details">
                 <div className="product-title-row">
                   <span className="product-name">{product.name}</span>
@@ -285,7 +288,7 @@ function Products({ business, account }) {
                     </>
                   )}
                   {expiryInfo && (
-                    <Badge tone={expiryInfo.tone} size="sm">
+                    <Badge tone={expiryInfo.tone} dot size="sm">
                       {expiryInfo.label}
                     </Badge>
                   )}
@@ -321,7 +324,7 @@ function Products({ business, account }) {
                 <span className={`product-stock-val ${isOut ? "out" : isLow ? "low" : "in"}`}>
                   {product.currentStock}
                 </span>
-                <Badge tone={isOut ? "danger" : isLow ? "warning" : "success"} size="sm">
+                <Badge tone={isOut ? "danger" : isLow ? "warning" : "success"} dot size="sm">
                   {isOut ? "Out of stock" : isLow ? "Low stock" : "In stock"}
                 </Badge>
               </div>
@@ -427,27 +430,28 @@ function Products({ business, account }) {
             value={products.length.toLocaleString()}
             helpText={`Registered ${itemsLabel.toLowerCase()} in catalog`}
             icon="box"
+            tone="blue"
           />
           <StatCard
             label="Low Stock Alert"
             value={`${stats.lowStockCount} SKUs`}
             helpText="At or below reorder level"
             icon="warning"
-            tone={stats.lowStockCount > 0 ? "warning" : "neutral"}
+            tone={stats.lowStockCount > 0 ? "rose" : "green"}
           />
           <StatCard
             label="Total Stock Quantity"
             value={`${stats.totalQty.toLocaleString()} Units`}
             helpText={`Across all registered ${itemsLabel.toLowerCase()}`}
             icon="clock"
-            tone="info"
+            tone="purple"
           />
           <StatCard
             label="Inventory Valuation"
             value={money(stats.valuation)}
             helpText={`At purchase cost (${business.currency || "INR"})`}
             icon="trending-up"
-            tone="purple"
+            tone="green"
           />
         </StatGrid>
       )}

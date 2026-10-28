@@ -149,6 +149,7 @@ export function Icon({ name, size = 18, className = '', ...props }) {
           <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
         </svg>
       )
+    case 'alert':
     case 'alert-circle':
     case 'warning':
       return (
@@ -166,11 +167,27 @@ export function Icon({ name, size = 18, className = '', ...props }) {
           <line x1="12" y1="8" x2="12.01" y2="8" />
         </svg>
       )
+    case 'arrow':
     case 'arrow-right':
       return (
         <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true" {...props}>
           <line x1="5" y1="12" x2="19" y2="12" />
           <polyline points="12 5 19 12 12 19" />
+        </svg>
+      )
+    case 'layers':
+      return (
+        <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true" {...props}>
+          <polygon points="12 2 2 7 12 12 22 7 12 2" />
+          <polyline points="2 17 12 22 22 17" />
+          <polyline points="2 12 12 17 22 12" />
+        </svg>
+      )
+    case 'variance':
+      return (
+        <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true" {...props}>
+          <path d="M18 4l-4 4h3v8h-3l4 4 4-4h-3V8h3z" />
+          <path d="M6 20l4-4H7V8h3L6 4 2 8h3v8H2z" />
         </svg>
       )
     case 'menu':

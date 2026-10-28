@@ -30,15 +30,52 @@
   transition: transform 0.15s ease;
 }
 
+.product-avatar.avatar-blue {
+  background: linear-gradient(135deg, #e0f2fe 0%, #eff6ff 100%);
+  border-color: rgba(2, 132, 199, 0.28);
+  color: #0284c7;
+}
+.product-avatar.avatar-green {
+  background: linear-gradient(135deg, #dcfce7 0%, #f0fdf4 100%);
+  border-color: rgba(16, 185, 129, 0.28);
+  color: #059669;
+}
+.product-avatar.avatar-purple {
+  background: linear-gradient(135deg, #f3e8ff 0%, #faf5ff 100%);
+  border-color: rgba(147, 51, 234, 0.28);
+  color: #9333ea;
+}
+.product-avatar.avatar-amber {
+  background: linear-gradient(135deg, #fef3c7 0%, #fffbeb 100%);
+  border-color: rgba(245, 158, 11, 0.28);
+  color: #d97706;
+}
+.product-avatar.avatar-rose {
+  background: linear-gradient(135deg, #ffe4e6 0%, #fff1f2 100%);
+  border-color: rgba(244, 63, 94, 0.28);
+  color: #e11d48;
+}
+.product-avatar.avatar-cyan {
+  background: linear-gradient(135deg, #cffafe 0%, #ecfeff 100%);
+  border-color: rgba(8, 145, 178, 0.28);
+  color: #0891b2;
+}
+
 [data-theme="dark"] .product-avatar {
   background: rgba(2, 132, 199, 0.16);
   border-color: rgba(2, 132, 199, 0.35);
   color: #38bdf8;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
 }
+[data-theme="dark"] .product-avatar.avatar-blue { background: rgba(2, 132, 199, 0.16); border-color: rgba(2, 132, 199, 0.35); color: #38bdf8; }
+[data-theme="dark"] .product-avatar.avatar-green { background: rgba(22, 163, 74, 0.16); border-color: rgba(22, 163, 74, 0.35); color: #4ade80; }
+[data-theme="dark"] .product-avatar.avatar-purple { background: rgba(147, 51, 234, 0.16); border-color: rgba(147, 51, 234, 0.35); color: #c084fc; }
+[data-theme="dark"] .product-avatar.avatar-amber { background: rgba(217, 119, 6, 0.16); border-color: rgba(217, 119, 6, 0.35); color: #fbbf24; }
+[data-theme="dark"] .product-avatar.avatar-rose { background: rgba(225, 29, 72, 0.16); border-color: rgba(225, 29, 72, 0.35); color: #fb7185; }
+[data-theme="dark"] .product-avatar.avatar-cyan { background: rgba(8, 145, 178, 0.16); border-color: rgba(8, 145, 178, 0.35); color: #22d3ee; }
 
 .product-info-cell:hover .product-avatar {
-  transform: scale(1.05);
+  transform: scale(1.08);
 }
 
 .product-details {

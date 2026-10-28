@@ -13,6 +13,7 @@ import {
   FormStatus,
   Icon,
 } from '../../components/ui/index.js'
+import { getProductAvatarClass } from './inventoryUtils.js'
 import './InventoryOperations.css'
 
 export default function StockInView(props) {
@@ -228,7 +229,9 @@ function StockMovementView({
         mobileLabel: 'Product',
         render: (product) => (
           <div className="inventory-prod-cell">
-            <span className="inventory-prod-avatar">{product.name?.[0]?.toUpperCase()}</span>
+            <span className={`inventory-prod-avatar ${getProductAvatarClass(product.name)}`}>
+              {product.name?.[0]?.toUpperCase()}
+            </span>
             <div className="inventory-prod-info">
               <span className="inventory-prod-name">{product.name}</span>
               <span className="inventory-prod-meta">
@@ -259,9 +262,9 @@ function StockMovementView({
           const minimum = Number(product.minimumStock || 10)
           const state = stock === 0 ? 'out' : stock <= minimum ? 'low' : 'in'
           return (
-            <div>
-              <span className={`inventory-qty-val ${state}`}>{stock.toLocaleString('en-IN')}</span>{' '}
-              <small style={{ color: 'var(--text-soft)', fontSize: '11px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span className={`inventory-qty-val ${state}`}>{stock.toLocaleString('en-IN')}</span>
+              <small style={{ color: 'var(--text-soft)', fontSize: '11.5px', fontWeight: 600 }}>
                 {product.unit || 'units'}
               </small>
             </div>
@@ -276,10 +279,10 @@ function StockMovementView({
           const latest = summary.latest.get(product.productId)
           if (!latest) return <span style={{ color: 'var(--text-soft)', fontSize: '12px' }}>Never</span>
           return (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-              <span style={{ fontSize: '12px', fontWeight: 600 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span className={`inventory-qty-val ${outward ? 'out' : 'in'}`}>
                 {outward ? '-' : '+'}
-                {latest.quantity} {product.unit || 'units'}
+                {latest.quantity}
               </span>
               <small style={{ color: 'var(--text-soft)', fontSize: '11px' }}>
                 {new Date(latest.createdAt).toLocaleDateString()}
@@ -298,7 +301,7 @@ function StockMovementView({
           const isOut = stock === 0
           const isLow = stock <= minimum && !isOut
           return (
-            <Badge tone={isOut ? 'danger' : isLow ? 'warning' : 'success'}>
+            <Badge tone={isOut ? 'danger' : isLow ? 'warning' : 'success'} dot>
               {isOut ? 'Out of Stock' : isLow ? 'Low Stock' : 'In Stock'}
             </Badge>
           )
@@ -311,12 +314,12 @@ function StockMovementView({
         align: 'right',
         render: (product) => (
           <Button
-            variant="outline"
+            variant={outward ? 'danger' : 'primary'}
             size="sm"
             onClick={() => startIntake(product)}
             aria-label={`${outward ? 'Dispatch' : 'Receive'} ${product.name}`}
           >
-            {outward ? 'Dispatch' : 'Receive'}
+            {outward ? '- Dispatch' : '+ Inward'}
           </Button>
         ),
       },
@@ -360,44 +363,44 @@ function StockMovementView({
             label={outward ? 'Dispatches Logged' : 'Inward Shipments'}
             value={summary.inwardCount}
             helpText={`${summary.inwardUnits.toLocaleString('en-IN')} units logged`}
-            icon="clock"
-            tone="blue"
+            icon={outward ? 'arrow' : 'box'}
+            tone={outward ? 'rose' : 'green'}
           />
           <StatCard
             label="Critical Low Stock"
             value={summary.lowCount}
             helpText="SKUs at or below reorder level"
             icon="warning"
-            tone={summary.lowCount > 0 ? 'warning' : 'neutral'}
+            tone={summary.lowCount > 0 ? 'yellow' : 'neutral'}
           />
           <StatCard
             label="Out of Stock"
             value={summary.outOfStockCount}
             helpText="Immediate replenishment required"
-            icon="alert"
-            tone={summary.outOfStockCount > 0 ? 'danger' : 'neutral'}
+            icon="warning"
+            tone={summary.outOfStockCount > 0 ? 'rose' : 'neutral'}
           />
           <StatCard
             label="Warehouse Cost Value"
             value={money(summary.value)}
             helpText="Live purchase cost balance"
             icon="trending-up"
-            tone="success"
+            tone={outward ? 'blue' : 'purple'}
           />
         </StatGrid>
       )}
 
       {/* Intake / Dispatch Terminal Card */}
-      <section className="inventory-terminal-card" aria-labelledby="terminal-title">
+      <section className={`inventory-terminal-card ${outward ? 'terminal-out' : 'terminal-in'}`} aria-labelledby="terminal-title">
         <div className="inventory-terminal-header">
           <div className="inventory-terminal-title-wrap">
             <div className={`inventory-terminal-icon ${outward ? 'out' : 'in'}`}>
-              <Icon name="box" />
+              <Icon name={outward ? 'arrow' : 'box'} />
             </div>
             <div>
               <h3 id="terminal-title" className="inventory-terminal-title">
                 {operationLabel}
-                <Badge tone={outward ? 'danger' : 'info'}>
+                <Badge tone={outward ? 'danger' : 'success'} dot>
                   {outward ? 'Outward Dispatch' : 'Fast Intake'}
                 </Badge>
               </h3>
@@ -497,7 +500,7 @@ function StockMovementView({
           </div>
 
           <div className="inventory-context-row">
-            <div className="inventory-context-tile">
+            <div className="inventory-context-tile tile-blue">
               <span className="inventory-context-icon">📍</span>
               <div className="inventory-context-details">
                 <span className="inventory-context-label">Rack / Bin Location</span>
@@ -508,7 +511,7 @@ function StockMovementView({
                 </span>
               </div>
             </div>
-            <div className="inventory-context-tile">
+            <div className="inventory-context-tile tile-purple">
               <span className="inventory-context-icon">💰</span>
               <div className="inventory-context-details">
                 <span className="inventory-context-label">Unit Purchase Cost ({currency})</span>
@@ -517,7 +520,7 @@ function StockMovementView({
                 </span>
               </div>
             </div>
-            <div className="inventory-context-tile">
+            <div className={`inventory-context-tile ${outward ? 'tile-rose' : 'tile-green'}`}>
               <span className="inventory-context-icon">{outward ? '👤' : '🚚'}</span>
               <div className="inventory-context-details">
                 <span className="inventory-context-label">

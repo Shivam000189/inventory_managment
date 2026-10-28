@@ -16,6 +16,7 @@ import StockInView, { StockOutView } from './StockInView.jsx'
 import StockAdjustmentView from './StockAdjustmentView.jsx'
 import StockHistoryView from './StockHistoryView.jsx'
 import CategoriesView from '../products/CategoriesPage.jsx'
+import { getProductAvatarClass } from './inventoryUtils.js'
 import './InventoryOperations.css'
 
 function InventoryOperations({ section, business, account, onNavigate, canNavigate }) {
@@ -310,7 +311,9 @@ function StockLedgerView({ products = [], loading, error, refetch, business = {}
         mobileLabel: 'Product',
         render: (product) => (
           <div className="inventory-prod-cell">
-            <span className="inventory-prod-avatar">{product.name?.[0]?.toUpperCase()}</span>
+            <span className={`inventory-prod-avatar ${getProductAvatarClass(product.name)}`}>
+              {product.name?.[0]?.toUpperCase()}
+            </span>
             <div className="inventory-prod-info">
               <span className="inventory-prod-name">{product.name}</span>
               <span className="inventory-prod-meta">
@@ -345,9 +348,9 @@ function StockLedgerView({ products = [], loading, error, refetch, business = {}
           const minimum = Number(product.minimumStock || 10)
           const state = stock === 0 ? 'out' : stock <= minimum ? 'low' : 'in'
           return (
-            <div>
-              <span className={`inventory-qty-val ${state}`}>{stock.toLocaleString('en-IN')}</span>{' '}
-              <small style={{ color: 'var(--text-soft)', fontSize: '11px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span className={`inventory-qty-val ${state}`}>{stock.toLocaleString('en-IN')}</span>
+              <small style={{ color: 'var(--text-soft)', fontSize: '11.5px', fontWeight: 600 }}>
                 {product.unit || 'units'}
               </small>
             </div>
@@ -371,7 +374,7 @@ function StockLedgerView({ products = [], loading, error, refetch, business = {}
           const isOut = stock === 0
           const isLow = stock <= minimum && !isOut
           return (
-            <Badge tone={isOut ? 'danger' : isLow ? 'warning' : 'success'}>
+            <Badge tone={isOut ? 'danger' : isLow ? 'warning' : 'success'} dot>
               {isOut ? 'Out of Stock' : isLow ? 'Low Stock' : 'In Stock'}
             </Badge>
           )
@@ -393,7 +396,7 @@ function StockLedgerView({ products = [], loading, error, refetch, business = {}
               Reconcile
             </Button>
             <Button
-              variant="ghost"
+              variant="primary"
               size="sm"
               onClick={() => onNavigate?.('Stock In')}
               aria-label={`Stock In ${product.name}`}
@@ -454,7 +457,7 @@ function StockLedgerView({ products = [], loading, error, refetch, business = {}
             value={money(counts.value)}
             helpText="Weighted purchase cost"
             icon="trending-up"
-            tone="success"
+            tone="green"
           />
           <StatCard
             label="Critical Low Stock"
@@ -465,7 +468,7 @@ function StockLedgerView({ products = [], loading, error, refetch, business = {}
                 : 'At or below threshold'
             }
             icon="warning"
-            tone={counts.low + counts.out > 0 ? 'danger' : 'neutral'}
+            tone={counts.low + counts.out > 0 ? 'rose' : 'green'}
             onClick={() => {
               setStatus('low')
               setPage(1)

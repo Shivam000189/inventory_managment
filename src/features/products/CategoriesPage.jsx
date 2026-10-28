@@ -201,7 +201,11 @@ export default function CategoriesView({
         key: 'totalStock',
         header: 'Total Units',
         mobileLabel: 'Units',
-        render: (stat) => <strong>{stat.totalStock.toLocaleString('en-IN')}</strong>,
+        render: (stat) => (
+          <span className={`inventory-qty-val ${stat.status === 'critical' ? 'out' : stat.status === 'attention' ? 'low' : 'in'}`}>
+            {stat.totalStock.toLocaleString('en-IN')}
+          </span>
+        ),
       },
       {
         key: 'stockValue',
@@ -227,7 +231,7 @@ export default function CategoriesView({
               : stat.status === 'attention'
               ? `${stat.lowStock + stat.outOfStock} Low/Out`
               : 'Well Stocked'
-          return <Badge tone={tone}>{label}</Badge>
+          return <Badge tone={tone} dot>{label}</Badge>
         },
       },
       {
@@ -298,14 +302,14 @@ export default function CategoriesView({
             value={topValue ? money(topValue.stockValue) : '—'}
             helpText={topValue?.category || 'No categories'}
             icon="trending-up"
-            tone="success"
+            tone="green"
           />
           <StatCard
             label="Needs Attention"
             value={flagged.length}
             helpText="Categories with stock alerts"
-            icon="alert"
-            tone={flagged.length > 0 ? 'warning' : 'neutral'}
+            icon="warning"
+            tone={flagged.length > 0 ? 'yellow' : 'green'}
             onClick={() => setTab('attention')}
           />
         </StatGrid>
@@ -395,13 +399,18 @@ export default function CategoriesView({
       ) : (
         <div className="categories-grid">
           {filteredStats.map((stat) => (
-            <div key={stat.category} className="category-card">
+            <div key={stat.category} className={`category-card status-${stat.status}`}>
               <div className="category-card-header">
-                <div>
-                  <h4 className="category-card-title">{stat.category}</h4>
-                  <span style={{ fontSize: '12px', color: 'var(--text-soft)' }}>
-                    {stat.count} products
-                  </span>
+                <div className="category-card-title-group">
+                  <div className={`category-icon-bubble ${stat.status}`}>
+                    <span style={{ fontSize: '18px' }}>📁</span>
+                  </div>
+                  <div>
+                    <h4 className="category-card-title">{stat.category}</h4>
+                    <span style={{ fontSize: '12px', color: 'var(--text-soft)' }}>
+                      {stat.count} products catalogued
+                    </span>
+                  </div>
                 </div>
                 <Badge
                   tone={
@@ -411,23 +420,26 @@ export default function CategoriesView({
                       ? 'warning'
                       : 'success'
                   }
+                  dot
                 >
                   {stat.status === 'critical'
                     ? 'Out of Stock'
                     : stat.status === 'attention'
-                    ? 'Low'
-                    : 'Good'}
+                    ? 'Low Stock'
+                    : 'Healthy'}
                 </Badge>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                <span style={{ color: 'var(--text-soft)' }}>Total Units</span>
-                <strong>{stat.totalStock.toLocaleString('en-IN')}</strong>
+              <div className="category-metric-row">
+                <span style={{ color: 'var(--text-soft)', fontWeight: 600 }}>Total Units</span>
+                <span className={`inventory-qty-val ${stat.status === 'critical' ? 'out' : stat.status === 'attention' ? 'low' : 'in'}`}>
+                  {stat.totalStock.toLocaleString('en-IN')}
+                </span>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                <span style={{ color: 'var(--text-soft)' }}>Valuation</span>
-                <strong>{money(stat.stockValue)}</strong>
+              <div className="category-metric-row">
+                <span style={{ color: 'var(--text-soft)', fontWeight: 600 }}>Valuation</span>
+                <strong style={{ color: 'var(--ink)' }}>{money(stat.stockValue)}</strong>
               </div>
 
               <div className="category-card-stats">

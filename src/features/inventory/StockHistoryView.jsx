@@ -9,6 +9,7 @@ import {
   DataTable,
   Select,
 } from '../../components/ui/index.js'
+import { getProductAvatarClass } from './inventoryUtils.js'
 import './InventoryOperations.css'
 
 const INCREASE_TYPES = new Set(['stock_in', 'sales_return'])
@@ -16,11 +17,11 @@ const DECREASE_TYPES = new Set(['stock_out', 'purchase_return'])
 
 const EVENT_META = {
   stock_in: { label: 'Stock In', tone: 'success', group: 'in' },
-  sales_return: { label: 'Sales Return', tone: 'success', group: 'in' },
+  sales_return: { label: 'Sales Return', tone: 'info', group: 'in' },
   stock_out: { label: 'Stock Out', tone: 'danger', group: 'out' },
-  purchase_return: { label: 'Purchase Return', tone: 'danger', group: 'out' },
+  purchase_return: { label: 'Purchase Return', tone: 'purple', group: 'out' },
   adjustment: { label: 'Adjustment', tone: 'warning', group: 'flex' },
-  non_sellable_return: { label: 'Damaged Return', tone: 'warning', group: 'flex' },
+  non_sellable_return: { label: 'Damaged Return', tone: 'danger', group: 'flex' },
 }
 
 const metaFor = (type) =>
@@ -219,7 +220,7 @@ export default function StockHistoryView({
         mobileLabel: 'Type',
         render: (item) => {
           const meta = metaFor(item.type)
-          return <Badge tone={meta.tone}>{meta.label}</Badge>
+          return <Badge tone={meta.tone} dot>{meta.label}</Badge>
         },
       },
       {
@@ -228,13 +229,14 @@ export default function StockHistoryView({
         mobileLabel: 'Product',
         render: (item) => {
           const product = productById.get(item.productId)
+          const name = product?.name || item.productId
           return (
             <div className="inventory-prod-cell">
-              <span className="inventory-prod-avatar">
-                {product?.name?.[0]?.toUpperCase() || 'P'}
+              <span className={`inventory-prod-avatar ${getProductAvatarClass(name)}`}>
+                {name?.[0]?.toUpperCase() || 'P'}
               </span>
               <div className="inventory-prod-info">
-                <span className="inventory-prod-name">{product?.name || item.productId}</span>
+                <span className="inventory-prod-name">{name}</span>
                 <span className="inventory-prod-meta">{item.variantSku || product?.sku}</span>
               </div>
             </div>
@@ -247,22 +249,13 @@ export default function StockHistoryView({
         mobileLabel: 'Quantity',
         render: (item) => {
           const meta = metaFor(item.type)
-          const sign = meta.group === 'out' ? '-' : meta.group === 'in' ? '+' : '±'
+          const isOut = meta.group === 'out'
+          const isIn = meta.group === 'in'
           return (
-            <strong
-              style={{
-                fontSize: '13px',
-                color:
-                  meta.group === 'in'
-                    ? 'var(--success)'
-                    : meta.group === 'out'
-                    ? 'var(--danger)'
-                    : 'var(--warning)',
-              }}
-            >
-              {sign}
+            <span className={`inventory-qty-val ${isOut ? 'out' : isIn ? 'in' : 'adjust'}`}>
+              {isOut ? '-' : isIn ? '+' : '±'}
               {item.quantity}
-            </strong>
+            </span>
           )
         },
       },
@@ -271,10 +264,10 @@ export default function StockHistoryView({
         header: 'Stock Delta',
         mobileLabel: 'Delta',
         render: (item) => (
-          <div style={{ fontSize: '12px' }}>
-            <span>{item.previousStock ?? '—'}</span>
-            <span style={{ margin: '0 4px', color: 'var(--text-soft)' }}>→</span>
-            <strong>{item.newStock ?? '—'}</strong>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px' }}>
+            <span style={{ color: 'var(--text-soft)', fontFeatureSettings: 'tnum' }}>{item.previousStock ?? '—'}</span>
+            <span style={{ color: 'var(--text-soft)' }}>→</span>
+            <strong style={{ fontFeatureSettings: 'tnum', color: 'var(--ink)' }}>{item.newStock ?? '—'}</strong>
           </div>
         ),
       },
@@ -287,7 +280,7 @@ export default function StockHistoryView({
           const { label, detail, source } = describeEntry(item, meta)
           return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-              <span style={{ fontSize: '12px' }}>{label}</span>
+              <span style={{ fontSize: '12px', fontWeight: 600 }}>{label}</span>
               <small style={{ color: 'var(--text-soft)', fontSize: '11px' }}>
                 {detail ? `${detail} · ` : ''}By {source}
               </small>
@@ -339,21 +332,21 @@ export default function StockHistoryView({
             value={`+${stats.received.toLocaleString('en-IN')}`}
             helpText="Receipts & sales returns"
             icon="trending-up"
-            tone="success"
+            tone="green"
           />
           <StatCard
             label="Total Units Out"
             value={`-${stats.dispatched.toLocaleString('en-IN')}`}
             helpText="POS sales & dispatches"
             icon="arrow"
-            tone="danger"
+            tone="rose"
           />
           <StatCard
             label="Net Inventory Delta"
             value={`${stats.net >= 0 ? '+' : ''}${stats.net.toLocaleString('en-IN')}`}
             helpText="Overall quantity change"
             icon="box"
-            tone={stats.net >= 0 ? 'success' : 'warning'}
+            tone={stats.net >= 0 ? 'green' : 'yellow'}
           />
         </StatGrid>
       )}
