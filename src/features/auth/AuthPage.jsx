@@ -14,8 +14,13 @@ const iconProps = { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", 
 const IconEye = () => (<svg {...iconProps}><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z" /><circle cx="12" cy="12" r="3" /></svg>);
 const IconEyeOff = () => (<svg {...iconProps}><path d="M9.9 4.24A10.4 10.4 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.61 3.81M6.53 6.53A18.6 18.6 0 0 0 1 12s4 8 11 8a10.9 10.9 0 0 0 5.47-1.47M14.12 14.12a3 3 0 1 1-4.24-4.24" /><path d="m1 1 22 22" /></svg>);
 
-export default function AuthPage({ initialReset = "", onAuthenticated }) {
-  const [mode, setMode] = useState(initialReset ? "reset" : "signin");
+export default function AuthPage({
+  initialReset = "",
+  initialMode = "signin",
+  onAuthenticated,
+  onBackToHome,
+}) {
+  const [mode, setMode] = useState(initialReset ? "reset" : initialMode);
   const [role, setRole] = useState("owner");
   const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState(null);
@@ -186,6 +191,28 @@ export default function AuthPage({ initialReset = "", onAuthenticated }) {
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: 14 }}
                 >
+                  {onBackToHome && (
+                    <button
+                      type="button"
+                      onClick={onBackToHome}
+                      className="auth-back-home-link"
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--text-soft, #6b5d4f)',
+                        cursor: 'pointer',
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        marginBottom: '1rem',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: 0,
+                      }}
+                    >
+                      ← Back to Home
+                    </button>
+                  )}
                   <div className="auth-card-header">
                     <h1 className="auth-title">{copy.title}</h1>
                     {copy.subtitle && <p className="auth-subtitle">{copy.subtitle}</p>}

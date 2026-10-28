@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",
+    "@tailwindcss/vite": "^4.3.3",
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
@@ -31,8 +32,10 @@
     "exceljs": "^4.4.0",
     "express": "^5.2.1",
     "express-rate-limit": "^8.7.0",
+    "framer-motion": "^14.7.1",
     "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.3",
+    "lucide-react": "^1.63.0",
     "motion": "^13.2.0",
     "multer": "^2.2.0",
     "pdfjs-dist": "^5.4.624",
@@ -40,7 +43,8 @@
     "qrcode": "^1.5.4",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "react-router-dom": "^7.18.4"
+    "react-router-dom": "^7.18.4",
+    "tailwindcss": "^4.3.3"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^6.1.0",

@@ -282,7 +282,7 @@
   border: 0;
   border-radius: var(--radius-md);
   color: #ffffff;
-  background: var(--primary);
+  background: #2F2A25;
   font-size: 12.5px;
   font-weight: 700;
   letter-spacing: 1.3px;
@@ -294,7 +294,7 @@
 }
 
 .auth-submit-btn:hover:not(:disabled) {
-  background: var(--primary-hover);
+  background: #000000;
   transform: translateY(-1px);
 }
 

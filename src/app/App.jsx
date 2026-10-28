@@ -28,6 +28,7 @@ import { ErrorBoundary, PageSkeleton } from "../components/ui/index.js";
 // Auth & Setup (Lazy)
 const AuthPage = lazy(() => import("../features/auth/AuthPage.jsx"));
 const BusinessSetup = lazy(() => import("../features/onboarding/BusinessSetup.jsx"));
+const LandingPage = lazy(() => import("../features/landing/LandingPage.jsx"));
 
 
 // APIs & Hooks
@@ -283,6 +284,7 @@ function DashboardView() {
 function MainApp() {
   const { session, loading, updateSession } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [initialReset] = useState(() => {
     try {
@@ -294,6 +296,18 @@ function MainApp() {
 
   if (loading) {
     return <div className="app-loading">Loading your workspace…</div>;
+  }
+
+  // Always show full landing page if explicitly visiting /landing
+  if (location.pathname === "/landing") {
+    return (
+      <Suspense fallback={<div className="app-loading">Loading…</div>}>
+        <LandingPage
+          isLoggedIn={Boolean(session)}
+          onNavigateAuth={(mode) => navigate(mode === "signup" ? "/register" : "/login")}
+        />
+      </Suspense>
+    );
   }
 
   const needsOwnerOnboarding =
@@ -327,12 +341,84 @@ function MainApp() {
 
   return (
     <Suspense fallback={<div className="app-loading">Loading…</div>}>
-      <AuthPage
-        initialReset={initialReset}
-        onAuthenticated={(userSession) => {
-          updateSession(userSession);
-        }}
-      />
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <LandingPage
+              isLoggedIn={false}
+              onNavigateAuth={(mode) => navigate(mode === "signup" ? "/register" : "/login")}
+            />
+          }
+        />
+        <Route
+          path="/landing"
+          element={
+            <LandingPage
+              isLoggedIn={false}
+              onNavigateAuth={(mode) => navigate(mode === "signup" ? "/register" : "/login")}
+            />
+          }
+        />
+        <Route
+          path="/login"
+          element={
+            <AuthPage
+              initialReset={initialReset}
+              initialMode="signin"
+              onAuthenticated={(userSession) => updateSession(userSession)}
+              onBackToHome={() => navigate("/")}
+            />
+          }
+        />
+        <Route
+          path="/register"
+          element={
+            <AuthPage
+              initialReset={initialReset}
+              initialMode="signup"
+              onAuthenticated={(userSession) => updateSession(userSession)}
+              onBackToHome={() => navigate("/")}
+            />
+          }
+        />
+        <Route
+          path="/signup"
+          element={
+            <AuthPage
+              initialReset={initialReset}
+              initialMode="signup"
+              onAuthenticated={(userSession) => updateSession(userSession)}
+              onBackToHome={() => navigate("/")}
+            />
+          }
+        />
+        <Route
+          path="/forgot-password"
+          element={
+            <AuthPage
+              initialReset={initialReset}
+              initialMode="forgot"
+              onAuthenticated={(userSession) => updateSession(userSession)}
+              onBackToHome={() => navigate("/")}
+            />
+          }
+        />
+        <Route
+          path="*"
+          element={
+            initialReset ? (
+              <AuthPage
+                initialReset={initialReset}
+                onAuthenticated={(userSession) => updateSession(userSession)}
+                onBackToHome={() => navigate("/")}
+              />
+            ) : (
+              <Navigate to="/" replace />
+            )
+          }
+        />
+      </Routes>
     </Suspense>
   );
 }
