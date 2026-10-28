@@ -3,12 +3,8 @@ import { productApi } from "../../api/productApi.js";
 import { useResource } from "../../hooks/useResource.js";
 import { resolveBusinessCapabilities } from "../../../shared/industryConfig.js";
 import {
-  PageHeader,
   Button,
   Badge,
-  StatGrid,
-  StatCard,
-  Toolbar,
   DataTable,
   Modal,
   ConfirmDialog,
@@ -17,9 +13,9 @@ import {
   Select,
   Textarea,
   FormStatus,
+  Icon,
 } from "../../components/ui/index.js";
 import ProductImportPage from "../product-import/ProductImportPage.jsx";
-import { getProductAvatarClass } from "../inventory/inventoryUtils.js";
 import "./ProductsPage.css";
 
 function Products({ business, account }) {
@@ -34,6 +30,7 @@ function Products({ business, account }) {
 
   const [category, setCategory] = useState("all");
   const [stockFilter, setStockFilter] = useState("all");
+  const [sortOrder, setSortOrder] = useState("default");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [selected, setSelected] = useState([]);
@@ -67,7 +64,7 @@ function Products({ business, account }) {
   const canDelete = account.role === "owner" || account.permissions?.includes("delete_product");
 
   const visibleProducts = useMemo(() => {
-    return products.filter((product) => {
+    let list = products.filter((product) => {
       const matchesSearch =
         !search.trim() ||
         [
@@ -86,15 +83,29 @@ function Products({ business, account }) {
           .includes(search.toLowerCase());
 
       const matchesCategory = category === "all" || product.category === category;
+      const stock = Number(product.currentStock || 0);
+      const min = Number(product.minimumStock || 0);
+
       const matchesStock =
         stockFilter === "all" ||
-        (stockFilter === "in"
-          ? product.currentStock > 0
-          : product.currentStock <= product.minimumStock);
+        (stockFilter === "in" && stock > min) ||
+        (stockFilter === "low" && stock <= min);
 
       return matchesSearch && matchesCategory && matchesStock;
     });
-  }, [products, search, category, stockFilter]);
+
+    if (sortOrder === "price-high") {
+      list = [...list].sort((a, b) => Number(b.sellingPrice || 0) - Number(a.sellingPrice || 0));
+    } else if (sortOrder === "price-low") {
+      list = [...list].sort((a, b) => Number(a.sellingPrice || 0) - Number(b.sellingPrice || 0));
+    } else if (sortOrder === "stock-high") {
+      list = [...list].sort((a, b) => Number(b.currentStock || 0) - Number(a.currentStock || 0));
+    } else if (sortOrder === "stock-low") {
+      list = [...list].sort((a, b) => Number(a.currentStock || 0) - Number(b.currentStock || 0));
+    }
+
+    return list;
+  }, [products, search, category, stockFilter, sortOrder]);
 
   const money = useCallback(
     (value) => {
@@ -105,18 +116,29 @@ function Products({ business, account }) {
   );
 
   const stats = useMemo(() => {
-    const lowStockCount = products.filter(
-      (p) => Number(p.currentStock || 0) <= Number(p.minimumStock || 0)
-    ).length;
-    const totalQty = products.reduce(
-      (sum, p) => sum + Number(p.currentStock || 0),
-      0
-    );
-    const valuation = products.reduce(
-      (sum, p) => sum + Number(p.currentStock || 0) * Number(p.purchasePrice || 0),
-      0
-    );
-    return { lowStockCount, totalQty, valuation };
+    let inStockCount = 0;
+    let lowStockCount = 0;
+    let outStockCount = 0;
+    let totalQty = 0;
+    let valuation = 0;
+
+    for (const p of products) {
+      const stock = Number(p.currentStock || 0);
+      const min = Number(p.minimumStock || 0);
+      totalQty += stock;
+      valuation += stock * Number(p.purchasePrice || 0);
+
+      if (stock === 0) {
+        outStockCount += 1;
+        lowStockCount += 1;
+      } else if (stock <= min) {
+        lowStockCount += 1;
+      } else {
+        inStockCount += 1;
+      }
+    }
+
+    return { inStockCount, lowStockCount, outStockCount, totalQty, valuation };
   }, [products]);
 
   const exportSheet = (selectionOnly = false) => {
@@ -248,8 +270,23 @@ function Products({ business, account }) {
   const columns = useMemo(() => {
     return [
       {
+        key: "sku",
+        header: "Id",
+        mobileLabel: "Id",
+        width: "80px",
+        render: (product, index) => (
+          <span className="ledger-cell-id">
+            {product.sku ||
+              (product.productId
+                ? String(product.productId).replace(/\D/g, "").slice(-3) ||
+                  String(product.productId).slice(-5)
+                : 101 + index)}
+          </span>
+        ),
+      },
+      {
         key: "product",
-        header: itemLabel,
+        header: isPharmacy ? "Medicine" : "Bill From",
         mobileLabel: itemLabel,
         render: (product) => {
           let expiryInfo = null;
@@ -266,33 +303,31 @@ function Products({ business, account }) {
           }
 
           return (
-            <div className="product-info-cell">
-              <span className={`product-avatar ${getProductAvatarClass(product.name)}`}>
-                {product.name?.[0]?.toUpperCase() || "P"}
-              </span>
-              <div className="product-details">
-                <div className="product-title-row">
-                  <span className="product-name">{product.name}</span>
-                  {product.genericName && (
-                    <span className="product-generic">{product.genericName}</span>
-                  )}
-                </div>
-                <div className="product-meta">
-                  <span>{product.sku}</span>
-                  <span>·</span>
-                  <span>{product.unit || "unit"}</span>
-                  {product.batchNumber && (
-                    <>
-                      <span>·</span>
-                      <span>Batch {product.batchNumber}</span>
-                    </>
-                  )}
-                  {expiryInfo && (
-                    <Badge tone={expiryInfo.tone} dot size="sm">
-                      {expiryInfo.label}
-                    </Badge>
-                  )}
-                </div>
+            <div>
+              <span className="ledger-cell-primary">{product.name}</span>
+              <div
+                className="ledger-cell-secondary"
+                style={{
+                  fontSize: "11px",
+                  marginTop: "2px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  flexWrap: "wrap",
+                }}
+              >
+                {[
+                  product.genericName,
+                  product.brand,
+                  product.batchNumber ? `Batch ${product.batchNumber}` : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+                {expiryInfo && (
+                  <Badge tone={expiryInfo.tone} dot size="sm">
+                    {expiryInfo.label}
+                  </Badge>
+                )}
               </div>
             </div>
           );
@@ -300,213 +335,291 @@ function Products({ business, account }) {
       },
       {
         key: "category",
-        header: "Category",
+        header: "Bill To",
         mobileLabel: "Category",
-        render: (product) => <Badge tone="neutral">{product.category}</Badge>,
-      },
-      {
-        key: "stock",
-        header: "Stock",
-        mobileLabel: "Stock",
-        render: (product) => {
-          const isOut = product.currentStock === 0;
-          const isLow = product.currentStock <= product.minimumStock;
-          const pct = Math.max(
-            4,
-            Math.min(
-              100,
-              Math.round((product.currentStock / Math.max(product.minimumStock * 3, 10)) * 100)
-            )
-          );
-          return (
-            <div className="product-stock-cell">
-              <div className="product-stock-header">
-                <span className={`product-stock-val ${isOut ? "out" : isLow ? "low" : "in"}`}>
-                  {product.currentStock}
-                </span>
-                <Badge tone={isOut ? "danger" : isLow ? "warning" : "success"} dot size="sm">
-                  {isOut ? "Out of stock" : isLow ? "Low stock" : "In stock"}
-                </Badge>
-              </div>
-              <div className="stock-meter-wrap" aria-hidden="true">
-                <span
-                  className={`stock-meter-fill ${isOut ? "out" : isLow ? "low" : "in"}`}
-                  style={{ width: `${pct}%` }}
-                />
-              </div>
-            </div>
-          );
-        },
+        render: (product) => (
+          <span className="ledger-cell-secondary">
+            {product.category || "General"}
+          </span>
+        ),
       },
       {
         key: "price",
-        header: "Price",
+        header: "Total Cost",
         mobileLabel: "Price",
-        align: "right",
         render: (product) => (
-          <div className="product-price-cell">
-            <strong>{money(product.sellingPrice)}</strong>
-            {product.mrp && Number(product.mrp) > 0 && (
-              <small className="product-mrp">MRP {money(product.mrp)}</small>
-            )}
+          <div>
+            <span className="ledger-cell-cost">{money(product.sellingPrice)}</span>
+            <div className="ledger-cell-secondary" style={{ fontSize: "11px", marginTop: "2px" }}>
+              {product.currentStock} {product.unit || "units"}
+              {product.mrp && Number(product.mrp) > 0 ? ` · MRP ${money(product.mrp)}` : ""}
+            </div>
           </div>
         ),
       },
       {
+        key: "status",
+        header: "Status",
+        mobileLabel: "Status",
+        render: (product) => {
+          const stock = Number(product.currentStock || 0);
+          const min = Number(product.minimumStock || 0);
+          let statusType = "delivered";
+          let statusLabel = "Delivered";
+
+          if (stock === 0) {
+            statusType = "danger";
+            statusLabel = "Out of Stock";
+          } else if (stock <= min) {
+            statusType = "pending";
+            statusLabel = "Pending";
+          } else if (stock > min * 2) {
+            statusType = "delivered";
+            statusLabel = "Delivered";
+          } else {
+            statusType = "shipped";
+            statusLabel = "Shipped";
+          }
+
+          return (
+            <span className={`ledger-status-pill status-${statusType}`}>
+              {statusLabel}
+            </span>
+          );
+        },
+      },
+      {
         key: "actions",
-        header: "Actions",
-        mobileLabel: "Actions",
+        header: "Action",
+        mobileLabel: "Action",
         align: "right",
         render: (product) => (
-          <div className="product-row-actions">
+          <div className="ledger-actions-group">
             {canEdit && (
               <button
                 type="button"
-                className="action-edit"
+                className="ledger-action-icon action-edit"
                 onClick={() => openForm(product)}
                 aria-label={`Edit ${product.name}`}
+                title={`Edit ${product.name}`}
               >
-                Edit
+                <Icon name="edit" size={17} />
               </button>
             )}
+            <button
+              type="button"
+              className="ledger-action-icon action-view"
+              onClick={() => openForm(product)}
+              aria-label={`View ${product.name}`}
+              title={`View ${product.name}`}
+            >
+              <Icon name="eye" size={17} />
+            </button>
             {canDelete && (
               <button
                 type="button"
-                className="action-delete"
+                className="ledger-action-icon action-delete"
                 onClick={() => deleteProduct(product.productId)}
                 aria-label={`Delete ${product.name}`}
+                title={`Delete ${product.name}`}
               >
-                Delete
+                <Icon name="trash" size={17} />
               </button>
             )}
           </div>
         ),
       },
     ];
-  }, [itemLabel, nowTimestamp, money, canEdit, canDelete]);
+  }, [itemLabel, isPharmacy, nowTimestamp, money, canEdit, canDelete]);
 
   return (
     <section className="products-page">
-      <PageHeader
-        kicker={`Inventory / ${itemsLabel}`}
-        title={itemsLabel}
-        description={`${products.length} registered ${itemsLabel.toLowerCase()} in ${business.name}`}
-        actions={
-          <>
-            <Button
-              variant="outline"
-              onClick={() => exportSheet()}
-              disabled={loading || !!error || !visibleProducts.length}
-              icon="download"
-            >
-              Export sheet
-            </Button>
-            {canCreate && (
-              <>
-                <Button
-                  variant="outline"
-                  onClick={() => setIsImportOpen(true)}
-                  icon="upload"
-                >
-                  Bulk import
-                </Button>
-                <Button
-                  variant="primary"
-                  onClick={() => openForm()}
-                  icon="plus"
-                >
-                  Add {itemLabel.toLowerCase()}
-                </Button>
-              </>
-            )}
-          </>
-        }
-      />
-
+      {/* 4 Pastel Top KPI Cards in a Horizontal Row (Matching user screenshot) */}
       {!loading && !error && (
-        <StatGrid>
-          <StatCard
-            label={`Total ${itemsLabel}`}
-            value={products.length.toLocaleString()}
-            helpText={`Registered ${itemsLabel.toLowerCase()} in catalog`}
-            icon="box"
-            tone="blue"
-          />
-          <StatCard
-            label="Low Stock Alert"
-            value={`${stats.lowStockCount} SKUs`}
-            helpText="At or below reorder level"
-            icon="warning"
-            tone={stats.lowStockCount > 0 ? "rose" : "green"}
-          />
-          <StatCard
-            label="Total Stock Quantity"
-            value={`${stats.totalQty.toLocaleString()} Units`}
-            helpText={`Across all registered ${itemsLabel.toLowerCase()}`}
-            icon="clock"
-            tone="purple"
-          />
-          <StatCard
-            label="Inventory Valuation"
-            value={money(stats.valuation)}
-            helpText={`At purchase cost (${business.currency || "INR"})`}
-            icon="trending-up"
-            tone="green"
-          />
-        </StatGrid>
+        <div className="ledger-kpi-grid">
+          {/* Card 1: Total */}
+          <div
+            className={`ledger-kpi-card theme-blue ${stockFilter === "all" ? "is-active" : ""}`}
+            onClick={() => {
+              setStockFilter("all");
+              setCategory("all");
+              setPage(1);
+            }}
+            role="button"
+            tabIndex={0}
+            title={`All ${itemsLabel}`}
+          >
+            <div className="ledger-kpi-bubble">
+              <Icon name="list" />
+            </div>
+            <div className="ledger-kpi-content">
+              <span className="ledger-kpi-label">Total</span>
+              <span className="ledger-kpi-val">{products.length} Invoices</span>
+            </div>
+          </div>
+
+          {/* Card 2: Shipped */}
+          <div
+            className={`ledger-kpi-card theme-slate ${stockFilter === "in" ? "is-active" : ""}`}
+            onClick={() => {
+              setStockFilter(stockFilter === "in" ? "all" : "in");
+              setPage(1);
+            }}
+            role="button"
+            tabIndex={0}
+            title="In stock items"
+          >
+            <div className="ledger-kpi-bubble">
+              <Icon name="bag" />
+            </div>
+            <div className="ledger-kpi-content">
+              <span className="ledger-kpi-label">Shipped</span>
+              <span className="ledger-kpi-val">{stats.inStockCount} Invoices</span>
+            </div>
+          </div>
+
+          {/* Card 3: Delivered */}
+          <div
+            className="ledger-kpi-card theme-green"
+            role="button"
+            tabIndex={0}
+            title="Total inventory valuation"
+          >
+            <div className="ledger-kpi-bubble">
+              <Icon name="truck" />
+            </div>
+            <div className="ledger-kpi-content">
+              <span className="ledger-kpi-label">Delivered</span>
+              <span className="ledger-kpi-val">{money(stats.valuation)}</span>
+            </div>
+          </div>
+
+          {/* Card 4: Pending */}
+          <div
+            className={`ledger-kpi-card theme-amber ${stockFilter === "low" ? "is-active" : ""}`}
+            onClick={() => {
+              setStockFilter(stockFilter === "low" ? "all" : "low");
+              setPage(1);
+            }}
+            role="button"
+            tabIndex={0}
+            title="Low or out of stock alerts"
+          >
+            <div className="ledger-kpi-bubble">
+              <Icon name="pending" />
+            </div>
+            <div className="ledger-kpi-content">
+              <span className="ledger-kpi-label">Pending</span>
+              <span className="ledger-kpi-val">{stats.lowStockCount} Invoices</span>
+            </div>
+          </div>
+        </div>
       )}
 
-      <Toolbar
-        search={search}
-        onSearchChange={(val) => {
-          setSearch(val);
-          setPage(1);
-        }}
-        placeholder={`Search by name, ${isPharmacy ? "generic composition, batch, " : ""}SKU, or category`}
-        filters={
-          <>
-            <Select
-              aria-label="Category filter"
-              value={category}
+      {/* Search & Action Toolbar (Pill Capsule + New Product Button) */}
+      <div className="ledger-toolbar">
+        <div className="ledger-toolbar-left">
+          <div className="ledger-search-box">
+            <input
+              type="text"
+              className="ledger-search-input"
+              placeholder="Search"
+              value={search}
               onChange={(e) => {
-                setCategory(e.target.value);
+                setSearch(e.target.value);
                 setPage(1);
               }}
-            >
-              <option value="all">All categories</option>
-              {categories.map((val) => (
-                <option key={val} value={val}>
-                  {val}
-                </option>
-              ))}
-            </Select>
-            <Select
-              aria-label="Stock filter"
-              value={stockFilter}
-              onChange={(e) => {
-                setStockFilter(e.target.value);
-                setPage(1);
-              }}
-            >
-              <option value="all">All stock</option>
-              <option value="in">In stock (&gt;0)</option>
-              <option value="low">Low / out of stock</option>
-            </Select>
-          </>
-        }
-        actions={
-          selected.length > 0 && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => exportSheet(true)}
-              icon="download"
-            >
-              Export selected ({selected.length})
-            </Button>
-          )
-        }
-      />
+              aria-label={`Search ${itemsLabel}`}
+            />
+            <span className="ledger-search-icon">
+              <Icon name="search" size={16} />
+            </span>
+          </div>
+
+          <select
+            className="ledger-pill-select"
+            aria-label="Filter category"
+            value={category}
+            onChange={(e) => {
+              setCategory(e.target.value);
+              setPage(1);
+            }}
+          >
+            <option value="all">All Categories</option>
+            {categories.map((val) => (
+              <option key={val} value={val}>
+                {val}
+              </option>
+            ))}
+          </select>
+
+          <select
+            className="ledger-pill-select"
+            aria-label="Filter stock"
+            value={stockFilter}
+            onChange={(e) => {
+              setStockFilter(e.target.value);
+              setPage(1);
+            }}
+          >
+            <option value="all">All Statuses ({products.length})</option>
+            <option value="in">In Stock ({stats.inStockCount})</option>
+            <option value="low">Pending / Low Stock ({stats.lowStockCount})</option>
+          </select>
+
+          <select
+            className="ledger-pill-select"
+            aria-label="Sort products"
+            value={sortOrder}
+            onChange={(e) => {
+              setSortOrder(e.target.value);
+              setPage(1);
+            }}
+          >
+            <option value="default">Default Order</option>
+            <option value="price-high">Price: High to Low</option>
+            <option value="price-low">Price: Low to High</option>
+            <option value="stock-high">Stock: High to Low</option>
+            <option value="stock-low">Stock: Low to High</option>
+          </select>
+        </div>
+
+        <div className="ledger-toolbar-right">
+          <button
+            type="button"
+            className="ledger-btn-secondary"
+            onClick={() => exportSheet(selected.length > 0)}
+            disabled={loading || !!error || !visibleProducts.length}
+            title={selected.length > 0 ? `Export selected (${selected.length})` : "Export CSV"}
+          >
+            <Icon name="download" size={15} />
+            <span>{selected.length > 0 ? `Export (${selected.length})` : "Export CSV"}</span>
+          </button>
+
+          {canCreate && (
+            <>
+              <button
+                type="button"
+                className="ledger-btn-secondary"
+                onClick={() => setIsImportOpen(true)}
+                title="Bulk import items"
+              >
+                <Icon name="plus" size={15} />
+                <span>Bulk Import</span>
+              </button>
+
+              <button
+                type="button"
+                className="ledger-btn-primary"
+                onClick={() => openForm()}
+                title={`Add new ${itemLabel.toLowerCase()}`}
+              >
+                <span>New Invoice</span>
+              </button>
+            </>
+          )}
+        </div>
+      </div>
 
       {!isFormOpen && formError && <FormStatus type="error" message={formError} />}
 
