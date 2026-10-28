@@ -796,3 +796,436 @@
   font-size: 12px;
   color: var(--text-soft);
 }
+
+/* ==========================================================================
+   Stock Ledger & Invoice-Style Overview
+   Pixel-faithful implementation of user's pastel KPI cards & ledger table design
+   ========================================================================== */
+
+/* 1. Four Pastel Top KPI Cards in a Horizontal Row */
+.ledger-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 960px) {
+  .ledger-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 520px) {
+  .ledger-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ledger-kpi-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 22px;
+  border-radius: 18px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s ease;
+  user-select: none;
+}
+
+.ledger-kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.06);
+}
+
+.ledger-kpi-card.is-active {
+  border-color: currentColor;
+  box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.08);
+}
+
+/* Theme: Sky Blue Pastel */
+.ledger-kpi-card.theme-blue {
+  background-color: #e8f4fd;
+}
+.ledger-kpi-card.theme-blue .ledger-kpi-bubble {
+  background-color: #0084ff;
+  color: #ffffff;
+}
+
+/* Theme: Slate / Gray Pastel */
+.ledger-kpi-card.theme-slate {
+  background-color: #edf2f7;
+}
+.ledger-kpi-card.theme-slate .ledger-kpi-bubble {
+  background-color: #475569;
+  color: #ffffff;
+}
+
+/* Theme: Mint / Green Pastel */
+.ledger-kpi-card.theme-green {
+  background-color: #e6f9f0;
+}
+.ledger-kpi-card.theme-green .ledger-kpi-bubble {
+  background-color: #10b981;
+  color: #ffffff;
+}
+
+/* Theme: Peach / Warm Amber Pastel */
+.ledger-kpi-card.theme-amber {
+  background-color: #fef3e2;
+}
+.ledger-kpi-card.theme-amber .ledger-kpi-bubble {
+  background-color: #f59e0b;
+  color: #ffffff;
+}
+
+/* Dark Mode KPI Cards */
+[data-theme="dark"] .ledger-kpi-card.theme-blue {
+  background-color: rgba(0, 132, 255, 0.12);
+  border-color: rgba(0, 132, 255, 0.25);
+}
+[data-theme="dark"] .ledger-kpi-card.theme-slate {
+  background-color: rgba(100, 116, 139, 0.14);
+  border-color: rgba(100, 116, 139, 0.25);
+}
+[data-theme="dark"] .ledger-kpi-card.theme-green {
+  background-color: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.25);
+}
+[data-theme="dark"] .ledger-kpi-card.theme-amber {
+  background-color: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.25);
+}
+
+.ledger-kpi-bubble {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+}
+
+.ledger-kpi-bubble svg {
+  width: 20px;
+  height: 20px;
+}
+
+.ledger-kpi-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ledger-kpi-label {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #64748b;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+
+[data-theme="dark"] .ledger-kpi-label {
+  color: #94a3b8;
+}
+
+.ledger-kpi-val {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1e293b;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+[data-theme="dark"] .ledger-kpi-val {
+  color: #f8fafc;
+}
+
+/* 2. Search & Action Toolbar (Pill Style) */
+.ledger-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 22px;
+  flex-wrap: wrap;
+}
+
+.ledger-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  flex: 1;
+  min-width: 280px;
+}
+
+.ledger-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Pill Search Box */
+.ledger-search-box {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 260px;
+  max-width: 100%;
+}
+
+.ledger-search-input {
+  width: 100%;
+  height: 40px;
+  padding: 0 40px 0 18px;
+  border-radius: 9999px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  font-size: 13.5px;
+  color: #1e293b;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ledger-search-input:focus {
+  border-color: #0084ff;
+  box-shadow: 0 0 0 3px rgba(0, 132, 255, 0.15);
+}
+
+[data-theme="dark"] .ledger-search-input {
+  background: var(--surface);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #f1f5f9;
+}
+
+.ledger-search-icon {
+  position: absolute;
+  right: 14px;
+  color: #94a3b8;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+}
+
+/* Rounded Pill Filter Dropdowns */
+.ledger-pill-select {
+  height: 40px;
+  padding: 0 32px 0 16px;
+  border-radius: 9999px;
+  border: 1px solid #e2e8f0;
+  background-color: #ffffff;
+  font-size: 13px;
+  font-weight: 500;
+  color: #475569;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+
+.ledger-pill-select:focus {
+  border-color: #0084ff;
+}
+
+[data-theme="dark"] .ledger-pill-select {
+  background-color: var(--surface);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #cbd5e1;
+}
+
+/* Pill Action Buttons */
+.ledger-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 24px;
+  border-radius: 9999px;
+  background: #0084ff;
+  color: #ffffff;
+  font-size: 13.5px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 132, 255, 0.25);
+  transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ledger-btn-primary:hover {
+  background: #0073e6;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(0, 132, 255, 0.35);
+}
+
+.ledger-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 40px;
+  padding: 0 18px;
+  border-radius: 9999px;
+  background: #ffffff;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid #e2e8f0;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.ledger-btn-secondary:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #1e293b;
+}
+
+[data-theme="dark"] .ledger-btn-secondary {
+  background: var(--surface);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .ledger-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #f1f5f9;
+}
+
+/* 3. Solid Vibrant Status Pills (Matching User's Screenshot) */
+.ledger-status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 16px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #ffffff;
+  line-height: 1.35;
+  letter-spacing: 0.01em;
+  min-width: 82px;
+  text-align: center;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+.ledger-status-pill.status-shipped,
+.ledger-status-pill.status-blue {
+  background-color: #0084ff;
+}
+
+.ledger-status-pill.status-delivered,
+.ledger-status-pill.status-green,
+.ledger-status-pill.status-in {
+  background-color: #10b981;
+}
+
+.ledger-status-pill.status-pending,
+.ledger-status-pill.status-amber,
+.ledger-status-pill.status-low {
+  background-color: #f59e0b;
+}
+
+.ledger-status-pill.status-danger,
+.ledger-status-pill.status-red,
+.ledger-status-pill.status-out {
+  background-color: #ef4444;
+}
+
+/* 4. Action Icon Buttons (Green, Blue, Red Outlined Icons) */
+.ledger-actions-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.ledger-action-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+.ledger-action-icon:hover {
+  transform: scale(1.18);
+  background-color: rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="dark"] .ledger-action-icon:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.ledger-action-icon.action-edit {
+  color: #10b981;
+}
+
+.ledger-action-icon.action-view {
+  color: #0284c7;
+}
+
+.ledger-action-icon.action-delete {
+  color: #ef4444;
+}
+
+/* 5. Minimalist Ledger Row Cell Styling */
+.ledger-cell-id {
+  font-weight: 700;
+  color: #1e293b;
+  font-size: 13.5px;
+  letter-spacing: -0.01em;
+}
+
+[data-theme="dark"] .ledger-cell-id {
+  color: #f1f5f9;
+}
+
+.ledger-cell-primary {
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 13.5px;
+}
+
+[data-theme="dark"] .ledger-cell-primary {
+  color: #f8fafc;
+}
+
+.ledger-cell-secondary {
+  font-weight: 500;
+  color: #64748b;
+  font-size: 13px;
+}
+
+[data-theme="dark"] .ledger-cell-secondary {
+  color: #94a3b8;
+}
+
+.ledger-cell-cost {
+  font-weight: 700;
+  color: #1e293b;
+  font-size: 13.5px;
+}
+
+[data-theme="dark"] .ledger-cell-cost {
+  color: #f1f5f9;
+}
