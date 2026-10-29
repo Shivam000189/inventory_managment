@@ -3,10 +3,12 @@ import { productApi } from '../../api/productApi.js'
 import { inventoryApi } from '../../api/inventoryApi.js'
 import { useResource } from '../../hooks/useResource.js'
 import { PageHeader, Badge, DataTable, Icon } from '../../components/ui/index.js'
+import AsyncBoundary from '../../components/feedback/AsyncBoundary.jsx'
 import StockInView, { StockOutView } from './StockInView.jsx'
 import StockAdjustmentView from './StockAdjustmentView.jsx'
 import StockHistoryView from './StockHistoryView.jsx'
 import CategoriesView from '../products/CategoriesPage.jsx'
+import '../dashboard/overview-dashboard.css'
 import './InventoryOperations.css'
 
 function InventoryOperations({ section, business, account, onNavigate, canNavigate }) {
@@ -192,9 +194,8 @@ function StockLedgerView({ products = [], loading, error, refetch, business = {}
   const [status, setStatus] = useState('all')
   const [category, setCategory] = useState('all')
   const [sortOrder, setSortOrder] = useState('default')
-  const [selected, setSelected] = useState([])
   const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(10)
+  const pageSize = 8
 
   const categories = useMemo(
     () => [...new Set(products.map((product) => product.category).filter(Boolean))].sort(),
@@ -267,6 +268,12 @@ function StockLedgerView({ products = [], loading, error, refetch, business = {}
     return list
   }, [products, search, status, category, sortOrder])
 
+  const totalPages = Math.max(1, Math.ceil(visible.length / pageSize))
+  const effectivePage = Math.min(page, totalPages)
+  const pagedItems = useMemo(() => {
+    return visible.slice((effectivePage - 1) * pageSize, effectivePage * pageSize)
+  }, [visible, effectivePage, pageSize])
+
   const money = useCallback(
     (value) => {
       const sym = business.currency === 'INR' ? '₹' : business.currency || ''
@@ -310,139 +317,12 @@ function StockLedgerView({ products = [], loading, error, refetch, business = {}
     URL.revokeObjectURL(url)
   }
 
-  const columns = useMemo(() => {
-    return [
-      {
-        key: 'sku',
-        header: 'Id',
-        mobileLabel: 'Id',
-        width: '80px',
-        render: (product, index) => (
-          <span className="ledger-cell-id">
-            {product.sku || (product.productId ? String(product.productId).replace(/\D/g, '').slice(-3) || String(product.productId).slice(-5) : 101 + index)}
-          </span>
-        ),
-      },
-      {
-        key: 'product',
-        header: 'Bill From',
-        mobileLabel: 'Product',
-        render: (product) => (
-          <div>
-            <span className="ledger-cell-primary">{product.name}</span>
-            {product.brand && (
-              <div className="ledger-cell-secondary" style={{ fontSize: '11px', marginTop: '2px' }}>
-                {product.brand}
-              </div>
-            )}
-          </div>
-        ),
-      },
-      {
-        key: 'location',
-        header: 'Bill To',
-        mobileLabel: 'Location',
-        render: (product) => (
-          <span className="ledger-cell-secondary">
-            {[product.category, product.rackLocation || product.warehouse].filter(Boolean).join(' · ') || 'General Warehouse'}
-          </span>
-        ),
-      },
-      {
-        key: 'cost',
-        header: 'Total Cost',
-        mobileLabel: 'Cost',
-        render: (product) => {
-          const stock = Number(product.currentStock || 0)
-          return (
-            <div>
-              <span className="ledger-cell-cost">
-                {product.sellingPrice ? money(product.sellingPrice) : '90'}
-              </span>
-              <div className="ledger-cell-secondary" style={{ fontSize: '11px', marginTop: '2px' }}>
-                {stock} {product.unit || 'units'}
-              </div>
-            </div>
-          )
-        },
-      },
-      {
-        key: 'status',
-        header: 'Status',
-        mobileLabel: 'Status',
-        render: (product) => {
-          const stock = Number(product.currentStock || 0)
-          const minimum = Number(product.minimumStock || 10)
-          let statusType = 'delivered'
-          let statusLabel = 'Delivered'
-
-          if (stock === 0) {
-            statusType = 'danger'
-            statusLabel = 'Out of Stock'
-          } else if (stock <= minimum) {
-            statusType = 'pending'
-            statusLabel = 'Pending'
-          } else if (stock > minimum * 2) {
-            statusType = 'delivered'
-            statusLabel = 'Delivered'
-          } else {
-            statusType = 'shipped'
-            statusLabel = 'Shipped'
-          }
-
-          return (
-            <span className={`ledger-status-pill status-${statusType}`}>
-              {statusLabel}
-            </span>
-          )
-        },
-      },
-      {
-        key: 'actions',
-        header: 'Action',
-        mobileLabel: 'Action',
-        align: 'right',
-        render: (product) => (
-          <div className="ledger-actions-group">
-            <button
-              type="button"
-              className="ledger-action-icon action-edit"
-              onClick={() => onNavigate?.('Adjustments')}
-              aria-label={`Reconcile ${product.name}`}
-              title="Audit / Reconcile"
-            >
-              <Icon name="edit" size={17} />
-            </button>
-            <button
-              type="button"
-              className="ledger-action-icon action-view"
-              onClick={() => onNavigate?.('History')}
-              aria-label={`View history of ${product.name}`}
-              title="View History"
-            >
-              <Icon name="eye" size={17} />
-            </button>
-            <button
-              type="button"
-              className="ledger-action-icon action-delete"
-              onClick={() => onNavigate?.('Stock Out')}
-              aria-label={`Dispatch or Stock Out ${product.name}`}
-              title="Stock Out / Adjust"
-            >
-              <Icon name="trash" size={17} />
-            </button>
-          </div>
-        ),
-      },
-    ]
-  }, [money, onNavigate])
-
   return (
     <div className="inventory-page">
-      {/* 4 Pastel Top KPI Cards in a Horizontal Row (Matching user screenshot) */}
+      {/* 4 Tonal Pastel Top KPI Cards in a Horizontal Row */}
       {!loading && !error && (
         <div className="ledger-kpi-grid">
-          {/* Card 1: Total */}
+          {/* Card 1: Total Units in Stock (Sky Blue) */}
           <div
             className={`ledger-kpi-card theme-blue ${status === 'all' ? 'is-active' : ''}`}
             onClick={() => {
@@ -454,198 +334,328 @@ function StockLedgerView({ products = [], loading, error, refetch, business = {}
             title="Filter all records"
           >
             <div className="ledger-kpi-bubble">
+              <Icon name="box" />
+            </div>
+            <div className="ledger-kpi-content">
+              <span className="ledger-kpi-label">Total Units in Stock</span>
+              <span className="ledger-kpi-val">{counts.units.toLocaleString('en-IN')} Units</span>
+              <span className="ledger-kpi-pill pill-blue">Physical Count</span>
+            </div>
+          </div>
+
+          {/* Card 2: Inventory Valuation (Emerald Green) */}
+          <div
+            className="ledger-kpi-card theme-green"
+            role="button"
+            tabIndex={0}
+            title="Total inventory asset value"
+          >
+            <div className="ledger-kpi-bubble">
+              <Icon name="trending-up" />
+            </div>
+            <div className="ledger-kpi-content">
+              <span className="ledger-kpi-label">Inventory Valuation</span>
+              <span className="ledger-kpi-val">{money(counts.value)}</span>
+              <span className="ledger-kpi-pill pill-green">Asset Value</span>
+            </div>
+          </div>
+
+          {/* Card 3: Reorder Alerts (Warm Amber) */}
+          <div
+            className={`ledger-kpi-card theme-amber ${status === 'pending' || status === 'low' ? 'is-active' : ''}`}
+            onClick={() => {
+              setStatus(status === 'low' ? 'all' : 'low')
+              setPage(1)
+            }}
+            role="button"
+            tabIndex={0}
+            title="Filter low and out of stock items"
+          >
+            <div className="ledger-kpi-bubble">
+              <Icon name="warning" />
+            </div>
+            <div className="ledger-kpi-content">
+              <span className="ledger-kpi-label">Reorder Alerts</span>
+              <span className="ledger-kpi-val">{counts.pending} SKUs</span>
+              <span className="ledger-kpi-pill pill-amber">Action Needed</span>
+            </div>
+          </div>
+
+          {/* Card 4: Catalog Items (Royal Purple) */}
+          <div
+            className="ledger-kpi-card theme-purple"
+            role="button"
+            tabIndex={0}
+            title="Total catalogued products"
+          >
+            <div className="ledger-kpi-bubble">
               <Icon name="list" />
             </div>
             <div className="ledger-kpi-content">
-              <span className="ledger-kpi-label">Total</span>
-              <span className="ledger-kpi-val">{products.length} Invoices</span>
-            </div>
-          </div>
-
-          {/* Card 2: Shipped */}
-          <div
-            className={`ledger-kpi-card theme-slate ${status === 'shipped' ? 'is-active' : ''}`}
-            onClick={() => {
-              setStatus(status === 'shipped' ? 'all' : 'shipped')
-              setPage(1)
-            }}
-            role="button"
-            tabIndex={0}
-            title="Filter shipped stock"
-          >
-            <div className="ledger-kpi-bubble">
-              <Icon name="bag" />
-            </div>
-            <div className="ledger-kpi-content">
-              <span className="ledger-kpi-label">Shipped</span>
-              <span className="ledger-kpi-val">{counts.shipped} Invoices</span>
-            </div>
-          </div>
-
-          {/* Card 3: Delivered */}
-          <div
-            className={`ledger-kpi-card theme-green ${status === 'delivered' ? 'is-active' : ''}`}
-            onClick={() => {
-              setStatus(status === 'delivered' ? 'all' : 'delivered')
-              setPage(1)
-            }}
-            role="button"
-            tabIndex={0}
-            title="Filter delivered stock"
-          >
-            <div className="ledger-kpi-bubble">
-              <Icon name="truck" />
-            </div>
-            <div className="ledger-kpi-content">
-              <span className="ledger-kpi-label">Delivered</span>
-              <span className="ledger-kpi-val">{counts.delivered} Invoices</span>
-            </div>
-          </div>
-
-          {/* Card 4: Pending */}
-          <div
-            className={`ledger-kpi-card theme-amber ${status === 'pending' ? 'is-active' : ''}`}
-            onClick={() => {
-              setStatus(status === 'pending' ? 'all' : 'pending')
-              setPage(1)
-            }}
-            role="button"
-            tabIndex={0}
-            title="Filter pending stock"
-          >
-            <div className="ledger-kpi-bubble">
-              <Icon name="pending" />
-            </div>
-            <div className="ledger-kpi-content">
-              <span className="ledger-kpi-label">Pending</span>
-              <span className="ledger-kpi-val">{counts.pending} Invoices</span>
+              <span className="ledger-kpi-label">Catalog Items</span>
+              <span className="ledger-kpi-val">{products.length} SKUs</span>
+              <span className="ledger-kpi-pill pill-purple">Active SKUs</span>
             </div>
           </div>
         </div>
       )}
 
-      {/* Search & Action Toolbar (Pill Capsule + New Invoice Button) */}
-      <div className="ledger-toolbar">
-        <div className="ledger-toolbar-left">
-          <div className="ledger-search-box">
-            <input
-              type="text"
-              className="ledger-search-input"
-              placeholder="Search"
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value)
-                setPage(1)
-              }}
-              aria-label="Search invoices and products"
-            />
-            <span className="ledger-search-icon">
-              <Icon name="search" size={16} />
-            </span>
+      <div className="modern-panel-card content-list-panel">
+        <div className="content-list-header">
+          <div className="content-list-title-wrap">
+            <h2 className="content-list-title">
+              Stock Ledger <span className="content-list-count">({visible.length})</span>
+            </h2>
           </div>
 
-          <select
-            className="ledger-pill-select"
-            aria-label="Filter category"
-            value={category}
-            onChange={(e) => {
-              setCategory(e.target.value)
-              setPage(1)
-            }}
-          >
-            <option value="all">All Categories</option>
-            {categories.map((item) => (
-              <option key={item} value={item}>
-                {item}
-              </option>
-            ))}
-          </select>
+          <div className="content-list-toolbar">
+            <div className="content-list-search">
+              <svg
+                className="content-list-search-icon"
+                viewBox="0 0 24 24"
+                width="15"
+                height="15"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <circle cx="11" cy="11" r="7" />
+                <path d="m21 21-4.35-4.35" />
+              </svg>
+              <input
+                type="text"
+                className="content-list-search-input"
+                aria-label="Search stock ledger"
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value)
+                  setPage(1)
+                }}
+                placeholder="Search stock, SKU, rack..."
+              />
+            </div>
 
-          <select
-            className="ledger-pill-select"
-            aria-label="Filter status"
-            value={status}
-            onChange={(e) => {
-              setStatus(e.target.value)
-              setPage(1)
-            }}
-          >
-            <option value="all">All Statuses ({products.length})</option>
-            <option value="shipped">Shipped ({counts.shipped})</option>
-            <option value="delivered">Delivered ({counts.delivered})</option>
-            <option value="pending">Pending ({counts.pending})</option>
-            <option value="out">Out of Stock ({counts.out})</option>
-          </select>
+            <select
+              className="content-list-select"
+              aria-label="Filter category"
+              value={category}
+              onChange={(e) => {
+                setCategory(e.target.value)
+                setPage(1)
+              }}
+            >
+              <option value="all">All Categories</option>
+              {categories.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
 
-          <select
-            className="ledger-pill-select"
-            aria-label="Sort stock ledger"
-            value={sortOrder}
-            onChange={(e) => {
-              setSortOrder(e.target.value)
-              setPage(1)
-            }}
-          >
-            <option value="default">Default Order</option>
-            <option value="high">Stock: High to Low</option>
-            <option value="low">Stock: Low to High</option>
-          </select>
+            <select
+              className="content-list-select"
+              aria-label="Filter status"
+              value={status}
+              onChange={(e) => {
+                setStatus(e.target.value)
+                setPage(1)
+              }}
+            >
+              <option value="all">Status</option>
+              <option value="in">In Stock ({counts.in})</option>
+              <option value="low">Low Stock ({counts.low})</option>
+              <option value="out">Out of Stock ({counts.out})</option>
+            </select>
+
+            <select
+              className="content-list-select"
+              aria-label="Sort stock ledger"
+              value={sortOrder}
+              onChange={(e) => {
+                setSortOrder(e.target.value)
+                setPage(1)
+              }}
+            >
+              <option value="default">Default Order</option>
+              <option value="high">Stock: High to Low</option>
+              <option value="low">Stock: Low to High</option>
+            </select>
+
+            <button
+              type="button"
+              className="content-list-action-btn secondary"
+              onClick={exportLedger}
+              disabled={loading || !!error || !visible.length}
+              title="Export CSV"
+            >
+              Export CSV
+            </button>
+
+            <button
+              type="button"
+              className="content-list-action-btn secondary"
+              onClick={() => onNavigate?.('Stock History')}
+              title="Movement History & Audit Log"
+            >
+              Audit Ledger
+            </button>
+
+            <button
+              type="button"
+              className="content-list-action-btn"
+              onClick={() => onNavigate?.('Stock In')}
+              title="Record Stock Inward"
+            >
+              + Inward Stock
+            </button>
+          </div>
         </div>
 
-        <div className="ledger-toolbar-right">
-          <button
-            type="button"
-            className="ledger-btn-secondary"
-            onClick={exportLedger}
-            disabled={!visible.length}
-            title="Export CSV"
-          >
-            <Icon name="download" size={15} />
-            <span>Export CSV</span>
-          </button>
+        <AsyncBoundary
+          loading={loading}
+          error={error}
+          onRetry={refetch}
+          isEmpty={!visible.length}
+          emptyText={
+            products.length
+              ? "No stock records match your search or filters."
+              : "No stock records yet. Record inward stock to get started."
+          }
+        >
+          <div className="content-list-table-wrap">
+            <table className="content-list-table">
+              <thead>
+                <tr>
+                  <th style={{ width: "28%" }}>Product</th>
+                  <th style={{ width: "20%" }}>Location & Bin</th>
+                  <th style={{ width: "16%" }}>Valuation Basis</th>
+                  <th style={{ width: "16%" }}>Available Stock</th>
+                  <th style={{ width: "10%" }}>Status</th>
+                  <th style={{ width: "10%", textAlign: "right", paddingRight: "16px" }}>Quick Ops</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pagedItems.map((product) => {
+                  const stock = Number(product.currentStock || 0)
+                  const min = Number(product.minimumStock || 10)
+                  const isOutOfStock = stock === 0
+                  const isLowStock = stock <= min && !isOutOfStock
+                  const pillClass = isOutOfStock
+                    ? "status-pill-out"
+                    : isLowStock
+                    ? "status-pill-low"
+                    : "status-pill-instock"
+                  const statusText = isOutOfStock
+                    ? "Out of Stock"
+                    : isLowStock
+                    ? "Low Stock"
+                    : "In Stock"
 
-          <button
-            type="button"
-            className="ledger-btn-secondary"
-            onClick={() => onNavigate?.('Adjustments')}
-            title="Audit Reconciliation"
-          >
-            <Icon name="refresh" size={15} />
-            <span>Audit Count</span>
-          </button>
+                  const purchase = Number(product.purchasePrice || 0)
+                  const lineVal = stock * purchase
+                  const locationText = [product.warehouse || "Main Warehouse", product.rackLocation || "General Storage"].filter(Boolean).join(" · ")
 
-          <button
-            type="button"
-            className="ledger-btn-primary"
-            onClick={() => onNavigate?.('Stock In')}
-            title="Create New Invoice or Inward Stock"
-          >
-            <span>New Invoice</span>
-          </button>
-        </div>
+                  return (
+                    <tr key={product.productId}>
+                      <td className="cl-cell-product">
+                        <div className="cl-product-name">{product.name}</div>
+                        <div className="cl-product-meta">
+                          <span className="cl-product-sku">SKU: {product.sku || (product.productId ? String(product.productId).slice(-6) : "N/A")}</span>
+                          {product.category && (
+                            <span className="cl-product-brand"> · {product.category}</span>
+                          )}
+                          {product.brand && (
+                            <span className="cl-product-brand"> · {product.brand}</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="cl-cell-category">
+                        <span style={{ marginRight: "4px" }}>📍</span>
+                        <span>{locationText}</span>
+                      </td>
+                      <td className="cl-cell-price">
+                        <div>{money(lineVal)}</div>
+                        <div style={{ fontSize: "11px", color: "var(--muted, #64748b)", fontWeight: "normal" }}>
+                          @ {money(purchase)} / {product.unit || "unit"}
+                        </div>
+                      </td>
+                      <td className="cl-cell-stock">
+                        <span className="cl-stock-value">{stock.toLocaleString("en-IN")}</span>
+                        <span className="cl-stock-label"> {product.unit || "units"}</span>
+                      </td>
+                      <td className="cl-cell-status">
+                        <span className={`content-status-pill ${pillClass}`}>
+                          {statusText}
+                        </span>
+                      </td>
+                      <td className="cl-cell-actions" style={{ textAlign: "right", paddingRight: "16px" }}>
+                        <div className="cl-actions-wrapper">
+                          <button
+                            type="button"
+                            className="ledger-action-icon action-edit"
+                            onClick={() => onNavigate?.("Stock In")}
+                            aria-label={`Inward ${product.name}`}
+                            title="Inward Stock"
+                          >
+                            <Icon name="plus" size={15} />
+                          </button>
+                          <button
+                            type="button"
+                            className="ledger-action-icon action-delete"
+                            onClick={() => onNavigate?.("Stock Out")}
+                            aria-label={`Dispatch ${product.name}`}
+                            title="Issue / Dispatch"
+                          >
+                            <Icon name="minus" size={15} />
+                          </button>
+                          <button
+                            type="button"
+                            className="ledger-action-icon action-view"
+                            onClick={() => onNavigate?.("Adjustments")}
+                            aria-label={`Reconcile ${product.name}`}
+                            title="Reconcile / Adjust"
+                          >
+                            <Icon name="edit" size={15} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {visible.length > 0 && (
+            <footer className="content-list-pagination">
+              <span className="cl-page-info">
+                Page {effectivePage} of {totalPages}
+              </span>
+              <div className="cl-page-nav">
+                <button
+                  type="button"
+                  className="cl-page-btn"
+                  disabled={effectivePage <= 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  className="cl-page-btn"
+                  disabled={effectivePage >= totalPages}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                >
+                  Next
+                </button>
+              </div>
+            </footer>
+          )}
+        </AsyncBoundary>
       </div>
-
-      {/* Ledger Data Table */}
-      <DataTable
-        columns={columns}
-        data={visible}
-        keyField="productId"
-        selectable={true}
-        selectedKeys={selected}
-        onSelectionChange={setSelected}
-        page={page}
-        pageSize={pageSize}
-        total={visible.length}
-        onPageChange={setPage}
-        onPageSizeChange={(newSize) => {
-          setPageSize(newSize)
-          setPage(1)
-        }}
-        loading={loading}
-        error={error}
-        onRetry={refetch}
-        emptyText={products.length ? 'No invoices match these filters.' : 'No invoices in this workspace yet.'}
-      />
     </div>
   )
 }

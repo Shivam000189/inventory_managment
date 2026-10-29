@@ -1,9 +1,10 @@
 import { Fragment, useState } from "react";
 import AsyncBoundary from "../../../components/feedback/AsyncBoundary.jsx";
+import "../overview-dashboard.css";
 
 export default function InventoryTable({
-  inventoryTableOpen,
-  setInventoryTableOpen,
+  inventoryTableOpen = true,
+  setInventoryTableOpen: _setInventoryTableOpen,
   capabilities,
   navigateTo,
   search,
@@ -11,460 +12,407 @@ export default function InventoryTable({
   setOverviewPage,
   overviewCategory,
   setOverviewCategory,
-  inventoryGroups,
+  inventoryGroups = [],
   overviewSort,
   setOverviewSort,
   loading,
   error,
   refetch,
-  overviewRows,
+  overviewRows = [],
   overviewProducts = [],
-  currentOverviewPage,
-  overviewPages,
-  expandedInventoryGroups,
+  currentOverviewPage = 1,
+  overviewPages: _overviewPages,
+  expandedInventoryGroups = [],
   toggleInventoryGroup,
   _stockLevelPct,
   _business,
 }) {
-  const [selectedKeys, setSelectedKeys] = useState([]);
+  const [statusFilter, setStatusFilter] = useState("all");
 
-  const currentItems = overviewRows.slice(
-    (currentOverviewPage - 1) * 8,
-    currentOverviewPage * 8
+  const filteredRows = overviewRows.filter((group) => {
+    if (statusFilter === "all") return true;
+    const totalStock = group.stock ?? (group.items?.[0]?.stock || 0);
+    const minStock = group.items?.[0]?.minimumStock || 10;
+    if (statusFilter === "out") return totalStock === 0;
+    if (statusFilter === "low") return totalStock > 0 && totalStock <= minStock;
+    if (statusFilter === "in") return totalStock > minStock;
+    return true;
+  });
+
+  const effectivePages = Math.max(1, Math.ceil(filteredRows.length / 8));
+  const effectivePage = Math.min(currentOverviewPage, effectivePages);
+
+  const currentItems = filteredRows.slice(
+    (effectivePage - 1) * 8,
+    effectivePage * 8
   );
 
-  const allCurrentSelected =
-    currentItems.length > 0 &&
-    currentItems.every((group) => selectedKeys.includes(group.key));
+  const formatPrice = (priceVal) => {
+    const num = Number(priceVal || 0);
+    return `₹${num.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
 
-  const toggleSelectAll = (e) => {
-    if (e.target.checked) {
-      setSelectedKeys((prev) => [
-        ...new Set([...prev, ...currentItems.map((group) => group.key)]),
-      ]);
-    } else {
-      setSelectedKeys((prev) =>
-        prev.filter((k) => !currentItems.some((group) => group.key === k))
-      );
+  const displayPrice = (priceStr) => {
+    if (!priceStr && priceStr !== 0) return "₹0.00";
+    if (typeof priceStr === "string") {
+      return priceStr.replace("INR ", "₹");
     }
+    return formatPrice(priceStr);
   };
 
-  const toggleSelectItem = (key) => {
-    setSelectedKeys((prev) =>
-      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
-    );
-  };
+  if (!inventoryTableOpen) return null;
 
   return (
-    <section className="modern-panel-card invoice-style-panel">
-      {/* Header bar with toggle */}
-      <div className="section-heading" style={{ marginBottom: "20px" }}>
-        <div>
-          <h2 style={{ fontSize: "20px", fontWeight: 800, display: "flex", alignItems: "center", gap: "12px", margin: 0 }}>
-            <span
-              className="inventory-heading-icon"
-              aria-hidden="true"
-              style={{
-                fontSize: "42px",
-                lineHeight: 1,
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                verticalAlign: "middle",
-              }}
-            >
-              📦
+    <section className="modern-panel-card content-list-panel">
+      {/* Top Header Row matching Reference Image */}
+      <div className="content-list-header">
+        <div className="content-list-title-wrap">
+          <h2 className="content-list-title">
+            Inventory Catalog{" "}
+            <span className="content-list-count">
+              ({overviewProducts.length || filteredRows.length})
             </span>
-            <span>Inventory Ledger &amp; Catalog</span>
           </h2>
         </div>
-        {/* <div style={{ display: "flex", gap: "8px" }}>
-          <button
-            className="outline-button"
-            type="button"
-            onClick={() => setInventoryTableOpen(!inventoryTableOpen)}
-          > */}
-            {/* {inventoryTableOpen ? "Hide Table" : "Show Table"} */}
-          {/* </button>
-        </div> */}
-      </div>
 
-      {inventoryTableOpen && (
-        <>
-          {/* Controls Row: Search + Filters + Pill Action Button */}
-          <div className="invoice-controls-row">
-            <div className="invoice-controls-left">
-              <div className="invoice-search-wrap">
-                <input
-                  type="text"
-                  className="invoice-search-input"
-                  aria-label="Search inventory"
-                  value={search}
-                  onChange={(event) => {
-                    setSearch(event.target.value);
-                    setOverviewPage(1);
-                  }}
-                  placeholder="Search..."
-                />
-                <span className="invoice-search-icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="11" cy="11" r="7" />
-                    <path d="m21 21-4.35-4.35" />
-                  </svg>
-                </span>
-              </div>
-
-              <select
-                className="invoice-select"
-                aria-label="Filter by category"
-                value={overviewCategory}
-                onChange={(event) => {
-                  setOverviewCategory(event.target.value);
-                  setOverviewPage(1);
-                }}
-              >
-                <option value="all">All categories</option>
-                {[...new Set(inventoryGroups.map((g) => g.category))].map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-
-              <select
-                className="invoice-select"
-                aria-label="Sort inventory stock"
-                value={overviewSort}
-                onChange={(event) => {
-                  setOverviewSort(event.target.value);
-                  setOverviewPage(1);
-                }}
-              >
-                <option value="default">Default order</option>
-                <option value="high">Stock: High to low</option>
-                <option value="low">Stock: Low to high</option>
-              </select>
-            </div>
-
-            <button
-              type="button"
-              className="invoice-primary-btn"
-              onClick={() => navigateTo(capabilities?.productLabel || "Products")}
+        {/* Search + Category + Status + Action Controls */}
+        <div className="content-list-toolbar">
+          {/* Search with left-aligned icon */}
+          <div className="content-list-search">
+            <svg
+              className="content-list-search-icon"
+              viewBox="0 0 24 24"
+              width="15"
+              height="15"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
             >
-              {capabilities?.productLabel ? `New ${capabilities.productLabel.slice(0, -1)}` : "New Product"}
-            </button>
+              <circle cx="11" cy="11" r="7" />
+              <path d="m21 21-4.35-4.35" />
+            </svg>
+            <input
+              type="text"
+              className="content-list-search-input"
+              aria-label="Search inventory"
+              value={search}
+              onChange={(event) => {
+                setSearch(event.target.value);
+                setOverviewPage(1);
+              }}
+              placeholder="Search..."
+            />
           </div>
 
-          {/* 3. The Table */}
-          <AsyncBoundary
-            loading={loading}
-            error={error}
-            onRetry={refetch}
-            isEmpty={!overviewRows.length}
-            emptyText={
-              overviewProducts.length
-                ? "No products match your search filter."
-                : "No products in warehouse yet. Click 'New Product' above to start."
-            }
+          {/* Category Dropdown */}
+          <select
+            className="content-list-select"
+            aria-label="Filter by category"
+            value={overviewCategory}
+            onChange={(event) => {
+              setOverviewCategory(event.target.value);
+              setOverviewPage(1);
+            }}
           >
-            <div className="invoice-table-wrap">
-              <table className="invoice-table">
-                <thead>
-                  <tr>
-                    <th style={{ width: "42px" }}>
-                      <input
-                        type="checkbox"
-                        className="invoice-checkbox"
-                        aria-label="Select all products"
-                        checked={allCurrentSelected}
-                        onChange={toggleSelectAll}
-                      />
-                    </th>
-                    <th style={{ width: "95px" }}>Id</th>
-                    <th>Bill From</th>
-                    <th>Bill To</th>
-                    <th>Total Cost</th>
-                    <th>Status</th>
-                    <th style={{ textAlign: "right", paddingRight: "24px" }}>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {currentItems.map((group) => {
-                    const isGroup = group.items.length > 1;
-                    const expanded = expandedInventoryGroups.includes(group.key);
-                    const firstItem = group.items[0];
-                    const isSelected = selectedKeys.includes(group.key);
+            <option value="all">All Categories</option>
+            {[...new Set(inventoryGroups.map((g) => g.category).filter(Boolean))].map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
 
-                    if (!isGroup) {
-                      const isOutOfStock = firstItem.stock === 0;
-                      const isLowStock =
-                        firstItem.stock <= firstItem.minimumStock && !isOutOfStock;
-                      const pillClass = isOutOfStock
-                        ? "pill-out"
-                        : isLowStock
-                        ? "pill-pending"
-                        : "pill-delivered";
-                      const statusText = isOutOfStock
-                        ? "Out of Stock"
-                        : isLowStock
-                        ? "Pending"
-                        : "Delivered";
+          {/* Status Dropdown */}
+          <select
+            className="content-list-select"
+            aria-label="Filter by stock status"
+            value={statusFilter}
+            onChange={(event) => {
+              setStatusFilter(event.target.value);
+              setOverviewPage(1);
+            }}
+          >
+            <option value="all">Status</option>
+            <option value="in">In Stock</option>
+            <option value="low">Low Stock</option>
+            <option value="out">Out of Stock</option>
+          </select>
 
-                      return (
-                        <tr key={firstItem.key} className={isSelected ? "is-selected" : ""}>
-                          <td>
-                            <input
-                              type="checkbox"
-                              className="invoice-checkbox"
-                              aria-label={`Select ${firstItem.name}`}
-                              checked={isSelected}
-                              onChange={() => toggleSelectItem(group.key)}
-                            />
-                          </td>
-                          <td className="invoice-cell-id">
-                            <strong>{firstItem.sku || firstItem.key.slice(-5)}</strong>
-                          </td>
-                          <td className="invoice-cell-name">
-                            <span className="invoice-product-title">{firstItem.name}</span>
-                            {firstItem.brand && (
-                              <small className="invoice-product-sub">{firstItem.brand}</small>
-                            )}
-                          </td>
-                          <td className="invoice-cell-category">
-                            {firstItem.category}
-                          </td>
-                          <td className="invoice-cell-cost">
-                            {firstItem.price.toFixed(2)}
-                          </td>
-                          <td>
-                            <span className={`invoice-pill ${pillClass}`}>
-                              {statusText}
-                            </span>
-                          </td>
-                          <td style={{ textAlign: "right", paddingRight: "20px" }}>
-                            <div className="invoice-actions-cell">
-                              <button
-                                type="button"
-                                className="invoice-action-btn action-edit"
-                                title="Edit product in catalog"
-                                aria-label={`Edit ${firstItem.name}`}
-                                onClick={() =>
-                                  navigateTo(capabilities?.productLabel || "Products")
-                                }
-                              >
-                                <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                                </svg>
-                              </button>
-                              <button
-                                type="button"
-                                className="invoice-action-btn action-view"
-                                title="View product details"
-                                aria-label={`View ${firstItem.name}`}
-                                onClick={() =>
-                                  navigateTo(capabilities?.productLabel || "Products")
-                                }
-                              >
-                                <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                                  <circle cx="12" cy="12" r="3" />
-                                </svg>
-                              </button>
-                              <button
-                                type="button"
-                                className="invoice-action-btn action-delete"
-                                title="Delete product in catalog"
-                                aria-label={`Delete ${firstItem.name}`}
-                                onClick={() =>
-                                  navigateTo(capabilities?.productLabel || "Products")
-                                }
-                              >
-                                <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                  <polyline points="3 6 5 6 21 6" />
-                                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                                </svg>
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    }
+          {/* Order / Sort */}
+          <select
+            className="content-list-select"
+            aria-label="Sort inventory stock"
+            value={overviewSort}
+            onChange={(event) => {
+              setOverviewSort(event.target.value);
+              setOverviewPage(1);
+            }}
+          >
+            <option value="default">Default Order</option>
+            <option value="high">Stock: High to Low</option>
+            <option value="low">Stock: Low to High</option>
+          </select>
 
-                    // Multi-variant group row
-                    return (
-                      <Fragment key={group.key}>
-                        <tr className={`invoice-group-row ${expanded ? "expanded" : ""} ${isSelected ? "is-selected" : ""}`}>
-                          <td>
-                            <input
-                              type="checkbox"
-                              className="invoice-checkbox"
-                              aria-label={`Select ${group.name}`}
-                              checked={isSelected}
-                              onChange={() => toggleSelectItem(group.key)}
-                            />
-                          </td>
-                          <td className="invoice-cell-id">
-                            <strong>{firstItem.sku || group.key.slice(-5)}</strong>
-                          </td>
-                          <td className="invoice-cell-name">
-                            <button
-                              type="button"
-                              className="invoice-group-btn"
-                              onClick={() => toggleInventoryGroup(group.key)}
-                              aria-expanded={expanded}
-                            >
-                              <span className="invoice-product-title">{group.name}</span>
-                              <span className="invoice-group-arrow" aria-hidden="true">
-                                {expanded ? "▲" : "▼"}
+          {/* New Product Button */}
+          <button
+            type="button"
+            className="content-list-action-btn"
+            onClick={() => navigateTo(capabilities?.productLabel || "Products")}
+          >
+            {capabilities?.productLabel ? `+ New ${capabilities.productLabel.slice(0, -1)}` : " New Product"}
+          </button>
+        </div>
+      </div>
+
+      {/* Table Container */}
+      <AsyncBoundary
+        loading={loading}
+        error={error}
+        onRetry={refetch}
+        isEmpty={!filteredRows.length}
+        emptyText={
+          overviewProducts.length
+            ? "No products match your search or filter."
+            : "No products in warehouse yet. Click '+ New Product' above to start."
+        }
+      >
+        <div className="content-list-table-wrap">
+          <table className="content-list-table">
+            <thead>
+              <tr>
+                <th style={{ width: "32%" }}>Product Name</th>
+                <th style={{ width: "18%" }}>Category</th>
+                <th style={{ width: "14%" }}>Unit Price</th>
+                <th style={{ width: "16%" }}>Stock Level</th>
+                <th style={{ width: "12%" }}>Status</th>
+                <th style={{ width: "8%", textAlign: "right", paddingRight: "16px" }}>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {currentItems.map((group) => {
+                const isGroup = group.items.length > 1;
+                const expanded = expandedInventoryGroups.includes(group.key);
+                const firstItem = group.items[0];
+
+                if (!isGroup) {
+                  const isOutOfStock = firstItem.stock === 0;
+                  const isLowStock =
+                    firstItem.stock <= (firstItem.minimumStock || 10) && !isOutOfStock;
+                  const pillClass = isOutOfStock
+                    ? "status-pill-out"
+                    : isLowStock
+                    ? "status-pill-low"
+                    : "status-pill-instock";
+                  const statusText = isOutOfStock
+                    ? "Out of Stock"
+                    : isLowStock
+                    ? "Low Stock"
+                    : "In Stock";
+
+                  return (
+                    <tr key={firstItem.key}>
+                      <td className="cl-cell-product">
+                        <div className="cl-product-name">{firstItem.name}</div>
+                        <div className="cl-product-meta">
+                          <span className="cl-product-sku">SKU: {firstItem.sku || firstItem.key.slice(-6)}</span>
+                          {firstItem.brand && (
+                            <span className="cl-product-brand"> · {firstItem.brand}</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="cl-cell-category">
+                        {firstItem.category || "General"}
+                      </td>
+                      <td className="cl-cell-price">
+                        {formatPrice(firstItem.price)}
+                      </td>
+                      <td className="cl-cell-stock">
+                        <span className="cl-stock-value">{firstItem.stock}</span>
+                        <span className="cl-stock-label"> units</span>
+                      </td>
+                      <td className="cl-cell-status">
+                        <span className={`content-status-pill ${pillClass}`}>
+                          {statusText}
+                        </span>
+                      </td>
+                      <td className="cl-cell-actions" style={{ textAlign: "right", paddingRight: "16px" }}>
+                        <div className="cl-actions-wrapper">
+                          <button
+                            type="button"
+                            className="cl-dots-btn"
+                            title="Manage product"
+                            aria-label={`Manage ${firstItem.name}`}
+                            onClick={() =>
+                              navigateTo(capabilities?.productLabel || "Products")
+                            }
+                          >
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                              <circle cx="5" cy="12" r="1.75" />
+                              <circle cx="12" cy="12" r="1.75" />
+                              <circle cx="19" cy="12" r="1.75" />
+                            </svg>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                }
+
+                // Multi-variant group row
+                const groupOutOfStock = group.stock === 0;
+                const groupLowStock = group.stock <= 10 && !groupOutOfStock;
+                const groupPillClass = groupOutOfStock
+                  ? "status-pill-out"
+                  : groupLowStock
+                  ? "status-pill-low"
+                  : "status-pill-variant";
+                const groupStatusText = groupOutOfStock
+                  ? "Out of Stock"
+                  : `${group.items.length} Variants`;
+
+                return (
+                  <Fragment key={group.key}>
+                    <tr className={`cl-group-row ${expanded ? "expanded" : ""}`}>
+                      <td className="cl-cell-product">
+                        <button
+                          type="button"
+                          className="cl-group-toggle-btn"
+                          onClick={() => toggleInventoryGroup(group.key)}
+                          aria-expanded={expanded}
+                        >
+                          <span className="cl-product-name">{group.name}</span>
+                          <span className="cl-group-chevron" aria-hidden="true">
+                            {expanded ? "▴" : "▾"}
+                          </span>
+                        </button>
+                        <div className="cl-product-meta">
+                          <span className="cl-product-sku">{firstItem.sku || group.key.slice(-6)}</span>
+                          <span className="cl-product-brand"> · {group.items.length} variants available</span>
+                        </div>
+                      </td>
+                      <td className="cl-cell-category">{group.category}</td>
+                      <td className="cl-cell-price">{displayPrice(group.price)}</td>
+                      <td className="cl-cell-stock">
+                        <span className="cl-stock-value">{group.stock}</span>
+                        <span className="cl-stock-label"> total</span>
+                      </td>
+                      <td className="cl-cell-status">
+                        <span className={`content-status-pill ${groupPillClass}`}>
+                          {groupStatusText}
+                        </span>
+                      </td>
+                      <td className="cl-cell-actions" style={{ textAlign: "right", paddingRight: "16px" }}>
+                        <div className="cl-actions-wrapper">
+                          <button
+                            type="button"
+                            className="cl-dots-btn"
+                            title="Manage product"
+                            aria-label={`Manage ${group.name}`}
+                            onClick={() =>
+                              navigateTo(capabilities?.productLabel || "Products")
+                            }
+                          >
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                              <circle cx="5" cy="12" r="1.75" />
+                              <circle cx="12" cy="12" r="1.75" />
+                              <circle cx="19" cy="12" r="1.75" />
+                            </svg>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                    {expanded &&
+                      group.items.map((item) => {
+                        const itemOut = item.stock === 0;
+                        const itemLow = item.stock <= (item.minimumStock || 5) && !itemOut;
+                        const itemClass = itemOut
+                          ? "status-pill-out"
+                          : itemLow
+                          ? "status-pill-low"
+                          : "status-pill-instock";
+                        const itemText = itemOut
+                          ? "Out of Stock"
+                          : itemLow
+                          ? "Low Stock"
+                          : "In Stock";
+
+                        return (
+                          <tr key={item.key} className="cl-variant-subrow">
+                            <td className="cl-cell-product" style={{ paddingLeft: "28px" }}>
+                              <span className="cl-subrow-arrow">↳</span>{" "}
+                              <span className="cl-subrow-title">
+                                {[item.color, item.size].filter(Boolean).join(" · ") || "Standard"}
                               </span>
-                            </button>
-                          </td>
-                          <td className="invoice-cell-category">{group.category}</td>
-                          <td className="invoice-cell-cost">{group.price}</td>
-                          <td>
-                            <span className="invoice-pill pill-shipped">
-                              {group.items.length} Variants
-                            </span>
-                          </td>
-                          <td style={{ textAlign: "right", paddingRight: "20px" }}>
-                            <div className="invoice-actions-cell">
-                              <button
-                                type="button"
-                                className="invoice-action-btn action-edit"
-                                title="Edit group in catalog"
-                                aria-label={`Edit ${group.name}`}
-                                onClick={() =>
-                                  navigateTo(capabilities?.productLabel || "Products")
-                                }
-                              >
-                                <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                                </svg>
-                              </button>
-                              <button
-                                type="button"
-                                className="invoice-action-btn action-view"
-                                title="Toggle variant breakdown"
-                                aria-label={`View variants of ${group.name}`}
-                                onClick={() => toggleInventoryGroup(group.key)}
-                              >
-                                <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                                  <circle cx="12" cy="12" r="3" />
-                                </svg>
-                              </button>
-                              <button
-                                type="button"
-                                className="invoice-action-btn action-delete"
-                                title="Delete group in catalog"
-                                aria-label={`Delete ${group.name}`}
-                                onClick={() =>
-                                  navigateTo(capabilities?.productLabel || "Products")
-                                }
-                              >
-                                <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                  <polyline points="3 6 5 6 21 6" />
-                                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                                </svg>
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                        {expanded &&
-                          group.items.map((item) => (
-                            <tr key={item.key} className="invoice-variant-subrow">
-                              <td></td>
-                              <td
-                                className="invoice-cell-id"
-                                style={{ color: "var(--ov-muted, #94a3b8)", fontSize: "11px" }}
-                              >
-                                {item.sku}
-                              </td>
-                              <td
-                                className="invoice-cell-name"
-                                style={{ paddingLeft: "32px" }}
-                              >
-                                ↳ {[item.color, item.size].filter(Boolean).join(" · ") || "Standard"}
-                              </td>
-                              <td className="invoice-cell-category">{item.category}</td>
-                              <td className="invoice-cell-cost">{item.price.toFixed(2)}</td>
-                              <td>
-                                <span
-                                  className={`invoice-pill ${
-                                    item.stock === 0
-                                      ? "pill-out"
-                                      : item.stock <= item.minimumStock
-                                      ? "pill-pending"
-                                      : "pill-delivered"
-                                  }`}
+                              <div className="cl-product-meta" style={{ paddingLeft: "16px" }}>
+                                <span className="cl-product-sku">{item.sku}</span>
+                              </div>
+                            </td>
+                            <td className="cl-cell-category">{item.category}</td>
+                            <td className="cl-cell-price">{formatPrice(item.price)}</td>
+                            <td className="cl-cell-stock">
+                              <span className="cl-stock-value">{item.stock}</span>
+                              <span className="cl-stock-label"> units</span>
+                            </td>
+                            <td className="cl-cell-status">
+                              <span className={`content-status-pill ${itemClass}`}>
+                                {itemText}
+                              </span>
+                            </td>
+                            <td className="cl-cell-actions" style={{ textAlign: "right", paddingRight: "16px" }}>
+                              <div className="cl-actions-wrapper">
+                                <button
+                                  type="button"
+                                  className="cl-dots-btn"
+                                  title="View variant"
+                                  onClick={() =>
+                                    navigateTo(capabilities?.productLabel || "Products")
+                                  }
                                 >
-                                  {item.stock === 0
-                                    ? "Out of Stock"
-                                    : item.stock <= item.minimumStock
-                                    ? "Low Stock"
-                                    : "In Stock"}
-                                </span>
-                              </td>
-                              <td style={{ textAlign: "right", paddingRight: "20px" }}>
-                                <div className="invoice-actions-cell">
-                                  <button
-                                    type="button"
-                                    className="invoice-action-btn action-view"
-                                    title="View variant"
-                                    onClick={() =>
-                                      navigateTo(capabilities?.productLabel || "Products")
-                                    }
-                                  >
-                                    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                                      <circle cx="12" cy="12" r="3" />
-                                    </svg>
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
-                      </Fragment>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                                  <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                                    <circle cx="5" cy="12" r="1.75" />
+                                    <circle cx="12" cy="12" r="1.75" />
+                                    <circle cx="19" cy="12" r="1.75" />
+                                  </svg>
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                  </Fragment>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
 
-            {/* Pagination footer */}
-            <footer className="overview-pagination invoice-pagination">
-              <span>
-                Showing {(currentOverviewPage - 1) * 8 + 1}–
-                {Math.min(currentOverviewPage * 8, overviewRows.length)} of{" "}
-                {overviewRows.length} products
-              </span>
-              <div className="invoice-page-buttons">
-                <button
-                  type="button"
-                  className="invoice-page-btn"
-                  disabled={currentOverviewPage === 1}
-                  onClick={() => setOverviewPage(currentOverviewPage - 1)}
-                >
-                  Previous
-                </button>
-                <span className="invoice-page-num">
-                  {currentOverviewPage} / {overviewPages}
-                </span>
-                <button
-                  type="button"
-                  className="invoice-page-btn"
-                  disabled={currentOverviewPage === overviewPages}
-                  onClick={() => setOverviewPage(currentOverviewPage + 1)}
-                >
-                  Next
-                </button>
-              </div>
-            </footer>
-          </AsyncBoundary>
-        </>
-      )}
+        {/* Pagination footer matching Page 1 of 4 and Previous / Next */}
+        <footer className="content-list-pagination">
+          <span className="cl-page-info">
+            Page {effectivePage} of {effectivePages}
+          </span>
+          <div className="cl-page-nav">
+            <button
+              type="button"
+              className="cl-page-btn"
+              disabled={effectivePage <= 1}
+              onClick={() => setOverviewPage(effectivePage - 1)}
+            >
+              Previous
+            </button>
+            <button
+              type="button"
+              className="cl-page-btn"
+              disabled={effectivePage >= effectivePages}
+              onClick={() => setOverviewPage(effectivePage + 1)}
+            >
+              Next
+            </button>
+          </div>
+        </footer>
+      </AsyncBoundary>
     </section>
   );
 }

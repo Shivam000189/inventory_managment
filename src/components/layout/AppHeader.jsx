@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import NotificationCenter from "./NotificationCenter.jsx";
 
 const NAVIGATION_LABELS = {
-  Overview: "Dashboard Overview",
+  Overview: "Overview",
   Products: "Products Catalog",
   Stock: "Stock Ledger",
   "Stock In": "Stock Inward",
@@ -65,8 +65,13 @@ export default function AppHeader({
     };
   }, [showUserMenu]);
 
-  const displayName = capitalize(account?.name || account?.email?.split("@")[0] || "User");
-  const roleLabel = account?.role === "owner" ? "Administrator" : capitalize(account?.role || "Staff");
+  const fullName = account?.name || account?.email?.split("@")[0] || "User";
+  const displayName = capitalize(fullName.split(" ")[0]);
+  const roleLabel = account?.role === "owner" ? "Owner" : capitalize(account?.role || "Staff");
+  const words = fullName.trim().split(/\s+/).filter(Boolean);
+  const initials = words.length > 1
+    ? (words[0][0] + words[1][0]).toUpperCase()
+    : words[0].slice(0, 2).toUpperCase();
 
   return (
     <>
@@ -101,9 +106,9 @@ export default function AppHeader({
               <input
                 type="text"
                 className="modern-search-overlay-input"
-                placeholder="Search products, orders, SKUs..."
+                placeholder="Search products, suppliers, orders..."
                 autoFocus
-                aria-label="Search products, orders, SKUs"
+                aria-label="Search products, suppliers, orders"
                 onKeyDown={(e) => {
                   if (e.key === "Escape") setIsSearchExpanded(false);
                 }}
@@ -123,17 +128,37 @@ export default function AppHeader({
           </div>
         )}
 
-        {/* Left Side: Greeting & Status (Persistent across all pages) */}
+        {/* Left Side: Search Bar */}
         <div className="modern-navbar-left">
-          <span className="modern-navbar-welcome-small">Welcome back,</span>
-          <div className="modern-navbar-name-row">
-            <h1 className="modern-navbar-name">{displayName}</h1>
-            <span className="modern-verified-pill" title="Verified business owner">✓</span>
+          <div className="modern-search-wrap">
+            <svg
+              className="modern-search-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <input
+              type="text"
+              className="modern-search-input"
+              placeholder="Search products, suppliers, orders..."
+              aria-label="Search products, suppliers, orders"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && e.target.value.trim() && navigateTo) {
+                  navigateTo("Products");
+                }
+              }}
+            />
           </div>
-          <p className="modern-navbar-sub">Here&apos;s what&apos;s happening in your business today.</p>
         </div>
 
-        {/* Right Side: Search, Role Pill, Theme, Notif, User Menu */}
+        {/* Right Side: Theme Toggle, Notifications, User Menu */}
         <div className="modern-navbar-right">
           {/* Mobile Search Toggle Button */}
           <button
@@ -148,29 +173,6 @@ export default function AppHeader({
               <line x1="21" y1="21" x2="16.65" y2="16.65" />
             </svg>
           </button>
-
-          {/* Desktop Search Pill Input */}
-          <div className="modern-search-wrap">
-            <input
-              type="text"
-              className="modern-search-input"
-              placeholder="Search products, orders, SKUs..."
-              aria-label="Search"
-            />
-            <svg className="modern-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <circle cx="11" cy="11" r="8" />
-              <line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
-          </div>
-
-          {/* Role Pill Badge */}
-          <div className="modern-role-pill">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-              <circle cx="12" cy="7" r="4" />
-            </svg>
-            <span>{roleLabel}</span>
-          </div>
 
           {/* Theme Toggle Button */}
           <button
@@ -220,7 +222,7 @@ export default function AppHeader({
               onClick={() => setShowUserMenu(!showUserMenu)}
             >
               <span className="modern-user-avatar">
-                {(account?.name || account?.email || "U")[0].toUpperCase()}
+                {initials}
               </span>
               <div className="modern-user-meta">
                 <span className="modern-user-name">{displayName}</span>

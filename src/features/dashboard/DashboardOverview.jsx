@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { salesOrderApi } from "../../api/salesOrderApi.js";
-import GettingStartedBanner from "./components/GettingStartedBanner.jsx";
 import MetricCards from "./components/MetricCards.jsx";
 import QuickActions from "./components/QuickActions.jsx";
 import TodaysOverview from "./components/TodaysOverview.jsx";
 import ActivityFeed from "./components/ActivityFeed.jsx";
 import InventoryTable from "./components/InventoryTable.jsx";
+import CalendarDatePicker from "./components/CalendarDatePicker.jsx";
 import "./overview-dashboard.css";
 const stockLevelPct = (stock, minimum) => {
   const value = Number(stock || 0);
@@ -24,7 +24,7 @@ function formatOrderTime(createdAt) {
 
 export default function DashboardOverview({
   business,
-  account,
+  _account,
   products = [],
   loading,
   error,
@@ -34,9 +34,9 @@ export default function DashboardOverview({
   navigateTo,
   notifItems = [],
   openNotification,
-  gettingStarted,
-  checklistDismissed,
-  setChecklistDismissed,
+  _gettingStarted,
+  _checklistDismissed,
+  _setChecklistDismissed,
 }) {
   const [search, setSearch] = useState("");
   const [overviewCategory, setOverviewCategory] = useState("all");
@@ -247,18 +247,15 @@ export default function DashboardOverview({
         ];
 
   return (
-    <div className="modern-dashboard-content">
-      {/* Getting Started Banner */}
-      {/* <GettingStartedBanner
-        account={account}
-        checklistDismissed={checklistDismissed}
-        setChecklistDismissed={setChecklistDismissed}
-        gettingStarted={gettingStarted}
-        products={products}
-        capabilities={capabilities}
-        navigateTo={navigateTo}
-        business={business}
-      /> */}
+    <div className="modern-dashboard-content overview-dashboard">
+      {/* Overview Title & Date Header (matches design) */}
+      <div className="overview-hero-header">
+        <div>
+          <h1 className="overview-hero-title">Overview</h1>
+          <p className="overview-hero-subtitle">Here&apos;s what&apos;s happening with your business today.</p>
+        </div>
+        <CalendarDatePicker />
+      </div>
 
       {/* 1. Top Row: 4 Metric KPI Cards */}
       <MetricCards

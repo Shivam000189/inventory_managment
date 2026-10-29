@@ -16,6 +16,7 @@ const ReportsPage = lazy(() => import('../features/reports/ReportsPage.jsx'))
 const BusinessProfilePage = lazy(() => import('../features/settings/BusinessProfilePage.jsx'))
 const StoreSettingsPage = lazy(() => import('../features/settings/StoreSettingsPage.jsx'))
 const Returns = lazy(() => import('../features/returns/ReturnsPage.jsx'))
+const ProductImportPage = lazy(() => import('../features/product-import/ProductImportPage.jsx'))
 const ClothingModule = lazy(() => import('../features/industries/clothing/ClothingModule.jsx'))
 const ColorManagementPage = lazy(() => import('../features/industries/clothing/ColorManagementPage.jsx'))
 const BulkPricingPage = lazy(() => import('../features/industries/wholesale/BulkPricingPage.jsx'))
@@ -131,6 +132,17 @@ export const ROUTE_TABLE = {
         account={ctx.account}
         onNavigate={ctx.navigateTo}
         canNavigate={ctx.canOpen}
+      />
+    ),
+  },
+  'Product Import': {
+    path: '/product-import',
+    requiredPermission: 'edit_product',
+    render: (ctx) => (
+      <ProductImportPage
+        business={ctx.business}
+        onImportSuccess={() => ctx.navigateTo('Products')}
+        onClose={() => ctx.navigateTo('Products')}
       />
     ),
   },

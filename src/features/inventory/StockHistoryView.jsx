@@ -230,14 +230,14 @@ export default function StockHistoryView({
         render: (item) => {
           const product = productById.get(item.productId)
           const name = product?.name || item.productId
+          const avatarClass = getProductAvatarClass(name)
+          const initial = (name || 'P').charAt(0).toUpperCase()
           return (
-            <div className="inventory-prod-cell">
-              <span className={`inventory-prod-avatar ${getProductAvatarClass(name)}`}>
-                {name?.[0]?.toUpperCase() || 'P'}
-              </span>
-              <div className="inventory-prod-info">
-                <span className="inventory-prod-name">{name}</span>
-                <span className="inventory-prod-meta">{item.variantSku || product?.sku}</span>
+            <div className="product-info-cell">
+              <span className={`product-avatar ${avatarClass}`}>{initial}</span>
+              <div className="product-details">
+                <span className="product-name">{name}</span>
+                <span className="product-meta">{item.variantSku || product?.sku}</span>
               </div>
             </div>
           )
@@ -321,13 +321,6 @@ export default function StockHistoryView({
       {!loading && !error && (
         <StatGrid>
           <StatCard
-            label="Transactions in Range"
-            value={stats.total}
-            helpText="Events matching selected dates"
-            icon="clock"
-            tone="blue"
-          />
-          <StatCard
             label="Total Units In"
             value={`+${stats.received.toLocaleString('en-IN')}`}
             helpText="Receipts & sales returns"
@@ -344,9 +337,16 @@ export default function StockHistoryView({
           <StatCard
             label="Net Inventory Delta"
             value={`${stats.net >= 0 ? '+' : ''}${stats.net.toLocaleString('en-IN')}`}
-            helpText="Overall quantity change"
+            helpText="Overall quantity delta"
             icon="box"
-            tone={stats.net >= 0 ? 'green' : 'yellow'}
+            tone="purple"
+          />
+          <StatCard
+            label="Total Transactions"
+            value={stats.total}
+            helpText="Events matching selected dates"
+            icon="clock"
+            tone="blue"
           />
         </StatGrid>
       )}
@@ -421,6 +421,7 @@ export default function StockHistoryView({
         columns={columns}
         data={visible}
         keyField="id"
+        selectable={false}
         page={page}
         pageSize={pageSize}
         total={visible.length}

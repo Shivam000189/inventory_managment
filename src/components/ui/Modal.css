@@ -46,6 +46,10 @@
   max-width: 860px;
 }
 
+.ui-modal-dialog-xl {
+  max-width: 1100px;
+}
+
 .ui-modal-dialog-sm {
   max-width: 440px;
 }

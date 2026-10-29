@@ -1,18 +1,6 @@
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React from 'react';
+import { motion } from 'framer-motion';
 import { Check, ChevronRight, ShieldCheck } from 'lucide-react';
-
-const CATEGORIES = [
-  'All Modules',
-  'Inventory & Stock',
-  'POS & Billing',
-  'Purchasing & GRN',
-  'Wholesale & B2B',
-  'Pharma & Batches',
-  'Clothing & Variants',
-  'Catalog & Import',
-  'Financial & Tax'
-];
 
 const MODULE_CARDS = [
   {
@@ -328,13 +316,6 @@ const MODULE_CARDS = [
 ];
 
 export const BusinessModules = ({ onSelectModule, onViewAll }) => {
-  const [activeCategory, setActiveCategory] = useState('All Modules');
-
-  const filteredCards = MODULE_CARDS.filter((card) => {
-    if (activeCategory === 'All Modules') return true;
-    return card.category === activeCategory;
-  });
-
   return (
     <section id="modules" className="py-14 sm:py-20 px-5 sm:px-8 max-w-7xl mx-auto select-none">
       {/* ======================================================== */}
@@ -374,50 +355,22 @@ export const BusinessModules = ({ onSelectModule, onViewAll }) => {
       </div>
 
       {/* ======================================================== */}
-      {/* FILTER TABS ROW                                          */}
+      {/* ALL MODULE CARDS GRID                                    */}
       {/* ======================================================== */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-3 mb-8 no-scrollbar">
-        {CATEGORIES.map((cat) => {
-          const isActive = activeCategory === cat;
-          return (
-            <button
-              key={cat}
-              type="button"
-              onClick={() => setActiveCategory(cat)}
-              className={`px-4 py-2 rounded-full text-xs font-semibold transition-all whitespace-nowrap cursor-pointer shrink-0 ${
-                isActive
-                  ? 'bg-[#1a1715] text-[#ffffff] shadow-sm'
-                  : 'bg-[#ffffff] text-[#5e5852] hover:text-[#1a1715] hover:bg-[#faf7f2] border border-[#ede7df]'
-              }`}
-            >
-              {cat}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* ======================================================== */}
-      {/* 8 MODULE CARDS GRID                                      */}
-      {/* ======================================================== */}
-      <motion.div
-        layout
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6"
-      >
-        <AnimatePresence mode="popLayout">
-          {filteredCards.map((card) => (
-            <motion.div
-              layout
-              key={card.id}
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ duration: 0.3 }}
-              whileHover={{ y: -4 }}
-              onClick={() => {
-                if (onSelectModule) onSelectModule(card.title);
-              }}
-              className="rounded-2xl bg-[#ffffff] border border-[#ede7df] shadow-[0_2px_12px_rgba(47,31,19,0.03)] hover:shadow-[0_12px_28px_rgba(47,31,19,0.08)] transition-all duration-300 overflow-hidden flex flex-col justify-between cursor-pointer group"
-            >
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
+        {MODULE_CARDS.map((card) => (
+          <motion.div
+            key={card.id}
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-40px' }}
+            transition={{ duration: 0.35 }}
+            whileHover={{ y: -4 }}
+            onClick={() => {
+              if (onSelectModule) onSelectModule(card.title);
+            }}
+            className="rounded-2xl bg-[#ffffff] border border-[#ede7df] shadow-[0_2px_12px_rgba(47,31,19,0.03)] hover:shadow-[0_12px_28px_rgba(47,31,19,0.08)] transition-all duration-300 overflow-hidden flex flex-col justify-between cursor-pointer group"
+          >
               {/* Card Top: Visual Banner with Badges */}
               <div>
                 <div
@@ -475,8 +428,7 @@ export const BusinessModules = ({ onSelectModule, onViewAll }) => {
               </div>
             </motion.div>
           ))}
-        </AnimatePresence>
-      </motion.div>
+      </div>
     </section>
   );
 };

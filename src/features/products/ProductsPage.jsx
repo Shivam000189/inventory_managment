@@ -2,10 +2,9 @@ import { useCallback, useMemo, useState } from "react";
 import { productApi } from "../../api/productApi.js";
 import { useResource } from "../../hooks/useResource.js";
 import { resolveBusinessCapabilities } from "../../../shared/industryConfig.js";
+import AsyncBoundary from "../../components/feedback/AsyncBoundary.jsx";
 import {
   Button,
-  Badge,
-  DataTable,
   Modal,
   ConfirmDialog,
   Field,
@@ -16,6 +15,7 @@ import {
   Icon,
 } from "../../components/ui/index.js";
 import ProductImportPage from "../product-import/ProductImportPage.jsx";
+import "../dashboard/overview-dashboard.css";
 import "./ProductsPage.css";
 
 function Products({ business, account }) {
@@ -32,8 +32,7 @@ function Products({ business, account }) {
   const [stockFilter, setStockFilter] = useState("all");
   const [sortOrder, setSortOrder] = useState("default");
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-  const [selected, setSelected] = useState([]);
+  const pageSize = 8;
   const [search, setSearch] = useState("");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
@@ -89,7 +88,8 @@ function Products({ business, account }) {
       const matchesStock =
         stockFilter === "all" ||
         (stockFilter === "in" && stock > min) ||
-        (stockFilter === "low" && stock <= min);
+        (stockFilter === "low" && stock <= min && stock > 0) ||
+        (stockFilter === "out" && stock === 0);
 
       return matchesSearch && matchesCategory && matchesStock;
     });
@@ -106,6 +106,12 @@ function Products({ business, account }) {
 
     return list;
   }, [products, search, category, stockFilter, sortOrder]);
+
+  const totalPages = Math.max(1, Math.ceil(visibleProducts.length / pageSize));
+  const effectivePage = Math.min(page, totalPages);
+  const pagedProducts = useMemo(() => {
+    return visibleProducts.slice((effectivePage - 1) * pageSize, effectivePage * pageSize);
+  }, [visibleProducts, effectivePage, pageSize]);
 
   const money = useCallback(
     (value) => {
@@ -141,10 +147,8 @@ function Products({ business, account }) {
     return { inStockCount, lowStockCount, outStockCount, totalQty, valuation };
   }, [products]);
 
-  const exportSheet = (selectionOnly = false) => {
-    const rows = selectionOnly
-      ? visibleProducts.filter((product) => selected.includes(product.productId))
-      : visibleProducts;
+  const exportSheet = () => {
+    const rows = visibleProducts;
     const cell = (value) => `"${String(value ?? "").replace(/^[=+@-]/, "'$&").replaceAll('"', '""')}"`;
     const values = [
       ["Product / Medicine", "Generic Name", "Batch", "Expiry", "SKU", "Category", "Stock", "Price", "MRP", "Currency"],
@@ -267,177 +271,12 @@ function Products({ business, account }) {
     return [...new Set(products.map((p) => p.category).filter(Boolean))];
   }, [products]);
 
-  const columns = useMemo(() => {
-    return [
-      {
-        key: "sku",
-        header: "Id",
-        mobileLabel: "Id",
-        width: "80px",
-        render: (product, index) => (
-          <span className="ledger-cell-id">
-            {product.sku ||
-              (product.productId
-                ? String(product.productId).replace(/\D/g, "").slice(-3) ||
-                  String(product.productId).slice(-5)
-                : 101 + index)}
-          </span>
-        ),
-      },
-      {
-        key: "product",
-        header: isPharmacy ? "Medicine" : "Bill From",
-        mobileLabel: itemLabel,
-        render: (product) => {
-          let expiryInfo = null;
-          if (product.expiryDate) {
-            const expTime = new Date(product.expiryDate).getTime();
-            if (!Number.isNaN(expTime)) {
-              const isExpired = expTime < nowTimestamp;
-              const isSoon = expTime < nowTimestamp + 60 * 86400000;
-              expiryInfo = {
-                tone: isExpired ? "danger" : isSoon ? "warning" : "neutral",
-                label: `${isExpired ? "⚠️ Expired: " : "Exp: "}${new Date(product.expiryDate).toLocaleDateString("en-IN", { month: "short", year: "numeric" })}`,
-              };
-            }
-          }
-
-          return (
-            <div>
-              <span className="ledger-cell-primary">{product.name}</span>
-              <div
-                className="ledger-cell-secondary"
-                style={{
-                  fontSize: "11px",
-                  marginTop: "2px",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  flexWrap: "wrap",
-                }}
-              >
-                {[
-                  product.genericName,
-                  product.brand,
-                  product.batchNumber ? `Batch ${product.batchNumber}` : null,
-                ]
-                  .filter(Boolean)
-                  .join(" · ")}
-                {expiryInfo && (
-                  <Badge tone={expiryInfo.tone} dot size="sm">
-                    {expiryInfo.label}
-                  </Badge>
-                )}
-              </div>
-            </div>
-          );
-        },
-      },
-      {
-        key: "category",
-        header: "Bill To",
-        mobileLabel: "Category",
-        render: (product) => (
-          <span className="ledger-cell-secondary">
-            {product.category || "General"}
-          </span>
-        ),
-      },
-      {
-        key: "price",
-        header: "Total Cost",
-        mobileLabel: "Price",
-        render: (product) => (
-          <div>
-            <span className="ledger-cell-cost">{money(product.sellingPrice)}</span>
-            <div className="ledger-cell-secondary" style={{ fontSize: "11px", marginTop: "2px" }}>
-              {product.currentStock} {product.unit || "units"}
-              {product.mrp && Number(product.mrp) > 0 ? ` · MRP ${money(product.mrp)}` : ""}
-            </div>
-          </div>
-        ),
-      },
-      {
-        key: "status",
-        header: "Status",
-        mobileLabel: "Status",
-        render: (product) => {
-          const stock = Number(product.currentStock || 0);
-          const min = Number(product.minimumStock || 0);
-          let statusType = "delivered";
-          let statusLabel = "Delivered";
-
-          if (stock === 0) {
-            statusType = "danger";
-            statusLabel = "Out of Stock";
-          } else if (stock <= min) {
-            statusType = "pending";
-            statusLabel = "Pending";
-          } else if (stock > min * 2) {
-            statusType = "delivered";
-            statusLabel = "Delivered";
-          } else {
-            statusType = "shipped";
-            statusLabel = "Shipped";
-          }
-
-          return (
-            <span className={`ledger-status-pill status-${statusType}`}>
-              {statusLabel}
-            </span>
-          );
-        },
-      },
-      {
-        key: "actions",
-        header: "Action",
-        mobileLabel: "Action",
-        align: "right",
-        render: (product) => (
-          <div className="ledger-actions-group">
-            {canEdit && (
-              <button
-                type="button"
-                className="ledger-action-icon action-edit"
-                onClick={() => openForm(product)}
-                aria-label={`Edit ${product.name}`}
-                title={`Edit ${product.name}`}
-              >
-                <Icon name="edit" size={17} />
-              </button>
-            )}
-            <button
-              type="button"
-              className="ledger-action-icon action-view"
-              onClick={() => openForm(product)}
-              aria-label={`View ${product.name}`}
-              title={`View ${product.name}`}
-            >
-              <Icon name="eye" size={17} />
-            </button>
-            {canDelete && (
-              <button
-                type="button"
-                className="ledger-action-icon action-delete"
-                onClick={() => deleteProduct(product.productId)}
-                aria-label={`Delete ${product.name}`}
-                title={`Delete ${product.name}`}
-              >
-                <Icon name="trash" size={17} />
-              </button>
-            )}
-          </div>
-        ),
-      },
-    ];
-  }, [itemLabel, isPharmacy, nowTimestamp, money, canEdit, canDelete]);
-
   return (
     <section className="products-page">
-      {/* 4 Pastel Top KPI Cards in a Horizontal Row (Matching user screenshot) */}
+      {/* 4 Tonal Pastel Top KPI Cards in a Horizontal Row */}
       {!loading && !error && (
         <div className="ledger-kpi-grid">
-          {/* Card 1: Total */}
+          {/* Card 1: Total SKUs (Sky Blue) */}
           <div
             className={`ledger-kpi-card theme-blue ${stockFilter === "all" ? "is-active" : ""}`}
             onClick={() => {
@@ -450,17 +289,18 @@ function Products({ business, account }) {
             title={`All ${itemsLabel}`}
           >
             <div className="ledger-kpi-bubble">
-              <Icon name="list" />
+              <Icon name="box" />
             </div>
             <div className="ledger-kpi-content">
-              <span className="ledger-kpi-label">Total</span>
-              <span className="ledger-kpi-val">{products.length} Invoices</span>
+              <span className="ledger-kpi-label">Total SKUs</span>
+              <span className="ledger-kpi-val">{products.length} Items</span>
+              <span className="ledger-kpi-pill pill-blue">Catalog Active</span>
             </div>
           </div>
 
-          {/* Card 2: Shipped */}
+          {/* Card 2: In Stock Healthy (Emerald Green) */}
           <div
-            className={`ledger-kpi-card theme-slate ${stockFilter === "in" ? "is-active" : ""}`}
+            className={`ledger-kpi-card theme-green ${stockFilter === "in" ? "is-active" : ""}`}
             onClick={() => {
               setStockFilter(stockFilter === "in" ? "all" : "in");
               setPage(1);
@@ -470,31 +310,16 @@ function Products({ business, account }) {
             title="In stock items"
           >
             <div className="ledger-kpi-bubble">
-              <Icon name="bag" />
+              <Icon name="check" />
             </div>
             <div className="ledger-kpi-content">
-              <span className="ledger-kpi-label">Shipped</span>
-              <span className="ledger-kpi-val">{stats.inStockCount} Invoices</span>
+              <span className="ledger-kpi-label">In Stock Healthy</span>
+              <span className="ledger-kpi-val">{stats.inStockCount} Items</span>
+              <span className="ledger-kpi-pill pill-green">Well Stocked</span>
             </div>
           </div>
 
-          {/* Card 3: Delivered */}
-          <div
-            className="ledger-kpi-card theme-green"
-            role="button"
-            tabIndex={0}
-            title="Total inventory valuation"
-          >
-            <div className="ledger-kpi-bubble">
-              <Icon name="truck" />
-            </div>
-            <div className="ledger-kpi-content">
-              <span className="ledger-kpi-label">Delivered</span>
-              <span className="ledger-kpi-val">{money(stats.valuation)}</span>
-            </div>
-          </div>
-
-          {/* Card 4: Pending */}
+          {/* Card 3: Low Stock Alerts (Warm Amber) */}
           <div
             className={`ledger-kpi-card theme-amber ${stockFilter === "low" ? "is-active" : ""}`}
             onClick={() => {
@@ -503,150 +328,325 @@ function Products({ business, account }) {
             }}
             role="button"
             tabIndex={0}
-            title="Low or out of stock alerts"
+            title="Low stock alerts"
           >
             <div className="ledger-kpi-bubble">
-              <Icon name="pending" />
+              <Icon name="warning" />
             </div>
             <div className="ledger-kpi-content">
-              <span className="ledger-kpi-label">Pending</span>
-              <span className="ledger-kpi-val">{stats.lowStockCount} Invoices</span>
+              <span className="ledger-kpi-label">Low Stock Alerts</span>
+              <span className="ledger-kpi-val">{stats.lowStockCount} Items</span>
+              <span className="ledger-kpi-pill pill-amber">Action Needed</span>
+            </div>
+          </div>
+
+          {/* Card 4: Total Valuation (Royal Purple) */}
+          <div
+            className="ledger-kpi-card theme-purple"
+            role="button"
+            tabIndex={0}
+            title="Total inventory valuation"
+          >
+            <div className="ledger-kpi-bubble">
+              <Icon name="trending-up" />
+            </div>
+            <div className="ledger-kpi-content">
+              <span className="ledger-kpi-label">Total Valuation</span>
+              <span className="ledger-kpi-val">{money(stats.valuation)}</span>
+              <span className="ledger-kpi-pill pill-purple">Asset Value</span>
             </div>
           </div>
         </div>
       )}
 
-      {/* Search & Action Toolbar (Pill Capsule + New Product Button) */}
-      <div className="ledger-toolbar">
-        <div className="ledger-toolbar-left">
-          <div className="ledger-search-box">
-            <input
-              type="text"
-              className="ledger-search-input"
-              placeholder="Search"
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
-              aria-label={`Search ${itemsLabel}`}
-            />
-            <span className="ledger-search-icon">
-              <Icon name="search" size={16} />
-            </span>
-          </div>
-
-          <select
-            className="ledger-pill-select"
-            aria-label="Filter category"
-            value={category}
-            onChange={(e) => {
-              setCategory(e.target.value);
-              setPage(1);
-            }}
-          >
-            <option value="all">All Categories</option>
-            {categories.map((val) => (
-              <option key={val} value={val}>
-                {val}
-              </option>
-            ))}
-          </select>
-
-          <select
-            className="ledger-pill-select"
-            aria-label="Filter stock"
-            value={stockFilter}
-            onChange={(e) => {
-              setStockFilter(e.target.value);
-              setPage(1);
-            }}
-          >
-            <option value="all">All Statuses ({products.length})</option>
-            <option value="in">In Stock ({stats.inStockCount})</option>
-            <option value="low">Pending / Low Stock ({stats.lowStockCount})</option>
-          </select>
-
-          <select
-            className="ledger-pill-select"
-            aria-label="Sort products"
-            value={sortOrder}
-            onChange={(e) => {
-              setSortOrder(e.target.value);
-              setPage(1);
-            }}
-          >
-            <option value="default">Default Order</option>
-            <option value="price-high">Price: High to Low</option>
-            <option value="price-low">Price: Low to High</option>
-            <option value="stock-high">Stock: High to Low</option>
-            <option value="stock-low">Stock: Low to High</option>
-          </select>
-        </div>
-
-        <div className="ledger-toolbar-right">
-          <button
-            type="button"
-            className="ledger-btn-secondary"
-            onClick={() => exportSheet(selected.length > 0)}
-            disabled={loading || !!error || !visibleProducts.length}
-            title={selected.length > 0 ? `Export selected (${selected.length})` : "Export CSV"}
-          >
-            <Icon name="download" size={15} />
-            <span>{selected.length > 0 ? `Export (${selected.length})` : "Export CSV"}</span>
-          </button>
-
-          {canCreate && (
-            <>
-              <button
-                type="button"
-                className="ledger-btn-secondary"
-                onClick={() => setIsImportOpen(true)}
-                title="Bulk import items"
-              >
-                <Icon name="plus" size={15} />
-                <span>Bulk Import</span>
-              </button>
-
-              <button
-                type="button"
-                className="ledger-btn-primary"
-                onClick={() => openForm()}
-                title={`Add new ${itemLabel.toLowerCase()}`}
-              >
-                <span>New Invoice</span>
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-
       {!isFormOpen && formError && <FormStatus type="error" message={formError} />}
 
-      <DataTable
-        columns={columns}
-        data={visibleProducts}
-        keyField="productId"
-        selectable={true}
-        selectedKeys={selected}
-        onSelectionChange={setSelected}
-        page={page}
-        pageSize={pageSize}
-        total={visibleProducts.length}
-        onPageChange={setPage}
-        onPageSizeChange={(newSize) => {
-          setPageSize(newSize);
-          setPage(1);
-        }}
-        loading={loading}
-        error={error}
-        onRetry={refetch}
-        emptyText={
-          products.length
-            ? `No ${itemsLabel.toLowerCase()} match your search.`
-            : `No ${itemsLabel.toLowerCase()} yet. Add your first ${itemLabel.toLowerCase()}.`
-        }
-      />
+      <div className="modern-panel-card content-list-panel">
+        <div className="content-list-header">
+          <div className="content-list-title-wrap">
+            <h2 className="content-list-title">
+              {itemsLabel} Catalog{" "}
+              <span className="content-list-count">
+                ({visibleProducts.length})
+              </span>
+            </h2>
+          </div>
+
+          <div className="content-list-toolbar">
+            <div className="content-list-search">
+              <svg
+                className="content-list-search-icon"
+                viewBox="0 0 24 24"
+                width="15"
+                height="15"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <circle cx="11" cy="11" r="7" />
+                <path d="m21 21-4.35-4.35" />
+              </svg>
+              <input
+                type="text"
+                className="content-list-search-input"
+                aria-label={`Search ${itemsLabel.toLowerCase()}`}
+                value={search}
+                onChange={(event) => {
+                  setSearch(event.target.value);
+                  setPage(1);
+                }}
+                placeholder="Search..."
+              />
+            </div>
+
+            <select
+              className="content-list-select"
+              aria-label="Filter by category"
+              value={category}
+              onChange={(event) => {
+                setCategory(event.target.value);
+                setPage(1);
+              }}
+            >
+              <option value="all">All Categories</option>
+              {categories.map((val) => (
+                <option key={val} value={val}>
+                  {val}
+                </option>
+              ))}
+            </select>
+
+            <select
+              className="content-list-select"
+              aria-label="Filter by stock status"
+              value={stockFilter}
+              onChange={(event) => {
+                setStockFilter(event.target.value);
+                setPage(1);
+              }}
+            >
+              <option value="all">Status</option>
+              <option value="in">In Stock ({stats.inStockCount})</option>
+              <option value="low">Low Stock ({stats.lowStockCount})</option>
+              <option value="out">Out of Stock ({stats.outStockCount})</option>
+            </select>
+
+            <select
+              className="content-list-select"
+              aria-label="Sort products"
+              value={sortOrder}
+              onChange={(event) => {
+                setSortOrder(event.target.value);
+                setPage(1);
+              }}
+            >
+              <option value="default">Default Order</option>
+              <option value="price-high">Price: High to Low</option>
+              <option value="price-low">Price: Low to High</option>
+              <option value="stock-high">Stock: High to Low</option>
+              <option value="stock-low">Stock: Low to High</option>
+            </select>
+
+            <button
+              type="button"
+              className="content-list-action-btn secondary"
+              onClick={() => exportSheet()}
+              disabled={loading || !!error || !visibleProducts.length}
+              title="Export CSV"
+            >
+              Export CSV
+            </button>
+
+            {canCreate && (
+              <>
+                <button
+                  type="button"
+                  className="content-list-action-btn secondary"
+                  onClick={() => setIsImportOpen(true)}
+                  title="Bulk import items"
+                >
+                  Bulk Import
+                </button>
+
+                <button
+                  type="button"
+                  className="content-list-action-btn"
+                  onClick={() => openForm()}
+                  title={`Add new ${itemLabel.toLowerCase()}`}
+                >
+                  + New {itemLabel}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+
+        <AsyncBoundary
+          loading={loading}
+          error={error}
+          onRetry={refetch}
+          isEmpty={!visibleProducts.length}
+          emptyText={
+            products.length
+              ? `No ${itemsLabel.toLowerCase()} match your search or filters.`
+              : `No ${itemsLabel.toLowerCase()} in catalog yet. Click '+ New ${itemLabel}' to add one.`
+          }
+        >
+          <div className="content-list-table-wrap">
+            <table className="content-list-table">
+              <thead>
+                <tr>
+                  <th style={{ width: "32%" }}>{isPharmacy ? "Medicine Name" : "Product Name"}</th>
+                  <th style={{ width: "18%" }}>Category</th>
+                  <th style={{ width: "14%" }}>Unit Price</th>
+                  <th style={{ width: "16%" }}>Stock Level</th>
+                  <th style={{ width: "12%" }}>Status</th>
+                  <th style={{ width: "8%", textAlign: "right", paddingRight: "16px" }}>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pagedProducts.map((product) => {
+                  const stock = Number(product.currentStock || 0);
+                  const min = Number(product.minimumStock || 10);
+                  const isOutOfStock = stock === 0;
+                  const isLowStock = stock <= min && !isOutOfStock;
+                  const pillClass = isOutOfStock
+                    ? "status-pill-out"
+                    : isLowStock
+                    ? "status-pill-low"
+                    : "status-pill-instock";
+                  const statusText = isOutOfStock
+                    ? "Out of Stock"
+                    : isLowStock
+                    ? "Low Stock"
+                    : "In Stock";
+
+                  let expiryLabel = null;
+                  if (product.expiryDate) {
+                    const expTime = new Date(product.expiryDate).getTime();
+                    if (!Number.isNaN(expTime)) {
+                      const isExpired = expTime < nowTimestamp;
+                      expiryLabel = `${isExpired ? "⚠️ Expired: " : "Exp: "}${new Date(product.expiryDate).toLocaleDateString("en-IN", { month: "short", year: "numeric" })}`;
+                    }
+                  }
+
+                  return (
+                    <tr key={product.productId}>
+                      <td className="cl-cell-product">
+                        <div className="cl-product-name">{product.name}</div>
+                        <div className="cl-product-meta">
+                          <span className="cl-product-sku">SKU: {product.sku || "N/A"}</span>
+                          {product.genericName && (
+                            <span className="cl-product-brand"> · {product.genericName}</span>
+                          )}
+                          {product.brand && (
+                            <span className="cl-product-brand"> · {product.brand}</span>
+                          )}
+                          {product.batchNumber && (
+                            <span className="cl-product-brand"> · Batch: {product.batchNumber}</span>
+                          )}
+                          {expiryLabel && (
+                            <span
+                              className="cl-product-brand"
+                              style={{ color: expiryLabel.includes("⚠️") ? "var(--danger, #dc2626)" : "inherit" }}
+                            >
+                              {" "}· {expiryLabel}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="cl-cell-category">
+                        {product.category || "General"}
+                      </td>
+                      <td className="cl-cell-price">
+                        {money(product.sellingPrice)}
+                        {product.mrp && Number(product.mrp) > 0 ? (
+                          <div style={{ fontSize: "11px", color: "var(--muted, #64748b)", fontWeight: "normal" }}>
+                            MRP {money(product.mrp)}
+                          </div>
+                        ) : null}
+                      </td>
+                      <td className="cl-cell-stock">
+                        <span className="cl-stock-value">{stock.toLocaleString("en-IN")}</span>
+                        <span className="cl-stock-label"> {product.unit || "units"}</span>
+                      </td>
+                      <td className="cl-cell-status">
+                        <span className={`content-status-pill ${pillClass}`}>
+                          {statusText}
+                        </span>
+                      </td>
+                      <td className="cl-cell-actions" style={{ textAlign: "right", paddingRight: "16px" }}>
+                        <div className="cl-actions-wrapper">
+                          {canEdit && (
+                            <button
+                              type="button"
+                              className="ledger-action-icon action-edit"
+                              onClick={() => openForm(product)}
+                              aria-label={`Edit ${product.name}`}
+                              title={`Edit ${product.name}`}
+                            >
+                              <Icon name="edit" size={15} />
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            className="ledger-action-icon action-view"
+                            onClick={() => openForm(product)}
+                            aria-label={`View ${product.name}`}
+                            title={`View ${product.name}`}
+                          >
+                            <Icon name="eye" size={15} />
+                          </button>
+                          {canDelete && (
+                            <button
+                              type="button"
+                              className="ledger-action-icon action-delete"
+                              onClick={() => deleteProduct(product.productId)}
+                              aria-label={`Delete ${product.name}`}
+                              title={`Delete ${product.name}`}
+                            >
+                              <Icon name="trash" size={15} />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {visibleProducts.length > 0 && (
+            <footer className="content-list-pagination">
+              <span className="cl-page-info">
+                Page {effectivePage} of {totalPages}
+              </span>
+              <div className="cl-page-nav">
+                <button
+                  type="button"
+                  className="cl-page-btn"
+                  disabled={effectivePage <= 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  className="cl-page-btn"
+                  disabled={effectivePage >= totalPages}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                >
+                  Next
+                </button>
+              </div>
+            </footer>
+          )}
+        </AsyncBoundary>
+      </div>
 
       <Modal
         isOpen={isFormOpen}

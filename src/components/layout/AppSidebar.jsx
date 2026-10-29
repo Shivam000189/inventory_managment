@@ -1,7 +1,7 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const NAVIGATION_LABELS = {
-  Overview: "Dashboard",
+  Overview: "Overview",
   Products: "Products",
   Categories: "Categories",
   Stock: "Stock Ledger",
@@ -91,6 +91,40 @@ function getSectionIcon(section) {
   );
 }
 
+function getSubgroupIcon(label) {
+  const l = String(label).toLowerCase();
+  if (l.includes("manage")) {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="3" width="7" height="7" rx="1.5" />
+        <rect x="14" y="3" width="7" height="7" rx="1.5" />
+        <rect x="14" y="14" width="7" height="7" rx="1.5" />
+        <rect x="3" y="14" width="7" height="7" rx="1.5" />
+      </svg>
+    );
+  }
+  if (l.includes("operation")) {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+      </svg>
+    );
+  }
+  if (l.includes("track")) {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="10" />
+        <polyline points="12 6 12 12 16 14" />
+      </svg>
+    );
+  }
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
 const INVENTORY_SUBGROUPS = [
   { label: "Manage", items: ["Products", "Medicines", "Stock", "Categories"] },
   { label: "Operations", items: ["Stock In", "Stock Out", "Adjustments"] },
@@ -114,6 +148,30 @@ export default function AppSidebar({
 }) {
   const sidebarRef = useRef(null);
   const closeButtonRef = useRef(null);
+
+  const [expandedSubgroups, setExpandedSubgroups] = useState(() => {
+    const initial = new Set(["Manage"]);
+    for (const group of INVENTORY_SUBGROUPS) {
+      if (group.items.includes(activeNav)) {
+        initial.add(group.label);
+      }
+    }
+    return initial;
+  });
+
+  useEffect(() => {
+    for (const group of INVENTORY_SUBGROUPS) {
+      if (group.items.includes(activeNav)) {
+        setExpandedSubgroups((prev) => {
+          if (prev.has(group.label)) return prev;
+          const next = new Set(prev);
+          next.add(group.label);
+          return next;
+        });
+        break;
+      }
+    }
+  }, [activeNav]);
 
   useEffect(() => {
     if (!mobileNavOpen) return;
@@ -196,11 +254,11 @@ export default function AppSidebar({
         </div>
         {/* Modern Navigation Menu */}
         <nav className="modern-sidebar-nav" aria-label="Main navigation">
-          {/* Overview / Dashboard */}
+          {/* Overview */}
           <button
             className={`modern-nav-item ${activeNav === "Overview" ? "active" : ""}`}
             type="button"
-            title="Dashboard Overview"
+            title="Overview"
             onClick={() => navigateTo("Overview")}
           >
             <span className="modern-nav-icon" aria-hidden="true">
@@ -211,7 +269,7 @@ export default function AppSidebar({
                 <rect x="3" y="14" width="7" height="7" rx="1.5" />
               </svg>
             </span>
-            <span className="modern-nav-label">Dashboard</span>
+            <span className="modern-nav-label">Overview</span>
           </button>
 
           {/* Dynamic Navigation Sections */}
@@ -276,20 +334,57 @@ export default function AppSidebar({
                             subgroup.items.includes(it)
                           );
                           if (matchingItems.length === 0) return null;
+                          const isClusterOpen = expandedSubgroups.has(subgroup.label);
+                          const containsActive = matchingItems.includes(activeNav);
+
                           return (
                             <div key={subgroup.label} className="modern-subnav-cluster">
-                              <div className="modern-subnav-cluster-title">{subgroup.label}</div>
-                              {matchingItems.map((item) => (
-                                <button
-                                  key={item}
-                                  className={`modern-subnav-item ${activeNav === item ? "active" : ""}`}
-                                  type="button"
-                                  title={navigationLabel(item)}
-                                  onClick={() => navigateTo(item)}
-                                >
-                                  <span className="modern-nav-label">{navigationLabel(item)}</span>
-                                </button>
-                              ))}
+                              <button
+                                type="button"
+                                className={`modern-subnav-cluster-toggle ${isClusterOpen ? "open" : ""} ${containsActive ? "contains-active" : ""}`}
+                                aria-expanded={isClusterOpen}
+                                title={`${subgroup.label} (${matchingItems.length})`}
+                                onClick={() => {
+                                  setExpandedSubgroups((current) => {
+                                    const next = new Set(current);
+                                    if (next.has(subgroup.label)) {
+                                      next.delete(subgroup.label);
+                                    } else {
+                                      next.add(subgroup.label);
+                                    }
+                                    return next;
+                                  });
+                                }}
+                              >
+                                <div className="modern-subnav-cluster-toggle-left">
+                                  <span className="modern-subnav-cluster-icon" aria-hidden="true">
+                                    {getSubgroupIcon(subgroup.label)}
+                                  </span>
+                                  <span className="modern-subnav-cluster-title">{subgroup.label}</span>
+                                  <span className="modern-subnav-cluster-count">{matchingItems.length}</span>
+                                </div>
+                                <span className={`modern-subnav-cluster-chevron ${isClusterOpen ? "open" : ""}`} aria-hidden="true">
+                                  <svg viewBox="0 0 20 20" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="m6 8 4 4 4-4" />
+                                  </svg>
+                                </span>
+                              </button>
+
+                              {isClusterOpen && (
+                                <div className="modern-subnav-cluster-items">
+                                  {matchingItems.map((item) => (
+                                    <button
+                                      key={item}
+                                      className={`modern-subnav-item ${activeNav === item ? "active" : ""}`}
+                                      type="button"
+                                      title={navigationLabel(item)}
+                                      onClick={() => navigateTo(item)}
+                                    >
+                                      <span className="modern-nav-label">{navigationLabel(item)}</span>
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                           );
                         })}
@@ -298,20 +393,53 @@ export default function AppSidebar({
                             (it) => !INVENTORY_SUBGROUPS.some((g) => g.items.includes(it))
                           );
                           if (remainingItems.length === 0) return null;
+                          const isClusterOpen = expandedSubgroups.has("Extensions");
+                          const containsActive = remainingItems.includes(activeNav);
                           return (
                             <div className="modern-subnav-cluster">
-                              <div className="modern-subnav-cluster-title">Extensions</div>
-                              {remainingItems.map((item) => (
-                                <button
-                                  key={item}
-                                  className={`modern-subnav-item ${activeNav === item ? "active" : ""}`}
-                                  type="button"
-                                  title={navigationLabel(item)}
-                                  onClick={() => navigateTo(item)}
-                                >
-                                  <span className="modern-nav-label">{navigationLabel(item)}</span>
-                                </button>
-                              ))}
+                              <button
+                                type="button"
+                                className={`modern-subnav-cluster-toggle ${isClusterOpen ? "open" : ""} ${containsActive ? "contains-active" : ""}`}
+                                aria-expanded={isClusterOpen}
+                                title={`Extensions (${remainingItems.length})`}
+                                onClick={() => {
+                                  setExpandedSubgroups((current) => {
+                                    const next = new Set(current);
+                                    if (next.has("Extensions")) next.delete("Extensions");
+                                    else next.add("Extensions");
+                                    return next;
+                                  });
+                                }}
+                              >
+                                <div className="modern-subnav-cluster-toggle-left">
+                                  <span className="modern-subnav-cluster-icon" aria-hidden="true">
+                                    {getSubgroupIcon("Extensions")}
+                                  </span>
+                                  <span className="modern-subnav-cluster-title">Extensions</span>
+                                  <span className="modern-subnav-cluster-count">{remainingItems.length}</span>
+                                </div>
+                                <span className={`modern-subnav-cluster-chevron ${isClusterOpen ? "open" : ""}`} aria-hidden="true">
+                                  <svg viewBox="0 0 20 20" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="m6 8 4 4 4-4" />
+                                  </svg>
+                                </span>
+                              </button>
+
+                              {isClusterOpen && (
+                                <div className="modern-subnav-cluster-items">
+                                  {remainingItems.map((item) => (
+                                    <button
+                                      key={item}
+                                      className={`modern-subnav-item ${activeNav === item ? "active" : ""}`}
+                                      type="button"
+                                      title={navigationLabel(item)}
+                                      onClick={() => navigateTo(item)}
+                                    >
+                                      <span className="modern-nav-label">{navigationLabel(item)}</span>
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                           );
                         })()}

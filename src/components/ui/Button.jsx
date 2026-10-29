@@ -1,4 +1,5 @@
 import './Button.css'
+import { Icon } from './icons.jsx'
 
 export function Button({
   children,
@@ -24,6 +25,14 @@ export function Button({
     .filter(Boolean)
     .join(' ')
 
+  const renderIcon = (ic) => {
+    if (!ic) return null
+    if (typeof ic === 'string') {
+      return <Icon name={ic} size={size === 'sm' ? 14 : size === 'lg' ? 18 : 16} />
+    }
+    return ic
+  }
+
   return (
     <button
       type={type}
@@ -34,10 +43,10 @@ export function Button({
       {isLoading ? (
         <span className="ui-btn-spinner" aria-hidden="true" />
       ) : (
-        leftIcon
+        renderIcon(leftIcon)
       )}
       {children}
-      {!isLoading && rightIcon}
+      {!isLoading && renderIcon(rightIcon)}
     </button>
   )
 }

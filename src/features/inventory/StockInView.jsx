@@ -4,16 +4,17 @@ import {
   PageHeader,
   Button,
   Badge,
-  StatGrid,
-  StatCard,
-  Toolbar,
-  DataTable,
   Select,
   Input,
   FormStatus,
   Icon,
+  Modal,
 } from '../../components/ui/index.js'
-import { getProductAvatarClass } from './inventoryUtils.js'
+import AsyncBoundary from '../../components/feedback/AsyncBoundary.jsx'
+import {
+  getProductAvatarClass,
+} from './inventoryUtils.js'
+import '../dashboard/overview-dashboard.css'
 import './InventoryOperations.css'
 
 export default function StockInView(props) {
@@ -35,8 +36,8 @@ function StockMovementView({
   saving,
   message,
   onSubmit,
-  onNavigate,
-  canNavigate,
+  onNavigate: _onNavigate,
+  canNavigate: _canNavigate,
   outward = false,
 }) {
   const capabilities = useMemo(
@@ -49,16 +50,33 @@ function StockMovementView({
   const [stockStatus, setStockStatus] = useState('all')
   const [sortOrder, setSortOrder] = useState('default')
   const [selectedId, setSelectedId] = useState('')
-  const [selectedKeys, setSelectedKeys] = useState([])
+  const [inputQuantity, setInputQuantity] = useState('')
+  const [isModalOpen, setIsModalOpen] = useState(false)
   const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(10)
+  const pageSize = 8
 
   const productRef = useRef(null)
   const quantityRef = useRef(null)
   const formRef = useRef(null)
 
   const selectedProduct = products.find((product) => product.productId === selectedId)
+  const isExceedingStock =
+    outward &&
+    selectedProduct &&
+    inputQuantity !== '' &&
+    Number(inputQuantity) > Number(selectedProduct.currentStock || 0)
   const currency = business.currency || 'INR'
+
+  useEffect(() => {
+    if (message?.type === 'success') {
+      const timer = setTimeout(() => {
+        setIsModalOpen(false)
+        setSelectedId('')
+        setInputQuantity('')
+      }, 700)
+      return () => clearTimeout(timer)
+    }
+  }, [message])
 
   const money = (value) => {
     const amount = Number(value || 0)
@@ -131,7 +149,7 @@ function StockMovementView({
           .toLowerCase()
           .includes(query)
 
-      const matchesCategory = category === 'all' || product.category === category
+      const matchesCategory = category === 'all' || category === 'recent' || product.category === category
 
       const matchesStatus =
         stockStatus === 'all' ||
@@ -151,6 +169,33 @@ function StockMovementView({
     return list
   }, [products, search, category, stockStatus, sortOrder])
 
+  const isRecentView = category === 'recent'
+
+  const filteredRecentEntries = useMemo(() => {
+    const query = search.trim().toLowerCase()
+    if (!query) return summary.entries
+    return summary.entries.filter((entry) => {
+      const prod = products.find((p) => p.productId === entry.productId)
+      return (
+        (prod?.name || '').toLowerCase().includes(query) ||
+        (prod?.sku || entry.variantSku || entry.productId || '').toLowerCase().includes(query) ||
+        (entry.reason || '').toLowerCase().includes(query)
+      )
+    })
+  }, [summary.entries, products, search])
+
+  const currentTotal = isRecentView ? filteredRecentEntries.length : filteredProducts.length
+  const totalPages = Math.max(1, Math.ceil(currentTotal / pageSize))
+  const effectivePage = Math.min(page, totalPages)
+
+  const pagedProducts = useMemo(() => {
+    return filteredProducts.slice((effectivePage - 1) * pageSize, effectivePage * pageSize)
+  }, [filteredProducts, effectivePage, pageSize])
+
+  const pagedRecentEntries = useMemo(() => {
+    return filteredRecentEntries.slice((effectivePage - 1) * pageSize, effectivePage * pageSize)
+  }, [filteredRecentEntries, effectivePage, pageSize])
+
   useEffect(() => {
     const handleShortcut = (event) => {
       if (event.defaultPrevented || event.repeat || event.isComposing) return
@@ -161,7 +206,8 @@ function StockMovementView({
         event.key.toLowerCase() === (outward ? 'o' : 'i')
       ) {
         event.preventDefault()
-        productRef.current?.focus()
+        setIsModalOpen(true)
+        setTimeout(() => productRef.current?.focus(), 150)
       }
     }
     window.addEventListener('keydown', handleShortcut)
@@ -171,11 +217,12 @@ function StockMovementView({
   const startIntake = useCallback((product) => {
     if (saving) return
     setSelectedId(product.productId)
-    formRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    setInputQuantity('')
+    setIsModalOpen(true)
     setTimeout(() => {
       quantityRef.current?.focus()
       quantityRef.current?.select()
-    }, 100)
+    }, 150)
   }, [saving])
 
   const exportDispatches = () => {
@@ -211,121 +258,6 @@ function StockMovementView({
     setTimeout(() => URL.revokeObjectURL(url), 1000)
   }
 
-  const columns = useMemo(() => {
-    return [
-      {
-        key: 'sku',
-        header: 'SKU',
-        mobileLabel: 'SKU',
-        render: (product) => (
-          <code style={{ fontSize: '11px', fontFamily: 'var(--font-mono)' }}>
-            {product.sku || product.productId.slice(-6)}
-          </code>
-        ),
-      },
-      {
-        key: 'product',
-        header: 'Product & Details',
-        mobileLabel: 'Product',
-        render: (product) => (
-          <div className="inventory-prod-cell">
-            <span className={`inventory-prod-avatar ${getProductAvatarClass(product.name)}`}>
-              {product.name?.[0]?.toUpperCase()}
-            </span>
-            <div className="inventory-prod-info">
-              <span className="inventory-prod-name">{product.name}</span>
-              <span className="inventory-prod-meta">
-                {[
-                  product.brand,
-                  product.batchNumber ? `Batch: ${product.batchNumber}` : null,
-                  product.expiryDate ? `Exp: ${String(product.expiryDate).slice(0, 10)}` : null,
-                ]
-                  .filter(Boolean)
-                  .join(' · ')}
-              </span>
-            </div>
-          </div>
-        ),
-      },
-      {
-        key: 'category',
-        header: 'Category',
-        mobileLabel: 'Category',
-        render: (product) => <Badge tone="neutral">{product.category || 'Unassigned'}</Badge>,
-      },
-      {
-        key: 'stock',
-        header: 'Available Stock',
-        mobileLabel: 'Stock',
-        render: (product) => {
-          const stock = Number(product.currentStock || 0)
-          const minimum = Number(product.minimumStock || 10)
-          const state = stock === 0 ? 'out' : stock <= minimum ? 'low' : 'in'
-          return (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span className={`inventory-qty-val ${state}`}>{stock.toLocaleString('en-IN')}</span>
-              <small style={{ color: 'var(--text-soft)', fontSize: '11.5px', fontWeight: 600 }}>
-                {product.unit || 'units'}
-              </small>
-            </div>
-          )
-        },
-      },
-      {
-        key: 'lastMovement',
-        header: `Last ${outward ? 'Dispatch' : 'Inward'}`,
-        mobileLabel: 'Last Movement',
-        render: (product) => {
-          const latest = summary.latest.get(product.productId)
-          if (!latest) return <span style={{ color: 'var(--text-soft)', fontSize: '12px' }}>Never</span>
-          return (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span className={`inventory-qty-val ${outward ? 'out' : 'in'}`}>
-                {outward ? '-' : '+'}
-                {latest.quantity}
-              </span>
-              <small style={{ color: 'var(--text-soft)', fontSize: '11px' }}>
-                {new Date(latest.createdAt).toLocaleDateString()}
-              </small>
-            </div>
-          )
-        },
-      },
-      {
-        key: 'status',
-        header: 'Status',
-        mobileLabel: 'Status',
-        render: (product) => {
-          const stock = Number(product.currentStock || 0)
-          const minimum = Number(product.minimumStock || 10)
-          const isOut = stock === 0
-          const isLow = stock <= minimum && !isOut
-          return (
-            <Badge tone={isOut ? 'danger' : isLow ? 'warning' : 'success'} dot>
-              {isOut ? 'Out of Stock' : isLow ? 'Low Stock' : 'In Stock'}
-            </Badge>
-          )
-        },
-      },
-      {
-        key: 'actions',
-        header: '',
-        mobileLabel: 'Actions',
-        align: 'right',
-        render: (product) => (
-          <Button
-            variant={outward ? 'danger' : 'primary'}
-            size="sm"
-            onClick={() => startIntake(product)}
-            aria-label={`${outward ? 'Dispatch' : 'Receive'} ${product.name}`}
-          >
-            {outward ? '- Dispatch' : '+ Inward'}
-          </Button>
-        ),
-      },
-    ]
-  }, [outward, summary.latest, startIntake])
-
   return (
     <div className="inventory-page">
       <PageHeader
@@ -336,225 +268,144 @@ function StockMovementView({
             ? `Outward goods dispatch, warehouse picking, and sales deduction for ${business.name}`
             : `Record incoming stock shipments, supplier receipts, and purchase orders for ${business.name}`
         }
-        actions={
-          <>
-            <Button
-              variant="outline"
-              onClick={exportDispatches}
-              disabled={!summary.entries.length}
-              icon="download"
-            >
-              Export log
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => onNavigate?.(canNavigate?.('Medicines') ? 'Medicines' : 'Products')}
-              icon="plus"
-            >
-              + New {capabilities.productLabel === 'Medicines' ? 'Medicine' : 'Product'}
-            </Button>
-          </>
-        }
       />
 
       {!loading && !error && (
-        <StatGrid>
-          <StatCard
-            label={outward ? 'Dispatches Logged' : 'Inward Shipments'}
-            value={summary.inwardCount}
-            helpText={`${summary.inwardUnits.toLocaleString('en-IN')} units logged`}
-            icon={outward ? 'arrow' : 'box'}
-            tone={outward ? 'rose' : 'green'}
-          />
-          <StatCard
-            label="Critical Low Stock"
-            value={summary.lowCount}
-            helpText="SKUs at or below reorder level"
-            icon="warning"
-            tone={summary.lowCount > 0 ? 'yellow' : 'neutral'}
-          />
-          <StatCard
-            label="Out of Stock"
-            value={summary.outOfStockCount}
-            helpText="Immediate replenishment required"
-            icon="warning"
-            tone={summary.outOfStockCount > 0 ? 'rose' : 'neutral'}
-          />
-          <StatCard
-            label="Warehouse Cost Value"
-            value={money(summary.value)}
-            helpText="Live purchase cost balance"
-            icon="trending-up"
-            tone={outward ? 'blue' : 'purple'}
-          />
-        </StatGrid>
-      )}
-
-      {/* Intake / Dispatch Terminal Card */}
-      <section className={`inventory-terminal-card ${outward ? 'terminal-out' : 'terminal-in'}`} aria-labelledby="terminal-title">
-        <div className="inventory-terminal-header">
-          <div className="inventory-terminal-title-wrap">
-            <div className={`inventory-terminal-icon ${outward ? 'out' : 'in'}`}>
+        <div className="ledger-kpi-grid">
+          {/* Card 1: Inward / Dispatch */}
+          <div
+            className={`ledger-kpi-card ${outward ? 'theme-blue' : 'theme-green'} ${category === 'recent' ? 'is-active' : ''}`}
+            onClick={() => {
+              setCategory(category === 'recent' ? 'all' : 'recent')
+              setPage(1)
+            }}
+            role="button"
+            tabIndex={0}
+            title={`View ${outward ? 'recent dispatches' : 'recent receipts'}`}
+          >
+            <div className="ledger-kpi-bubble">
               <Icon name={outward ? 'arrow' : 'box'} />
             </div>
-            <div>
-              <h3 id="terminal-title" className="inventory-terminal-title">
-                {operationLabel}
-                <Badge tone={outward ? 'danger' : 'success'} dot>
-                  {outward ? 'Outward Dispatch' : 'Fast Intake'}
-                </Badge>
-              </h3>
+            <div className="ledger-kpi-content">
+              <span className="ledger-kpi-label">{outward ? 'Dispatches Logged' : 'Inward Shipments'}</span>
+              <span className="ledger-kpi-val">{summary.inwardCount} Records</span>
+              <span className={`ledger-kpi-pill ${outward ? 'pill-blue' : 'pill-green'}`}>
+                {summary.inwardUnits.toLocaleString('en-IN')} Units {outward ? 'Issued' : 'Received'}
+              </span>
             </div>
           </div>
-          <kbd className="inventory-kbd">Alt + {outward ? 'O' : 'I'}</kbd>
+
+          {/* Card 2: Low Stock */}
+          <div
+            className={`ledger-kpi-card theme-amber ${stockStatus === 'low' ? 'is-active' : ''}`}
+            onClick={() => {
+              setStockStatus(stockStatus === 'low' ? 'all' : 'low')
+              setPage(1)
+            }}
+            role="button"
+            tabIndex={0}
+            title="Filter low stock items"
+          >
+            <div className="ledger-kpi-bubble">
+              <Icon name="warning" />
+            </div>
+            <div className="ledger-kpi-content">
+              <span className="ledger-kpi-label">Critical Low Stock</span>
+              <span className="ledger-kpi-val">{summary.lowCount} SKUs</span>
+              <span className="ledger-kpi-pill pill-amber">Reorder Needed</span>
+            </div>
+          </div>
+
+          {/* Card 3: Out of Stock */}
+          <div
+            className={`ledger-kpi-card theme-red ${stockStatus === 'out' ? 'is-active' : ''}`}
+            onClick={() => {
+              setStockStatus(stockStatus === 'out' ? 'all' : 'out')
+              setPage(1)
+            }}
+            role="button"
+            tabIndex={0}
+            title="Filter out of stock items"
+          >
+            <div className="ledger-kpi-bubble">
+              <Icon name="warning" />
+            </div>
+            <div className="ledger-kpi-content">
+              <span className="ledger-kpi-label">Out of Stock</span>
+              <span className="ledger-kpi-val">{summary.outOfStockCount} SKUs</span>
+              <span className="ledger-kpi-pill pill-red">Replenish Urgently</span>
+            </div>
+          </div>
+
+          {/* Card 4: Warehouse Cost */}
+          <div className="ledger-kpi-card theme-purple">
+            <div className="ledger-kpi-bubble">
+              <Icon name="trending-up" />
+            </div>
+            <div className="ledger-kpi-content">
+              <span className="ledger-kpi-label">Warehouse Cost Value</span>
+              <span className="ledger-kpi-val">{money(summary.value)}</span>
+              <span className="ledger-kpi-pill pill-purple">Purchase Basis</span>
+            </div>
+          </div>
         </div>
+      )}
 
-        <form
-          ref={formRef}
-          onSubmit={onSubmit}
-          onReset={() => setSelectedId('')}
-          className="inventory-form"
-        >
-          <div className="inventory-form-grid">
-            <div className="inventory-field">
-              <label htmlFor="terminal-product">Product / SKU *</label>
-              <Select
-                ref={productRef}
-                id="terminal-product"
-                name="productId"
-                value={selectedId}
-                required
-                disabled={saving}
-                onChange={(e) => setSelectedId(e.target.value)}
-              >
-                <option value="" disabled>
-                  Select a {capabilities.productLabel === 'Medicines' ? 'medicine' : 'product'}…
-                </option>
-                {products.map((product) => (
-                  <option key={product.productId} value={product.productId}>
-                    {product.name} ({product.sku})
-                    {product.batchNumber ? ` · Batch: ${product.batchNumber}` : ''} ·{' '}
-                    {product.currentStock} {product.unit || 'units'} available
-                  </option>
-                ))}
-              </Select>
-            </div>
-
-            <div className="inventory-field">
-              <label htmlFor="terminal-quantity">Quantity *</label>
-              <div className="inventory-input-with-suffix">
-                <input
-                  ref={quantityRef}
-                  id="terminal-quantity"
-                  name="quantity"
-                  type="number"
-                  min="1"
-                  step="1"
-                  required
-                  disabled={saving}
-                  placeholder="0"
-                />
-                <span className="inventory-suffix">
-                  {selectedProduct?.unit || 'units'}
-                </span>
-              </div>
-            </div>
-
-            <div className="inventory-field">
-              <label htmlFor="terminal-reason">Reason / Type</label>
-              <Input
-                id="terminal-reason"
-                name="reason"
-                list="terminal-reasons"
-                placeholder={
-                  outward
-                    ? 'e.g. Sale, damage, transfer'
-                    : 'e.g. Purchase order, supplier receipt'
-                }
-                disabled={saving}
-              />
-              <datalist id="terminal-reasons">
-                {(outward
-                  ? ['Sale', 'Damage', 'Transfer dispatch', 'Internal store use', 'Expired']
-                  : [
-                      'Purchase order',
-                      'Customer return',
-                      'Transfer receipt',
-                      'Opening stock',
-                      'Stock replenishment',
-                    ]
-                ).map((reason) => (
-                  <option key={reason} value={reason} />
-                ))}
-              </datalist>
-            </div>
-
-            <Button
-              type="submit"
-              variant={outward ? 'danger' : 'primary'}
-              loading={saving}
-              icon={outward ? 'arrow' : 'plus'}
-            >
-              {saving ? 'Recording…' : operationLabel}
-            </Button>
-          </div>
-
-          <div className="inventory-context-row">
-            <div className="inventory-context-tile tile-blue">
-              <span className="inventory-context-icon">📍</span>
-              <div className="inventory-context-details">
-                <span className="inventory-context-label">Rack / Bin Location</span>
-                <span className="inventory-context-value">
-                  {selectedProduct
-                    ? selectedProduct.rackLocation || selectedProduct.warehouse || 'Unassigned'
-                    : 'Select a product to view location'}
-                </span>
-              </div>
-            </div>
-            <div className="inventory-context-tile tile-purple">
-              <span className="inventory-context-icon">💰</span>
-              <div className="inventory-context-details">
-                <span className="inventory-context-label">Unit Purchase Cost ({currency})</span>
-                <span className="inventory-context-value">
-                  {selectedProduct ? money(selectedProduct.purchasePrice) : '—'}
-                </span>
-              </div>
-            </div>
-            <div className={`inventory-context-tile ${outward ? 'tile-rose' : 'tile-green'}`}>
-              <span className="inventory-context-icon">{outward ? '👤' : '🚚'}</span>
-              <div className="inventory-context-details">
-                <span className="inventory-context-label">
-                  {outward ? 'Authorized Operator' : 'Assigned Supplier'}
-                </span>
-                <span className="inventory-context-value">
-                  {outward
-                    ? `${account?.name || account?.email || 'Current user'} (${account?.role || 'Staff'})`
-                    : selectedProduct?.supplier || 'Standard Supplier'}
-                </span>
-              </div>
-            </div>
-          </div>
-        </form>
-
-        {message && (
+      {message && (
+        <div style={{ marginBottom: '14px' }}>
           <FormStatus
             type={message.type === 'error' ? 'error' : 'success'}
             message={message.text}
           />
-        )}
-      </section>
+        </div>
+      )}
 
       {/* Products list with current stock levels */}
-      <Toolbar
-        search={search}
-        onSearchChange={(val) => {
-          setSearch(val)
-          setPage(1)
-        }}
-        placeholder="Search product, SKU, barcode, brand…"
-        filters={
-          <>
-            <Select
+      <div className="modern-panel-card content-list-panel">
+        <div className="content-list-header">
+          <div className="content-list-title-wrap">
+            <h2 className="content-list-title">
+              {isRecentView
+                ? (outward ? 'Recent Dispatches' : 'Recent Receipts')
+                : (outward ? 'Dispatch Catalog' : 'Receiving Catalog')}{' '}
+              <span className="content-list-count">
+                ({isRecentView ? filteredRecentEntries.length : filteredProducts.length})
+              </span>
+            </h2>
+          </div>
+
+          <div className="content-list-toolbar">
+            <div className="content-list-search">
+              <svg
+                className="content-list-search-icon"
+                viewBox="0 0 24 24"
+                width="15"
+                height="15"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <circle cx="11" cy="11" r="7" />
+                <path d="m21 21-4.35-4.35" />
+              </svg>
+              <input
+                type="text"
+                className="content-list-search-input"
+                aria-label="Search catalog"
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value)
+                  setPage(1)
+                }}
+                placeholder={isRecentView ? "Search receipts, order ref, product…" : "Search product, SKU, barcode, brand…"}
+              />
+            </div>
+
+            <select
+              className="content-list-select"
               aria-label="Filter by category"
               value={category}
               onChange={(e) => {
@@ -563,14 +414,18 @@ function StockMovementView({
               }}
             >
               <option value="all">All categories ({products.length})</option>
+              <option value="recent">
+                {outward ? 'Recent Dispatches' : 'Recent Receipts'} ({summary.entries.length})
+              </option>
               {summary.categories.map((c) => (
                 <option key={c} value={c}>
                   {c}
                 </option>
               ))}
-            </Select>
+            </select>
 
-            <Select
+            <select
+              className="content-list-select"
               aria-label="Filter by stock status"
               value={stockStatus}
               onChange={(e) => {
@@ -582,9 +437,10 @@ function StockMovementView({
               <option value="in">In Stock (Healthy)</option>
               <option value="low">Low Stock Alert ({summary.lowCount})</option>
               <option value="out">Out of Stock ({summary.outOfStockCount})</option>
-            </Select>
+            </select>
 
-            <Select
+            <select
+              className="content-list-select"
               aria-label="Sort stock"
               value={sortOrder}
               onChange={(e) => {
@@ -595,35 +451,466 @@ function StockMovementView({
               <option value="default">Default order</option>
               <option value="high">Stock: High to Low</option>
               <option value="low">Stock: Low to High</option>
-            </Select>
-          </>
-        }
-      />
+            </select>
 
-      <DataTable
-        columns={columns}
-        data={filteredProducts}
-        keyField="productId"
-        selectable={true}
-        selectedKeys={selectedKeys}
-        onSelectionChange={setSelectedKeys}
-        page={page}
-        pageSize={pageSize}
-        total={filteredProducts.length}
-        onPageChange={setPage}
-        onPageSizeChange={(newSize) => {
-          setPageSize(newSize)
-          setPage(1)
+            <button
+              type="button"
+              className="content-list-action-btn secondary"
+              onClick={exportDispatches}
+              disabled={!summary.entries.length}
+              title="Export Log"
+            >
+              Export Log
+            </button>
+
+            <button
+              type="button"
+              className="content-list-action-btn"
+              onClick={() => {
+                setSelectedId('')
+                setInputQuantity('')
+                setIsModalOpen(true)
+              }}
+              title={outward ? 'Record Outward Dispatch' : 'Record Inward Stock'}
+            >
+              {outward ? '+ Outward' : '+ Inward'}
+            </button>
+          </div>
+        </div>
+
+        <AsyncBoundary
+          loading={loading}
+          error={error}
+          onRetry={refetch}
+          isEmpty={isRecentView ? !filteredRecentEntries.length : !filteredProducts.length}
+          emptyText={
+            isRecentView
+              ? `No recent ${outward ? 'dispatches' : 'receipts'} recorded yet.`
+              : products.length
+              ? 'No items match your search and filter criteria.'
+              : `No products found. Add products to begin ${outward ? 'dispatching' : 'receiving'} stock.`
+          }
+        >
+          <div className="content-list-table-wrap">
+            {isRecentView ? (
+              <table className="content-list-table">
+                <thead>
+                  <tr>
+                    <th style={{ width: '32%' }}>Product & Details</th>
+                    <th style={{ width: '18%' }}>Category & Location</th>
+                    <th style={{ width: '18%' }}>Date & Time</th>
+                    <th style={{ width: '14%' }}>Quantity</th>
+                    <th style={{ width: '18%' }}>Reason / Reference</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pagedRecentEntries.map((item, index) => {
+                    const prod = products.find((p) => p.productId === item.productId)
+                    const avatarClass = getProductAvatarClass(prod?.name || item.productId)
+                    const initial = (prod?.name || 'P').charAt(0).toUpperCase()
+                    return (
+                      <tr key={item.id || item._id || `${item.productId}-${item.createdAt}-${index}`}>
+                        <td className="cl-cell-product">
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <span className={`product-avatar ${avatarClass}`}>{initial}</span>
+                            <div>
+                              <div className="cl-product-name">{prod?.name || item.productId}</div>
+                              <div className="cl-product-meta">
+                                <span className="cl-product-sku">SKU: {prod?.sku || item.variantSku || (item.productId ? String(item.productId).slice(-6) : 'N/A')}</span>
+                                {prod?.brand && (
+                                  <span className="cl-product-brand"> · {prod.brand}</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="cl-cell-category">
+                          <div>
+                            <span className="ledger-category-pill">{prod?.category || 'General'}</span>
+                            {prod?.rackLocation && (
+                              <div style={{ fontSize: '11px', color: 'var(--text-soft)', marginTop: '4px' }}>
+                                📍 {prod.rackLocation}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="cl-cell-date">
+                          <span style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--text)' }}>
+                            {new Date(item.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
+                          </span>
+                          <div style={{ fontSize: '11px', color: 'var(--text-soft)', marginTop: '2px' }}>
+                            {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </div>
+                        </td>
+                        <td className="cl-cell-stock">
+                          <span className={`inventory-qty-val ${outward ? 'out' : 'in'}`} style={{ fontSize: '13px' }}>
+                            {outward ? '-' : '+'}{item.quantity} {prod?.unit || 'units'}
+                          </span>
+                        </td>
+                        <td className="cl-cell-details">
+                          <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text)' }}>
+                            {item.reason || (outward ? 'Dispatch' : 'Inward receipt')}
+                          </span>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            ) : (
+              <table className="content-list-table">
+                <thead>
+                  <tr>
+                    <th style={{ width: '32%' }}>Product & Details</th>
+                    <th style={{ width: '16%' }}>Category</th>
+                    <th style={{ width: '18%' }}>Available Stock</th>
+                    <th style={{ width: '14%' }}>Last {outward ? 'Dispatch' : 'Inward'}</th>
+                    <th style={{ width: '10%' }}>Status</th>
+                    <th style={{ width: '10%', textAlign: 'right', paddingRight: '16px' }}>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pagedProducts.map((product) => {
+                    const stock = Number(product.currentStock || 0)
+                    const min = Number(product.minimumStock || 10)
+                    const isOutOfStock = stock === 0
+                    const isLowStock = stock <= min && !isOutOfStock
+                    const pillClass = isOutOfStock
+                      ? 'status-pill-out'
+                      : isLowStock
+                      ? 'status-pill-low'
+                      : 'status-pill-instock'
+                    const statusLabel = isOutOfStock
+                      ? 'Out of Stock'
+                      : isLowStock
+                      ? 'Low Stock'
+                      : 'In Stock'
+
+                    const latest = summary.latest.get(product.productId)
+                    const avatarClass = getProductAvatarClass(product.name)
+                    const initial = (product.name || 'P').charAt(0).toUpperCase()
+                    const pct = Math.min(100, Math.max(8, Math.round((stock / Math.max(min * 2, 10)) * 100)))
+                    const stockState = isOutOfStock ? 'out' : isLowStock ? 'low' : 'in'
+
+                    return (
+                      <tr key={product.productId}>
+                        <td className="cl-cell-product">
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <span className={`product-avatar ${avatarClass}`}>{initial}</span>
+                            <div>
+                              <div className="cl-product-name">{product.name}</div>
+                              <div className="cl-product-meta">
+                                <span className="cl-product-sku">SKU: {product.sku || (product.productId ? String(product.productId).slice(-6) : 'N/A')}</span>
+                                {product.brand && (
+                                  <span className="cl-product-brand"> · {product.brand}</span>
+                                )}
+                                {product.batchNumber && (
+                                  <span className="cl-product-brand"> · Batch: {product.batchNumber}</span>
+                                )}
+                                {product.expiryDate && (
+                                  <span className="cl-product-brand"> · Exp: {String(product.expiryDate).slice(0, 10)}</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="cl-cell-category">
+                          <span className="ledger-category-pill">{product.category || 'General'}</span>
+                        </td>
+                        <td className="cl-cell-stock">
+                          <div className="product-stock-cell">
+                            <div className="product-stock-header">
+                              <span className={`product-stock-val ${stockState}`}>{stock.toLocaleString('en-IN')}</span>
+                              <span className="product-stock-unit">{product.unit || 'units'}</span>
+                            </div>
+                            <div className="stock-meter-wrap" title={`${stock} units (${pct}% health)`}>
+                              <span className={`stock-meter-fill ${stockState}`} style={{ width: `${pct}%` }} />
+                            </div>
+                          </div>
+                        </td>
+                        <td className="cl-cell-date">
+                          {latest ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span className={`inventory-qty-val ${outward ? 'out' : 'in'}`}>
+                                {outward ? '-' : '+'}
+                                {latest.quantity}
+                              </span>
+                              <small style={{ color: 'var(--text-soft)', fontSize: '11px' }}>
+                                {new Date(latest.createdAt).toLocaleDateString()}
+                              </small>
+                            </div>
+                          ) : (
+                            <span style={{ color: 'var(--text-soft)', fontSize: '12px' }}>Never</span>
+                          )}
+                        </td>
+                        <td className="cl-cell-status">
+                          <span className={`content-status-pill ${pillClass}`}>
+                            {statusLabel}
+                          </span>
+                        </td>
+                        <td className="cl-cell-actions" style={{ textAlign: 'right', paddingRight: '16px' }}>
+                          <button
+                            type="button"
+                            className={`ledger-op-btn ${outward ? 'op-out' : 'op-in'}`}
+                            onClick={() => startIntake(product)}
+                            aria-label={`${outward ? 'Dispatch' : 'Receive'} ${product.name}`}
+                          >
+                            {outward ? '- Dispatch' : '+ Inward'}
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          <div className="content-list-pagination">
+            <span className="content-list-pagination-info">
+              Showing {(effectivePage - 1) * pageSize + 1} to{' '}
+              {Math.min(effectivePage * pageSize, currentTotal)} of {currentTotal}{' '}
+              {isRecentView
+                ? (outward ? 'dispatches' : 'receipts')
+                : (capabilities.productLabel === 'Medicines' ? 'medicines' : 'products')}
+            </span>
+            <div className="content-list-pagination-controls">
+              <button
+                type="button"
+                className="content-list-pagination-btn"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={effectivePage <= 1}
+              >
+                Previous
+              </button>
+              <span className="content-list-page-number">
+                {effectivePage} / {totalPages}
+              </span>
+              <button
+                type="button"
+                className="content-list-pagination-btn"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={effectivePage >= totalPages}
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        </AsyncBoundary>
+      </div>
+
+      {/* Modal Intake / Dispatch Console */}
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false)
+          setSelectedId('')
+          setInputQuantity('')
         }}
-        loading={loading}
-        error={error}
-        onRetry={refetch}
-        emptyText={
-          products.length
-            ? 'No items match your search and filter criteria.'
-            : `No products found. Add products to begin ${outward ? 'dispatching' : 'receiving'} stock.`
-        }
-      />
+        title={operationLabel}
+        kicker={outward ? 'Dispatch Bay' : 'Fast Intake'}
+        size="lg"
+      >
+        <div style={{ marginTop: '4px' }}>
+          {/* Terminal Card */}
+          <section className={`inventory-terminal-card ${outward ? 'terminal-out' : 'terminal-in'}`} aria-labelledby="terminal-title">
+            <div className="inventory-terminal-header">
+              <div className="inventory-terminal-title-wrap">
+                <div className={`inventory-terminal-icon ${outward ? 'out' : 'in'}`}>
+                  <Icon name={outward ? 'arrow' : 'box'} />
+                </div>
+                <div>
+                  <h3 id="terminal-title" className="inventory-terminal-title">
+                    {operationLabel}
+                    <Badge tone={outward ? 'danger' : 'success'} dot>
+                      {outward ? 'Outward Dispatch' : 'Fast Intake'}
+                    </Badge>
+                  </h3>
+                </div>
+              </div>
+              <kbd className="inventory-kbd">Alt + {outward ? 'O' : 'I'}</kbd>
+            </div>
+
+            {/* Live Product Context Card */}
+            {selectedProduct && (
+              <div className="inventory-live-context-card">
+                <span className={`product-avatar ${getProductAvatarClass(selectedProduct.name)}`}>
+                  {(selectedProduct.name || 'P').charAt(0).toUpperCase()}
+                </span>
+                <div className="live-context-info">
+                  <div className="live-context-title-row">
+                    <span className="live-context-name">{selectedProduct.name}</span>
+                    <span className="ledger-sku-pill">{selectedProduct.sku || selectedProduct.productId.slice(-6)}</span>
+                    {selectedProduct.brand && (
+                      <span className="cl-product-brand" style={{ fontSize: '11.5px', color: 'var(--text-soft)' }}>
+                        · {selectedProduct.brand}
+                      </span>
+                    )}
+                  </div>
+                  <div className="live-context-meta">
+                    <span>Rack: <strong>{selectedProduct.rackLocation || selectedProduct.warehouse || 'Unassigned'}</strong></span>
+                    <span>Unit Cost: <strong>{money(selectedProduct.purchasePrice)}</strong></span>
+                    {selectedProduct.supplier && <span>Supplier: <strong>{selectedProduct.supplier}</strong></span>}
+                  </div>
+                </div>
+                <div className="live-context-stock">
+                  <span className="live-context-stock-label">Current Stock</span>
+                  <span className={`live-context-stock-val ${Number(selectedProduct.currentStock || 0) <= Number(selectedProduct.minimumStock || 10) ? 'low' : ''}`}>
+                    {selectedProduct.currentStock} {selectedProduct.unit || 'units'}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            <form
+              ref={formRef}
+              onSubmit={onSubmit}
+              onReset={() => {
+                setSelectedId('')
+                setInputQuantity('')
+              }}
+              className="inventory-form"
+            >
+              <div className="inventory-form-grid">
+                <div className="inventory-field">
+                  <label htmlFor="terminal-product">Product / SKU *</label>
+                  <Select
+                    ref={productRef}
+                    id="terminal-product"
+                    name="productId"
+                    value={selectedId}
+                    required
+                    disabled={saving}
+                    onChange={(e) => setSelectedId(e.target.value)}
+                  >
+                    <option value="" disabled>
+                      Select a {capabilities.productLabel === 'Medicines' ? 'medicine' : 'product'}…
+                    </option>
+                    {products.map((product) => (
+                      <option key={product.productId} value={product.productId}>
+                        {product.name} ({product.sku})
+                        {product.batchNumber ? ` · Batch: ${product.batchNumber}` : ''} ·{' '}
+                        {product.currentStock} {product.unit || 'units'} available
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+
+                <div className="inventory-field">
+                  <label htmlFor="terminal-quantity">Quantity *</label>
+                  <div className="inventory-input-with-suffix">
+                    <input
+                      ref={quantityRef}
+                      id="terminal-quantity"
+                      name="quantity"
+                      type="number"
+                      min="1"
+                      step="1"
+                      required
+                      disabled={saving}
+                      placeholder="0"
+                      value={inputQuantity}
+                      onChange={(e) => setInputQuantity(e.target.value)}
+                    />
+                    <span className="inventory-suffix">
+                      {selectedProduct?.unit || 'units'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="inventory-field">
+                  <label htmlFor="terminal-reason">Reason / Type</label>
+                  <Input
+                    id="terminal-reason"
+                    name="reason"
+                    list="terminal-reasons"
+                    placeholder={
+                      outward
+                        ? 'e.g. Sale, damage, transfer'
+                        : 'e.g. Purchase order, supplier receipt'
+                    }
+                    disabled={saving}
+                  />
+                  <datalist id="terminal-reasons">
+                    {(outward
+                      ? ['Sale', 'Damage', 'Transfer dispatch', 'Internal store use', 'Expired']
+                      : [
+                          'Purchase order',
+                          'Customer return',
+                          'Transfer receipt',
+                          'Opening stock',
+                          'Stock replenishment',
+                        ]
+                    ).map((reason) => (
+                      <option key={reason} value={reason} />
+                    ))}
+                  </datalist>
+                </div>
+
+                <Button
+                  type="submit"
+                  variant={outward ? 'danger' : 'primary'}
+                  loading={saving}
+                  disabled={saving || isExceedingStock}
+                >
+                  {saving ? 'Recording…' : operationLabel}
+                </Button>
+              </div>
+
+              {/* Live Stock Guard Alert */}
+              {isExceedingStock && (
+                <div className="inventory-guard-alert" role="alert">
+                  <span>⚠️</span>
+                  <span>Cannot issue more than available stock (Max: {selectedProduct.currentStock} {selectedProduct.unit || 'units'})</span>
+                </div>
+              )}
+
+              <div className="inventory-context-row">
+                <div className="inventory-context-tile tile-blue">
+                  <span className="inventory-context-icon">📍</span>
+                  <div className="inventory-context-details">
+                    <span className="inventory-context-label">Rack / Bin Location</span>
+                    <span className="inventory-context-value">
+                      {selectedProduct
+                        ? selectedProduct.rackLocation || selectedProduct.warehouse || 'Unassigned'
+                        : 'Select a product to view location'}
+                    </span>
+                  </div>
+                </div>
+                <div className="inventory-context-tile tile-purple">
+                  <span className="inventory-context-icon">💰</span>
+                  <div className="inventory-context-details">
+                    <span className="inventory-context-label">Unit Purchase Cost ({currency})</span>
+                    <span className="inventory-context-value">
+                      {selectedProduct ? money(selectedProduct.purchasePrice) : '—'}
+                    </span>
+                  </div>
+                </div>
+                <div className={`inventory-context-tile ${outward ? 'tile-rose' : 'tile-green'}`}>
+                  <span className="inventory-context-icon">{outward ? '👤' : '🚚'}</span>
+                  <div className="inventory-context-details">
+                    <span className="inventory-context-label">
+                      {outward ? 'Authorized Operator' : 'Assigned Supplier'}
+                    </span>
+                    <span className="inventory-context-value">
+                      {outward
+                        ? `${account?.name || account?.email || 'Current user'} (${account?.role || 'Staff'})`
+                        : selectedProduct?.supplier || 'Standard Supplier'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </form>
+
+            {message && (
+              <FormStatus
+                type={message.type === 'error' ? 'error' : 'success'}
+                message={message.text}
+              />
+            )}
+          </section>
+        </div>
+      </Modal>
     </div>
   )
 }

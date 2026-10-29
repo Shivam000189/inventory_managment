@@ -1,56 +1,71 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Zap } from 'lucide-react';
+import { Zap, Headphones } from 'lucide-react';
 
 export const Footer = ({ onOpenDemo }) => {
   return (
     <footer id="contact" className="pt-10 pb-16 px-6 max-w-7xl mx-auto">
       {/* High-Contrast Warm CTA Banner */}
       <motion.div
-        initial={{ opacity: 0, scale: 0.96, y: 25 }}
+        initial={{ opacity: 0, scale: 0.97, y: 20 }}
         whileInView={{ opacity: 1, scale: 1, y: 0 }}
         viewport={{ once: true, margin: '-60px' }}
-        transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-        className="rounded-[32px] p-10 sm:p-16 text-center mb-16 border border-[#3e3730] shadow-xl relative overflow-hidden"
+        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+        className="rounded-[28px] sm:rounded-[32px] px-6 py-12 sm:px-12 sm:py-16 text-center mb-16 border border-[#3d3228] shadow-2xl relative overflow-hidden"
         style={{
-          background:
-            'radial-gradient(circle at 50% 0%, #4a3f35 0%, #2f2a25 65%, #1c1916 100%)'
+          background: 'linear-gradient(180deg, #2a221b 0%, #1f1813 100%)'
         }}
       >
-        <motion.span
-          whileHover={{ scale: 1.05 }}
-          className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#F6EDE1]/10 text-[#F6EDE1] text-xs font-medium mb-5 cursor-default backdrop-blur-xs"
+        {/* Subtle decorative concentric line arcs */}
+        <svg
+          aria-hidden="true"
+          className="absolute inset-0 w-full h-full pointer-events-none"
+          xmlns="http://www.w3.org/2000/svg"
         >
-          <span className="w-2 h-2 rounded-full bg-[#7bbd65] animate-pulse" />
-          Ready in under 5 minutes
-        </motion.span>
-        <h2 className="text-3xl sm:text-5xl font-bold text-[#F6EDE1] max-w-2xl mx-auto leading-tight mb-4">
-          Take full command of every SKU and warehouse today
-        </h2>
-        <p className="text-[#F6EDE1]/70 max-w-xl mx-auto text-sm sm:text-base mb-8">
-          Join over 1,000 modern commerce brands and distributors running leaner,
-          faster operations on Inventry.
-        </p>
-        <div className="flex flex-wrap justify-center gap-4">
-          <motion.button
-            whileHover={{ scale: 1.04, y: -2 }}
-            whileTap={{ scale: 0.97 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-            onClick={onOpenDemo}
-            className="px-8 py-4 rounded-xl bg-[#F6EDE1] hover:bg-[#ffffff] text-[#0d0d0d] font-bold text-sm shadow-md hover:shadow-xl transition-shadow cursor-pointer"
+          <circle cx="0%" cy="50%" r="180" fill="none" stroke="#ffffff" strokeWidth="1" strokeOpacity="0.08" />
+          <circle cx="0%" cy="50%" r="300" fill="none" stroke="#ffffff" strokeWidth="1" strokeOpacity="0.06" />
+          <circle cx="0%" cy="50%" r="440" fill="none" stroke="#ffffff" strokeWidth="1" strokeOpacity="0.04" />
+          <circle cx="100%" cy="50%" r="220" fill="none" stroke="#ffffff" strokeWidth="1" strokeOpacity="0.07" />
+          <circle cx="100%" cy="50%" r="360" fill="none" stroke="#ffffff" strokeWidth="1" strokeOpacity="0.04" />
+        </svg>
+
+        <div className="relative z-10 flex flex-col items-center">
+          <div className="inline-flex items-center justify-center px-4 py-1.5 rounded-full bg-[#382d24] border border-[#4d3d31] text-[#cfbead] text-[10px] sm:text-[11px] font-semibold tracking-widest uppercase mb-4 shadow-inner">
+            READY TO GET STARTED?
+          </div>
+
+          <h2
+            className="text-2xl sm:text-3xl md:text-4xl lg:text-[40px] font-bold text-white max-w-2xl mx-auto leading-tight mb-3"
+            style={{ color: '#ffffff' }}
           >
-            Get Started for Free
-          </motion.button>
-          <motion.button
-            whileHover={{ scale: 1.04, y: -2 }}
-            whileTap={{ scale: 0.97 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-            onClick={onOpenDemo}
-            style={{ color: '#F6EDE1' }}
-            className="px-8 py-4 rounded-xl bg-transparent hover:bg-[#F6EDE1]/10 text-[#F6EDE1] !text-[#F6EDE1] font-semibold text-sm border border-[#F6EDE1]/25 transition-colors cursor-pointer"
-          >
-            <span style={{ color: '#F6EDE1' }}>Talk to Supply Chain Expert</span>
-          </motion.button>
+            Take control of every product,<br className="hidden sm:inline" /> sale and supplier.
+          </h2>
+
+          <p className="text-[#c2b5a6] max-w-lg mx-auto text-xs sm:text-sm mb-7 font-normal">
+            Join businesses that are growing with Inventry's all-in-one platform.
+          </p>
+
+          <div className="flex flex-wrap items-center justify-center gap-3.5">
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={onOpenDemo}
+              className="px-6 sm:px-7 py-2.5 sm:py-3 rounded-full bg-[#ffffff] hover:bg-[#f6ecdf] text-[#1c1713] font-semibold text-xs sm:text-sm transition-all shadow-sm hover:shadow-md cursor-pointer flex items-center justify-center gap-1.5"
+            >
+              <span>Get started for free</span>
+              <span className="text-sm leading-none">&rarr;</span>
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={onOpenDemo}
+              style={{ color: '#ffffff' }}
+              className="px-6 sm:px-7 py-2.5 sm:py-3 rounded-full bg-transparent hover:bg-white/10 text-white font-semibold text-xs sm:text-sm border border-white/25 hover:border-white/40 transition-all cursor-pointer flex items-center justify-center gap-2"
+            >
+              <Headphones className="w-4 h-4 text-white" />
+              <span style={{ color: '#ffffff' }}>Talk to a specialist</span>
+            </motion.button>
+          </div>
         </div>
       </motion.div>
 
