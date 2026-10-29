@@ -91,6 +91,12 @@ function getSectionIcon(section) {
   );
 }
 
+const INVENTORY_SUBGROUPS = [
+  { label: "Manage", items: ["Products", "Medicines", "Stock", "Categories"] },
+  { label: "Operations", items: ["Stock In", "Stock Out", "Adjustments"] },
+  { label: "Tracking", items: ["Stock History"] },
+];
+
 export default function AppSidebar({
   business,
   _account,
@@ -263,18 +269,67 @@ export default function AppSidebar({
 
                 {isGroupOpen && (
                   <div className="modern-nav-sublist">
-                    {items.map((item) => (
-                      <button
-                        key={item}
-                        className={`modern-subnav-item ${activeNav === item ? "active" : ""}`}
-                        type="button"
-                        title={navigationLabel(item)}
-                        onClick={() => navigateTo(item)}
-                      >
-                        <span className="modern-nav-label">{navigationLabel(item)}</span>
-                        {item === "POS / Billing" && <span className="modern-live-badge">LIVE</span>}
-                      </button>
-                    ))}
+                    {section === "Inventory" ? (
+                      <>
+                        {INVENTORY_SUBGROUPS.map((subgroup) => {
+                          const matchingItems = items.filter((it) =>
+                            subgroup.items.includes(it)
+                          );
+                          if (matchingItems.length === 0) return null;
+                          return (
+                            <div key={subgroup.label} className="modern-subnav-cluster">
+                              <div className="modern-subnav-cluster-title">{subgroup.label}</div>
+                              {matchingItems.map((item) => (
+                                <button
+                                  key={item}
+                                  className={`modern-subnav-item ${activeNav === item ? "active" : ""}`}
+                                  type="button"
+                                  title={navigationLabel(item)}
+                                  onClick={() => navigateTo(item)}
+                                >
+                                  <span className="modern-nav-label">{navigationLabel(item)}</span>
+                                </button>
+                              ))}
+                            </div>
+                          );
+                        })}
+                        {(() => {
+                          const remainingItems = items.filter(
+                            (it) => !INVENTORY_SUBGROUPS.some((g) => g.items.includes(it))
+                          );
+                          if (remainingItems.length === 0) return null;
+                          return (
+                            <div className="modern-subnav-cluster">
+                              <div className="modern-subnav-cluster-title">Extensions</div>
+                              {remainingItems.map((item) => (
+                                <button
+                                  key={item}
+                                  className={`modern-subnav-item ${activeNav === item ? "active" : ""}`}
+                                  type="button"
+                                  title={navigationLabel(item)}
+                                  onClick={() => navigateTo(item)}
+                                >
+                                  <span className="modern-nav-label">{navigationLabel(item)}</span>
+                                </button>
+                              ))}
+                            </div>
+                          );
+                        })()}
+                      </>
+                    ) : (
+                      items.map((item) => (
+                        <button
+                          key={item}
+                          className={`modern-subnav-item ${activeNav === item ? "active" : ""}`}
+                          type="button"
+                          title={navigationLabel(item)}
+                          onClick={() => navigateTo(item)}
+                        >
+                          <span className="modern-nav-label">{navigationLabel(item)}</span>
+                          {item === "POS / Billing" && <span className="modern-live-badge">LIVE</span>}
+                        </button>
+                      ))
+                    )}
                   </div>
                 )}
               </div>
