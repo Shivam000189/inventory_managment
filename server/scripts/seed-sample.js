@@ -1,3 +1,4 @@
+import { User, Business, Role, DEFAULT_ROLES, Member, Product, Supplier, Customer, PurchaseOrder, Receiving, SalesOrder, Payment, StockTransaction, Return } from '../models/index.js'
 /**
  * Fills every module with realistic randomised sample data, through the real
  * services (so stock, totals and statuses stay consistent).
@@ -8,19 +9,6 @@
  * Re-running resets the target business's catalogue + transactions first.
  */
 import { connectDatabase, disconnectDatabase } from '../config/db.js'
-import { User } from '../models/User.js'
-import { Business } from '../models/Business.js'
-import { Role, DEFAULT_ROLES } from '../models/Role.js'
-import { Member } from '../models/Member.js'
-import { Product } from '../models/Product.js'
-import { Supplier } from '../models/Supplier.js'
-import { Customer } from '../models/Customer.js'
-import { PurchaseOrder } from '../models/PurchaseOrder.js'
-import { Receiving } from '../models/Receiving.js'
-import { SalesOrder } from '../models/SalesOrder.js'
-import { Payment } from '../models/Payment.js'
-import { StockTransaction } from '../models/StockTransaction.js'
-import { Return } from '../models/Return.js'
 import { productService } from '../services/productService.js'
 import { supplierService } from '../services/supplierService.js'
 import { customerService } from '../services/customerService.js'

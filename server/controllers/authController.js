@@ -1,9 +1,9 @@
+import { User } from '../models/index.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
 import { ok, created } from '../utils/respond.js'
 import { attachSession, clearSessionCookies, newCsrfToken } from '../utils/cookies.js'
 import { env } from '../config/env.js'
 import { verifyToken } from '../utils/token.js'
-import { User } from '../models/User.js'
 import * as authService from '../services/authService.js'
 
 /** Adds the httpOnly session cookie + CSRF token to a service session result. */

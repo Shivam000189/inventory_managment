@@ -1,5 +1,4 @@
-import { Color } from '../models/Color.js'
-import { Product } from '../models/Product.js'
+import { Color, Product } from '../models/index.js'
 import { ApiError } from '../utils/ApiError.js'
 import { assert, requireFields, toObjectId } from '../validators/assert.js'
 

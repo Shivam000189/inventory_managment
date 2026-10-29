@@ -1,3 +1,4 @@
+import { User, Business, Role, Member, Supplier, Customer, Product, Color, Promotion, Coupon, GiftCard, LoyaltyTransaction, StoreCreditTransaction, CashierShift, SalesOrder, PurchaseOrder, Receiving, Return, Refund, Payment, StockTransaction, Notification, ProductImport } from '../models/index.js'
 /**
  * Automated Migration Script: MongoDB -> Supabase (PostgreSQL)
  *
@@ -43,24 +44,6 @@ import {
 } from '../utils/mongoSupabaseMapper.js'
 
 // Import all Mongoose models
-import { User } from '../models/User.js'
-import { Business } from '../models/Business.js'
-import { Role } from '../models/Role.js'
-import { Member } from '../models/Member.js'
-import { Supplier } from '../models/Supplier.js'
-import { Customer } from '../models/Customer.js'
-import { Product } from '../models/Product.js'
-import { Color } from '../models/Color.js'
-import { Promotion, Coupon, GiftCard, LoyaltyTransaction, StoreCreditTransaction, CashierShift } from '../models/Clothing.js'
-import { SalesOrder } from '../models/SalesOrder.js'
-import { PurchaseOrder } from '../models/PurchaseOrder.js'
-import { Receiving } from '../models/Receiving.js'
-import { Return } from '../models/Return.js'
-import { Refund } from '../models/Refund.js'
-import { Payment } from '../models/Payment.js'
-import { StockTransaction } from '../models/StockTransaction.js'
-import { Notification } from '../models/Notification.js'
-import { ProductImport } from '../models/ProductImport.js'
 
 const flags = new Set(process.argv.slice(2))
 const isDryRun = flags.has('--dry-run')

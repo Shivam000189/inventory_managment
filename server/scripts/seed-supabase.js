@@ -1,3 +1,4 @@
+import { DEFAULT_ROLES } from '../models/index.js'
 /**
  * Standalone Supabase Seed Script
  *
@@ -14,7 +15,6 @@
 
 import bcrypt from 'bcryptjs'
 import { getSupabaseAdmin, isSupabaseConfigured } from '../config/supabase.js'
-import { DEFAULT_ROLES } from '../models/Role.js'
 
 const flags = new Set(process.argv.slice(2))
 const isFresh = flags.has('--fresh')

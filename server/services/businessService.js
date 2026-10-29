@@ -1,7 +1,4 @@
-import { Business } from '../models/Business.js'
-import { Role, DEFAULT_ROLES } from '../models/Role.js'
-import { Member } from '../models/Member.js'
-import { User } from '../models/User.js'
+import { Business, Role, DEFAULT_ROLES, Member, User } from '../models/index.js'
 import { ApiError } from '../utils/ApiError.js'
 import { signToken } from '../utils/token.js'
 import { getSupabaseAdmin } from '../config/supabase.js'

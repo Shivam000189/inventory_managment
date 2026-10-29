@@ -1,4 +1,4 @@
-import { Customer } from '../models/Customer.js'
+import { Customer } from '../models/index.js'
 import { createCrudService } from './crudService.js'
 import { requireFields, assert, isEmail } from '../validators/assert.js'
 

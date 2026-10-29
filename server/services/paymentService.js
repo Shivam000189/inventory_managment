@@ -1,7 +1,4 @@
-import { Payment } from '../models/Payment.js'
-import { SalesOrder } from '../models/SalesOrder.js'
-import { PurchaseOrder } from '../models/PurchaseOrder.js'
-import { Customer } from '../models/Customer.js'
+import { Payment, SalesOrder, PurchaseOrder, Customer } from '../models/index.js'
 import { withTransaction } from '../config/db.js'
 import { toObjectId, toNumber, assert } from '../validators/assert.js'
 

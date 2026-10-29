@@ -1,5 +1,4 @@
-import { Member } from '../models/Member.js'
-import { Role, DEFAULT_ROLES } from '../models/Role.js'
+import { Member, Role, DEFAULT_ROLES } from '../models/index.js'
 import { ApiError } from '../utils/ApiError.js'
 import { toObjectId, requireFields, assert, isEmail } from '../validators/assert.js'
 

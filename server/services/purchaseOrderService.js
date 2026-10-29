@@ -1,6 +1,4 @@
-import { PurchaseOrder } from '../models/PurchaseOrder.js'
-import { Product } from '../models/Product.js'
-import { Supplier } from '../models/Supplier.js'
+import { PurchaseOrder, Product, Supplier } from '../models/index.js'
 import { ApiError } from '../utils/ApiError.js'
 import { toObjectId, toNumber, assert } from '../validators/assert.js'
 

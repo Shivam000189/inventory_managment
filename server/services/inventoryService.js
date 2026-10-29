@@ -1,5 +1,4 @@
-import { Product } from '../models/Product.js'
-import { StockTransaction } from '../models/StockTransaction.js'
+import { Product, StockTransaction } from '../models/index.js'
 import { ApiError } from '../utils/ApiError.js'
 import { toObjectId, toNumber, assert } from '../validators/assert.js'
 

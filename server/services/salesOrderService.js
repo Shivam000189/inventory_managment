@@ -1,6 +1,4 @@
-import { SalesOrder } from '../models/SalesOrder.js'
-import { Product } from '../models/Product.js'
-import { Customer } from '../models/Customer.js'
+import { SalesOrder, Product, Customer } from '../models/index.js'
 import { ApiError } from '../utils/ApiError.js'
 import { withTransaction } from '../config/db.js'
 import { applyStockChange } from './inventoryService.js'

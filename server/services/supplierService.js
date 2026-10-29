@@ -1,4 +1,4 @@
-import { Supplier } from '../models/Supplier.js'
+import { Supplier } from '../models/index.js'
 import { createCrudService } from './crudService.js'
 import { ApiError } from '../utils/ApiError.js'
 import { requireFields, assert, isEmail } from '../validators/assert.js'

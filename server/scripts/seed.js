@@ -1,3 +1,4 @@
+import { User, Business, Product, Supplier, Customer, Role, DEFAULT_ROLES, Member } from '../models/index.js'
 /**
  * One-time migration / seed.
  *
@@ -11,13 +12,6 @@ import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { connectDatabase, disconnectDatabase } from '../config/db.js'
-import { User } from '../models/User.js'
-import { Business } from '../models/Business.js'
-import { Product } from '../models/Product.js'
-import { Supplier } from '../models/Supplier.js'
-import { Customer } from '../models/Customer.js'
-import { Role, DEFAULT_ROLES } from '../models/Role.js'
-import { Member } from '../models/Member.js'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const dbJsonPath = path.join(here, '..', 'data', 'db.json')

@@ -1,3 +1,4 @@
+import { User } from '../models/index.js'
 /**
  * Admin password reset (for when you're locked out of your own workspace).
  *
@@ -6,7 +7,6 @@
  * Sets the password directly in MongoDB (bcrypt-hashed via the model hook).
  */
 import { connectDatabase, disconnectDatabase } from '../config/db.js'
-import { User } from '../models/User.js'
 
 const [email, password] = process.argv.slice(2)
 

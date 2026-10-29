@@ -1,7 +1,4 @@
-import { Receiving } from '../models/Receiving.js'
-import { PurchaseOrder } from '../models/PurchaseOrder.js'
-import { Product } from '../models/Product.js'
-import { StockTransaction } from '../models/StockTransaction.js'
+import { Receiving, PurchaseOrder, Product, StockTransaction } from '../models/index.js'
 import { withTransaction } from '../config/db.js'
 import { applyStockChange } from './inventoryService.js'
 import { toObjectId, toNumber, assert } from '../validators/assert.js'

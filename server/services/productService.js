@@ -1,7 +1,6 @@
-import { Product } from '../models/Product.js'
+import { Product, Business } from '../models/index.js'
 import { createCrudService } from './crudService.js'
 import { requireFields, toNumber, assert } from '../validators/assert.js'
-import { Business } from '../models/Business.js'
 import { resolveBusinessCapabilities } from '../../shared/industryConfig.js'
 
 const base = createCrudService(Product, {

@@ -1,11 +1,4 @@
-import { Product } from '../models/Product.js'
-import { SalesOrder } from '../models/SalesOrder.js'
-import { PurchaseOrder } from '../models/PurchaseOrder.js'
-import { StockTransaction } from '../models/StockTransaction.js'
-import { Return } from '../models/Return.js'
-import { Refund } from '../models/Refund.js'
-import { Supplier } from '../models/Supplier.js'
-import { Customer } from '../models/Customer.js'
+import { Product, SalesOrder, PurchaseOrder, StockTransaction, Return, Refund, Supplier, Customer } from '../models/index.js'
 import { toObjectId } from '../validators/assert.js'
 
 export async function getReport(businessId) {
