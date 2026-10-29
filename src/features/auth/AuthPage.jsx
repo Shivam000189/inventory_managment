@@ -4,7 +4,7 @@ import { authApi } from "../../api/authApi.js";
 import "./AuthPage.css";
 
 const AUTH_COPY = {
-  signin: { title: "Login", subtitle: "Welcome to log in to your background management system.", submit: "LOGIN" },
+  signin: { title: "Welcome", subtitle: "Sign in to your account to continue.", submit: "LOG IN" },
   signup: { title: "Create Account", subtitle: "Welcome! Set up your workspace in just a few seconds.", submit: "SIGN UP" },
   forgot: { title: "Reset Password", subtitle: "Enter your email to receive a recovery code.", submit: "SEND CODE" },
   reset: { title: "New Password", subtitle: "Enter your reset code and set a new password.", submit: "UPDATE PASSWORD" },
@@ -13,6 +13,84 @@ const AUTH_COPY = {
 const iconProps = { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": true };
 const IconEye = () => (<svg {...iconProps}><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z" /><circle cx="12" cy="12" r="3" /></svg>);
 const IconEyeOff = () => (<svg {...iconProps}><path d="M9.9 4.24A10.4 10.4 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.61 3.81M6.53 6.53A18.6 18.6 0 0 0 1 12s4 8 11 8a10.9 10.9 0 0 0 5.47-1.47M14.12 14.12a3 3 0 1 1-4.24-4.24" /><path d="m1 1 22 22" /></svg>);
+const IconMail = () => (<svg {...iconProps} strokeWidth={2}><rect width="20" height="16" x="2" y="4" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" /></svg>);
+const IconLock = () => (<svg {...iconProps} strokeWidth={2}><rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>);
+const IconChevronUp = () => (<svg {...iconProps} strokeWidth={2.2}><polyline points="18 15 12 9 6 15" /></svg>);
+
+const DEMO_INDUSTRIES = [
+  { id: "all", label: "All Industries" },
+  { id: "pharmacy", label: "Pharmacy" },
+  { id: "clothing", label: "Clothing & Apparel" },
+  { id: "electronics", label: "Electronics" },
+  { id: "grocery", label: "Grocery & Mart" },
+  { id: "hardware", label: "Hardware & Tools" },
+  { id: "automobile", label: "Automobile Parts" },
+  { id: "wholesale", label: "Wholesale Trading" },
+  { id: "retail", label: "Retail Corner Store" },
+  { id: "restaurant", label: "Restaurant & Kitchen" },
+  { id: "manufacturing", label: "Manufacturing" },
+  { id: "other", label: "General Goods" },
+];
+
+const DEMO_ACCOUNTS = [
+  // Pharmacy
+  { roleName: "Pharmacy Owner", industry: "pharmacy", email: "owner@pharmacy.stockroom.test", password: "Demo@12345", role: "owner", badge: "Shop Owner" },
+  { roleName: "Pharmacy Manager", industry: "pharmacy", email: "manager@pharmacy.stockroom.test", password: "Demo@12345", role: "team", badge: "Manager" },
+  { roleName: "Pharmacy Staff", industry: "pharmacy", email: "staff@pharmacy.stockroom.test", password: "Demo@12345", role: "team", badge: "Staff" },
+
+  // Clothing
+  { roleName: "Clothing Owner", industry: "clothing", email: "owner@clothing.stockroom.test", password: "Demo@12345", role: "owner", badge: "Shop Owner" },
+  { roleName: "Clothing Manager", industry: "clothing", email: "manager@clothing.stockroom.test", password: "Demo@12345", role: "team", badge: "Manager" },
+  { roleName: "Clothing Sales Staff", industry: "clothing", email: "staff@clothing.stockroom.test", password: "Demo@12345", role: "team", badge: "Staff" },
+
+  // Electronics
+  { roleName: "Electronics Owner", industry: "electronics", email: "owner@electronics.stockroom.test", password: "Demo@12345", role: "owner", badge: "Shop Owner" },
+  { roleName: "Electronics Manager", industry: "electronics", email: "manager@electronics.stockroom.test", password: "Demo@12345", role: "team", badge: "Manager" },
+  { roleName: "Electronics Staff", industry: "electronics", email: "staff@electronics.stockroom.test", password: "Demo@12345", role: "team", badge: "Staff" },
+
+  // Grocery
+  { roleName: "Grocery Owner", industry: "grocery", email: "owner@grocery.stockroom.test", password: "Demo@12345", role: "owner", badge: "Shop Owner" },
+  { roleName: "Grocery Manager", industry: "grocery", email: "manager@grocery.stockroom.test", password: "Demo@12345", role: "team", badge: "Manager" },
+  { roleName: "Grocery Cashier", industry: "grocery", email: "staff@grocery.stockroom.test", password: "Demo@12345", role: "team", badge: "Staff" },
+
+  // Hardware
+  { roleName: "Hardware Owner", industry: "hardware", email: "owner@hardware.stockroom.test", password: "Demo@12345", role: "owner", badge: "Shop Owner" },
+  { roleName: "Hardware Manager", industry: "hardware", email: "manager@hardware.stockroom.test", password: "Demo@12345", role: "team", badge: "Manager" },
+  { roleName: "Hardware Sales Staff", industry: "hardware", email: "staff@hardware.stockroom.test", password: "Demo@12345", role: "team", badge: "Staff" },
+
+  // Automobile
+  { roleName: "AutoParts Owner", industry: "automobile", email: "owner@automobile.stockroom.test", password: "Demo@12345", role: "owner", badge: "Shop Owner" },
+  { roleName: "AutoParts Manager", industry: "automobile", email: "manager@automobile.stockroom.test", password: "Demo@12345", role: "team", badge: "Manager" },
+  { roleName: "AutoParts Staff", industry: "automobile", email: "staff@automobile.stockroom.test", password: "Demo@12345", role: "team", badge: "Staff" },
+
+  // Wholesale
+  { roleName: "Wholesale Owner", industry: "wholesale", email: "owner@wholesale.stockroom.test", password: "Demo@12345", role: "owner", badge: "Shop Owner" },
+  { roleName: "Wholesale Manager", industry: "wholesale", email: "manager@wholesale.stockroom.test", password: "Demo@12345", role: "team", badge: "Manager" },
+  { roleName: "Wholesale Dispatch Staff", industry: "wholesale", email: "staff@wholesale.stockroom.test", password: "Demo@12345", role: "team", badge: "Staff" },
+
+  // Retail
+  { roleName: "Retail Store Owner", industry: "retail", email: "owner@retail.stockroom.test", password: "Demo@12345", role: "owner", badge: "Shop Owner" },
+  { roleName: "Retail Store Manager", industry: "retail", email: "manager@retail.stockroom.test", password: "Demo@12345", role: "team", badge: "Manager" },
+  { roleName: "Retail Counter Staff", industry: "retail", email: "staff@retail.stockroom.test", password: "Demo@12345", role: "team", badge: "Staff" },
+
+  // Restaurant
+  { roleName: "Restaurant Owner", industry: "restaurant", email: "owner@restaurant.stockroom.test", password: "Demo@12345", role: "owner", badge: "Shop Owner" },
+  { roleName: "Restaurant Manager", industry: "restaurant", email: "manager@restaurant.stockroom.test", password: "Demo@12345", role: "team", badge: "Manager" },
+  { roleName: "Restaurant Staff", industry: "restaurant", email: "staff@restaurant.stockroom.test", password: "Demo@12345", role: "team", badge: "Staff" },
+
+  // Manufacturing
+  { roleName: "Manufacturing Owner", industry: "manufacturing", email: "owner@manufacturing.stockroom.test", password: "Demo@12345", role: "owner", badge: "Shop Owner" },
+  { roleName: "Plant Manager", industry: "manufacturing", email: "manager@manufacturing.stockroom.test", password: "Demo@12345", role: "team", badge: "Manager" },
+  { roleName: "Factory Floor Staff", industry: "manufacturing", email: "staff@manufacturing.stockroom.test", password: "Demo@12345", role: "team", badge: "Staff" },
+
+  // Other
+  { roleName: "General Goods Owner", industry: "other", email: "owner@other.stockroom.test", password: "Demo@12345", role: "owner", badge: "Shop Owner" },
+  { roleName: "Operations Manager", industry: "other", email: "manager@other.stockroom.test", password: "Demo@12345", role: "team", badge: "Manager" },
+  { roleName: "Warehouse Staff", industry: "other", email: "staff@other.stockroom.test", password: "Demo@12345", role: "team", badge: "Staff" },
+
+  // Base Demo
+  { roleName: "Aflix Default Admin", industry: "all", email: "demo@stockroom.test", password: "demo12345", role: "owner", badge: "Base Demo" },
+];
 
 export default function AuthPage({
   initialReset = "",
@@ -22,11 +100,21 @@ export default function AuthPage({
 }) {
   const [mode, setMode] = useState(initialReset ? "reset" : initialMode);
   const [role, setRole] = useState("owner");
+  const [identifier, setIdentifier] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [showDemoAccounts, setShowDemoAccounts] = useState(true);
+  const [demoIndustryFilter, setDemoIndustryFilter] = useState("all");
   const [message, setMessage] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [resetToken, setResetToken] = useState(initialReset);
   const copy = AUTH_COPY[mode];
+
+  const filteredDemoAccounts = demoIndustryFilter === "all"
+    ? DEMO_ACCOUNTS
+    : DEMO_ACCOUNTS.filter(
+        (acc) => acc.industry === demoIndustryFilter || acc.industry === "all"
+      );
 
   const goToMode = (next) => {
     setMode(next);
@@ -42,22 +130,67 @@ export default function AuthPage({
     }
   };
 
+  const triggerLogin = async (loginEmail, loginPassword, loginRole) => {
+    if (submitting) return;
+    setSubmitting(true);
+    setMessage(null);
+    try {
+      const result = await authApi.login({
+        email: loginEmail.toLowerCase().trim(),
+        password: loginPassword,
+        role: loginRole,
+      });
+      onAuthenticated({ user: result.user, business: result.business });
+    } catch (error) {
+      setMessage({ type: "error", text: error.message });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleSelectDemoAccount = (acc, autoLogin = false) => {
+    setIdentifier(acc.email);
+    setPassword(acc.password || "Demo@12345");
+    setRole(acc.role);
+    setMessage(null);
+
+    if (autoLogin) {
+      triggerLogin(acc.email, acc.password || "Demo@12345", acc.role);
+    }
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (submitting) return;
     const form = event.currentTarget;
     const data = new FormData(form);
-    const identifier = String(
-      data.get("identifier") || data.get("email") || data.get("username") || ""
+    const rawIdentifier = String(
+      data.get("identifier") || identifier || ""
     ).trim();
-    const email = identifier.includes("@")
-      ? identifier.toLowerCase()
-      : (identifier ? `${identifier.replace(/\s+/g, "_").toLowerCase()}@stockroom.test` : "");
-    const password = String(data.get("password") || "");
+    const email = rawIdentifier.includes("@")
+      ? rawIdentifier.toLowerCase()
+      : (rawIdentifier ? `${rawIdentifier.replace(/\s+/g, "_").toLowerCase()}@stockroom.test` : "");
+    const formPassword = String(data.get("password") || password || "");
     const name = String(data.get("name") || "").trim();
 
+    if (mode === "signin") {
+      if (!rawIdentifier) {
+        return setMessage({
+          type: "error",
+          text: "Please enter your email or username.",
+        });
+      }
+      if (!formPassword) {
+        return setMessage({
+          type: "error",
+          text: "Please enter your password.",
+        });
+      }
+      return triggerLogin(email, formPassword, role);
+    }
+
     if (mode === "forgot") {
-      if (!identifier)
+      if (!rawIdentifier)
         return setMessage({
           type: "error",
           text: "Enter your username or email.",
@@ -89,19 +222,19 @@ export default function AuthPage({
           type: "error",
           text: "Enter the reset code from your email.",
         });
-      if (password.length < 8)
+      if (formPassword.length < 8)
         return setMessage({
           type: "error",
           text: "Your password must contain at least 8 characters.",
         });
-      if (password !== data.get("confirmPassword"))
+      if (formPassword !== data.get("confirmPassword"))
         return setMessage({
           type: "error",
           text: "The passwords do not match.",
         });
       setSubmitting(true);
       try {
-        const result = await authApi.resetPassword({ token, password });
+        const result = await authApi.resetPassword({ token, password: formPassword });
         clearResetUrl();
         onAuthenticated({ user: result.user, business: result.business });
         setMessage(null);
@@ -114,29 +247,31 @@ export default function AuthPage({
     }
 
     if (mode === "signup") {
-      if (!identifier)
+      if (!rawIdentifier)
         return setMessage({
           type: "error",
           text: "Enter a username or email.",
         });
-      if (password.length < 8)
+      if (formPassword.length < 8)
         return setMessage({
           type: "error",
           text: "Your password must contain at least 8 characters.",
         });
-      if (password !== data.get("confirmPassword"))
+      if (formPassword !== data.get("confirmPassword"))
         return setMessage({
           type: "error",
           text: "The passwords do not match.",
         });
       setSubmitting(true);
       try {
-        await authApi.register({ email, password, role, name: name || identifier });
+        await authApi.register({ email, password: formPassword, role, name: name || rawIdentifier });
         setMode("signin");
         setMessage({
           type: "success",
           text: "Account created successfully. Sign in with your details.",
         });
+        setIdentifier("");
+        setPassword("");
         form.reset();
       } catch (error) {
         setMessage({ type: "error", text: error.message });
@@ -144,29 +279,6 @@ export default function AuthPage({
         setSubmitting(false);
       }
       return;
-    }
-
-    if (!identifier)
-      return setMessage({
-        type: "error",
-        text: "Please enter your username.",
-      });
-    if (!password)
-      return setMessage({
-        type: "error",
-        text: "Please enter your password.",
-      });
-
-    setSubmitting(true);
-    try {
-      const result = await authApi.login({ email, password, role });
-      onAuthenticated({ user: result.user, business: result.business });
-      setMessage(null);
-      form.reset();
-    } catch (error) {
-      setMessage({ type: "error", text: error.message });
-    } finally {
-      setSubmitting(false);
     }
   };
 
@@ -259,13 +371,21 @@ export default function AuthPage({
                         <label htmlFor="auth-identifier">
                           {mode === "signin" ? "Email" : "Email or Username"}
                         </label>
-                        <div className="auth-input-wrap">
+                        <div className="auth-input-wrap with-leading-icon">
+                          <span className="auth-input-leading-icon email-icon" aria-hidden="true">
+                            <IconMail />
+                          </span>
                           <input
                             id="auth-identifier"
                             name="identifier"
                             type="text"
                             required
-                            placeholder={mode === "signin" ? "1185780732@qq.com" : "you@company.com or username"}
+                            value={identifier}
+                            onChange={(e) => {
+                              setIdentifier(e.target.value);
+                              if (message) setMessage(null);
+                            }}
+                            placeholder={mode === "signin" ? "owner@pharmacy.stockroom.test" : "you@company.com or username"}
                             autoComplete={mode === "signin" ? "username" : "email"}
                           />
                         </div>
@@ -292,12 +412,20 @@ export default function AuthPage({
                         <label htmlFor="auth-password">
                           {mode === "reset" ? "New Password" : "Password"}
                         </label>
-                        <div className="auth-input-wrap has-toggle">
+                        <div className="auth-input-wrap with-leading-icon has-toggle">
+                          <span className="auth-input-leading-icon lock-icon" aria-hidden="true">
+                            <IconLock />
+                          </span>
                           <input
                             id="auth-password"
                             name="password"
                             type={showPassword ? "text" : "password"}
                             required
+                            value={password}
+                            onChange={(e) => {
+                              setPassword(e.target.value);
+                              if (message) setMessage(null);
+                            }}
                             placeholder="Please enter your password"
                             autoComplete={mode === "signup" ? "new-password" : "current-password"}
                           />
@@ -339,7 +467,7 @@ export default function AuthPage({
                             goToMode("forgot");
                           }}
                         >
-                          Forgot password?
+                          Forgot your password?
                         </a>
                       </div>
                     )}
@@ -356,6 +484,91 @@ export default function AuthPage({
 
                     {message && (
                       <p className={`form-status ${message.type}`} role="alert">{message.text}</p>
+                    )}
+
+                    {mode === "signin" && (
+                      <div className="auth-demo-section">
+                        <div className="auth-demo-header">
+                          <button
+                            type="button"
+                            className="auth-demo-toggle-btn"
+                            onClick={() => setShowDemoAccounts(!showDemoAccounts)}
+                            aria-expanded={showDemoAccounts}
+                            aria-controls="auth-demo-list"
+                          >
+                            <span className="auth-demo-toggle-title">Demo accounts (one per role)</span>
+                            <span className={`auth-demo-chevron ${showDemoAccounts ? "open" : ""}`} aria-hidden="true">
+                              <IconChevronUp />
+                            </span>
+                          </button>
+                        </div>
+
+                        {showDemoAccounts && (
+                          <div id="auth-demo-list" className="auth-demo-card">
+                            <div className="auth-demo-filter-bar">
+                              <select
+                                value={demoIndustryFilter}
+                                onChange={(e) => setDemoIndustryFilter(e.target.value)}
+                                className="auth-demo-industry-select"
+                                aria-label="Filter demo accounts by industry"
+                              >
+                                {DEMO_INDUSTRIES.map((ind) => (
+                                  <option key={ind.id} value={ind.id}>
+                                    {ind.label}
+                                  </option>
+                                ))}
+                              </select>
+                              <span className="auth-demo-hint">Click row to auto-fill</span>
+                            </div>
+
+                            <div className="auth-demo-table" role="list">
+                              {filteredDemoAccounts.map((acc) => {
+                                const isSelected = identifier.toLowerCase() === acc.email.toLowerCase();
+                                return (
+                                  <div
+                                    key={acc.email}
+                                    role="listitem"
+                                    tabIndex={0}
+                                    className={`auth-demo-row ${isSelected ? "selected" : ""}`}
+                                    onClick={() => handleSelectDemoAccount(acc)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter" || e.key === " ") {
+                                        e.preventDefault();
+                                        handleSelectDemoAccount(acc);
+                                      }
+                                    }}
+                                    title={`Click to fill ${acc.roleName} credentials`}
+                                  >
+                                    <div className="auth-demo-role-col">
+                                      <span className="auth-demo-role-name">{acc.roleName}</span>
+                                      <span className={`auth-demo-role-pill ${acc.role}`}>
+                                        {acc.badge}
+                                      </span>
+                                    </div>
+                                    <div className="auth-demo-email-col">
+                                      <span className="auth-demo-email">{acc.email}</span>
+                                      {isSelected && (
+                                        <span className="auth-demo-check" title="Active selection">✓</span>
+                                      )}
+                                      <button
+                                        type="button"
+                                        className="auth-demo-quick-login-btn"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleSelectDemoAccount(acc, true);
+                                        }}
+                                        title="Quick 1-click Sign In"
+                                      >
+                                        ⚡ Log in
+                                      </button>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     )}
                   </form>
 

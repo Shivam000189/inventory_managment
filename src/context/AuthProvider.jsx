@@ -28,6 +28,15 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     let active = true;
+
+    // Only probe /api/auth/me if a CSRF cookie exists, indicating an active session.
+    // Unauthenticated visitors browsing the landing or login pages will skip this,
+    // avoiding an unnecessary 401 Unauthorized error in the console.
+    if (!getCsrfToken()) {
+      setLoading(false);
+      return;
+    }
+
     Promise.resolve().then(() => {
       if (active) {
         loadSession(() => active);

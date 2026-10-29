@@ -1,12 +1,12 @@
 # Stockroom (IMB)
 
-Inventory & small-business management app. **MERN stack:**
+Inventory & small-business management app. **Full-stack React & Supabase:**
 
 ```
-React + Vite  →  REST API (Express)  →  MongoDB (Mongoose)  →  API  →  React UI
+React 19 + Vite  →  REST API (Express 5)  →  Supabase (PostgreSQL)  →  API  →  React UI
 ```
 
-MongoDB is the single source of truth for all persistent data. The browser holds
+Supabase (PostgreSQL) is the single source of truth for all persistent data. The browser holds
 no token — the session is an httpOnly cookie (`sr_session`) with a companion
 readable CSRF token (`sr_csrf`); API/integration callers use `Authorization:
 Bearer` instead.
@@ -14,18 +14,18 @@ Bearer` instead.
 ## Prerequisites
 
 - Node.js 18+
-- A MongoDB database — [MongoDB Atlas](https://www.mongodb.com/atlas) (free tier)
-  or a local `mongod`. Put its connection string in `server/.env`.
+- A Supabase PostgreSQL database project (cloud or local Supabase CLI).
+  Provide your project credentials in `server/.env`.
 
 ## Setup
 
 ```powershell
 npm install
 copy .env.example .env                 # frontend: VITE_API_URL
-copy server\.env.example server\.env    # backend: MONGODB_URI, JWT_SECRET, ...
+copy server\.env.example server\.env    # backend: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, JWT_SECRET, ...
 ```
 
-Edit `server/.env` and set at least `MONGODB_URI` and `JWT_SECRET`.
+Edit `server/.env` and set `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` (or `DATABASE_URL`), and `JWT_SECRET`.
 
 ## Run
 
@@ -40,10 +40,30 @@ npm run server       # API at http://localhost:4000
 npm run dev          # Vite at http://localhost:5173
 ```
 
-Optional demo data:
+### Demo Data & Seeding
+
+**1. Comprehensive Multi-Industry Demo (All 11 Industries & 6 Business Types)**
+
+Fills the database with 11 businesses, 33 working login accounts (Owner, Manager, Staff for every business with password `Demo@12345`), and rich domain-specific data (products, batches, variants, orders, receivings, stock movements, and notifications):
 
 ```powershell
-npm run seed -- --demo    # creates demo@stockroom.test / demo12345 with sample records
+# Idempotent seed (safe to run repeatedly without duplicating data)
+npm run seed:demo-all
+
+# Clean fresh reset and reseed of demo accounts (.stockroom.test only)
+npm run seed:demo-all -- --fresh
+```
+
+Flags:
+- `--fresh`: Deletes only businesses and users whose emails end in `.stockroom.test` (excluding `demo@stockroom.test`), along with their associated cascade entities, before reseeding.
+- `--force`: Required if running against `NODE_ENV=production`.
+
+See [`docs/DEMO_ACCOUNTS.md`](docs/DEMO_ACCOUNTS.md) for the full matrix of login credentials and account type selection.
+
+**2. Single Business Base Demo**
+
+```powershell
+npm run seed:supabase    # creates base demo@stockroom.test / demo12345 account (Aflix Pharmacy)
 ```
 
 ## Scripts
@@ -54,7 +74,9 @@ npm run seed -- --demo    # creates demo@stockroom.test / demo12345 with sample 
 | `npm run server` | Express API |
 | `npm run server:dev` | Express API with nodemon reload |
 | `npm run dev:all` | Both, via `concurrently` |
-| `npm run seed` | Migrate `server/data/db.json` into MongoDB (`-- --demo`, `-- --fresh`) |
+| `npm run seed:demo-all` | Seed realistic demo data for all 11 industries & 33 accounts (`--fresh`, `--force`) |
+| `npm run seed:supabase` | Seed base Aflix Pharmacy demo account (`demo@stockroom.test`) |
+| `npm run db:check:supabase` | Test Supabase database connection |
 | `npm run build` / `npm run preview` | Production build / preview |
 | `npm run lint` | oxlint |
 
@@ -72,7 +94,9 @@ npm run seed -- --demo    # creates demo@stockroom.test / demo12345 with sample 
 | --- | --- |
 | `PORT` | `4000` |
 | `NODE_ENV` | `development` |
-| `MONGODB_URI` | `mongodb://127.0.0.1:27017/inventory_app` |
+| `SUPABASE_URL` | `https://<your-project>.supabase.co` |
+| `SUPABASE_SERVICE_ROLE_KEY` | _(service role key for backend queries)_ |
+| `DATABASE_URL` | _(optional direct pg connection string)_ |
 | `JWT_SECRET` | _(required in production; must be ≥ 32 chars there)_ |
 | `JWT_EXPIRES_IN` | `12h` (idle timeout; the cookie renews on activity) |
 | `CLIENT_URL` | `http://localhost:5173` (CORS allow-list, comma-separated) |
@@ -83,15 +107,16 @@ npm run seed -- --demo    # creates demo@stockroom.test / demo12345 with sample 
 
 ## Structure
 
-MERN monorepo — one Vite frontend (`src/`) and one Express API (`server/`), sharing
+Monorepo — one Vite frontend (`src/`) and one Express API (`server/`), sharing
 a single `package.json` and a small `shared/` folder.
 
 ```text
 IMB/
 ├── src/            React frontend (Vite) — see below
-├── server/         Express + Mongoose API — see below
+├── server/         Express + Supabase (PostgreSQL) API — see below
 ├── shared/         code needed by both sides
 │   └── industryConfig.js   per-industry module/field config (drives IndustryModule.jsx & backend validation)
+├── docs/           Documentation (DEMO_ACCOUNTS.md, etc.)
 ├── public/         static assets served as-is (favicon.svg)
 ├── index.html      Vite entry HTML
 ├── vite.config.js  Vite config
@@ -183,10 +208,8 @@ src/
 
 ### `server/` — API
 
-Every resource follows the same four-layer pattern, same base name across folders
-(e.g. `product` → `routes/productRoutes.js` → `controllers/*` → `services/productService.js`
-→ `models/Product.js`); simpler resources share `controllers/resourceController.js` +
-`services/crudService.js` instead of a dedicated controller/service.
+Every resource follows a layered pattern across folders:
+`routes/` → `controllers/` → `services/` → Supabase database models/PostgreSQL tables.
 
 ```text
 server/
@@ -194,12 +217,11 @@ server/
 ├── app.js             Express app: middleware + route mounting
 ├── config/
 │   ├── env.js              loads/validates environment variables
-│   └── db.js                Mongoose connection
+│   └── supabase.js         Supabase client & connection pool
 ├── routes/             Express routers — one per resource, mounted in routes/index.js
 ├── controllers/        HTTP request/response layer
 ├── services/            business logic, transactions, cross-model rules
-├── models/               Mongoose schemas (Business, Product, SalesOrder, User, …)
-│   └── plugins/serialize.js   shared toJSON/id transform for every schema
+├── models/               Supabase database access layer
 ├── middleware/
 │   ├── auth.js               session verification (cookie or Bearer) + revocation
 │   ├── csrf.js               double-submit CSRF guard for cookie sessions
@@ -213,10 +235,8 @@ server/
 │   ├── cookies.js            session + CSRF cookie handling
 │   ├── ApiError.js           typed HTTP errors
 │   └── asyncHandler.js, respond.js   route helpers
-├── data/db.json           seed source data
-└── scripts/               one-off ops: seed.js, seed-sample.js,
-                            seed-wholesale-clothing.js, reset-password.js,
-                            db-check.js, integration.test.mjs
+├── scripts/               one-off ops: seed-demo-all.js, seed-supabase.js,
+                            reset-password.js, db-check.js
+└── supabase/
+    └── schema.sql         PostgreSQL database schema definition
 ```
-
-See [`server/README.md`](server/README.md) for the API reference.

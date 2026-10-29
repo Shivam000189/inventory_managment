@@ -256,6 +256,11 @@ function DashboardView() {
             <Suspense fallback={<PageSkeleton />}>
               <Routes>
                 <Route path="/overview" element={<Navigate to="/" replace />} />
+                <Route path="/dashboard" element={<Navigate to="/" replace />} />
+                <Route path="/login" element={<Navigate to="/" replace />} />
+                <Route path="/register" element={<Navigate to="/" replace />} />
+                <Route path="/signup" element={<Navigate to="/" replace />} />
+                <Route path="/forgot-password" element={<Navigate to="/" replace />} />
                 {Object.entries(ROUTE_TABLE).map(([label, config]) => {
                   const hasPermission =
                     !config.requiredPermission ||
@@ -285,6 +290,11 @@ function MainApp() {
   const { session, loading, updateSession } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  const handleAuthenticated = (userSession) => {
+    updateSession(userSession);
+    navigate("/", { replace: true });
+  };
 
   const [initialReset] = useState(() => {
     try {
@@ -366,7 +376,7 @@ function MainApp() {
             <AuthPage
               initialReset={initialReset}
               initialMode="signin"
-              onAuthenticated={(userSession) => updateSession(userSession)}
+              onAuthenticated={handleAuthenticated}
               onBackToHome={() => navigate("/")}
             />
           }
@@ -377,7 +387,7 @@ function MainApp() {
             <AuthPage
               initialReset={initialReset}
               initialMode="signup"
-              onAuthenticated={(userSession) => updateSession(userSession)}
+              onAuthenticated={handleAuthenticated}
               onBackToHome={() => navigate("/")}
             />
           }
@@ -388,7 +398,7 @@ function MainApp() {
             <AuthPage
               initialReset={initialReset}
               initialMode="signup"
-              onAuthenticated={(userSession) => updateSession(userSession)}
+              onAuthenticated={handleAuthenticated}
               onBackToHome={() => navigate("/")}
             />
           }
@@ -399,7 +409,7 @@ function MainApp() {
             <AuthPage
               initialReset={initialReset}
               initialMode="forgot"
-              onAuthenticated={(userSession) => updateSession(userSession)}
+              onAuthenticated={handleAuthenticated}
               onBackToHome={() => navigate("/")}
             />
           }
@@ -410,7 +420,7 @@ function MainApp() {
             initialReset ? (
               <AuthPage
                 initialReset={initialReset}
-                onAuthenticated={(userSession) => updateSession(userSession)}
+                onAuthenticated={handleAuthenticated}
                 onBackToHome={() => navigate("/")}
               />
             ) : (

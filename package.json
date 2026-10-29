@@ -17,6 +17,7 @@
     "db:check:supabase": "node -e \"import('./server/config/supabase.js').then(m => m.testSupabaseConnection()).then(r => { console.log(r); process.exit(0); })\"",
     "db:migrate:supabase": "node server/scripts/migrate-mongo-to-supabase.js",
     "seed:supabase": "node server/scripts/seed-supabase.js",
+    "seed:demo-all": "node server/scripts/seed-demo-all.js",
     "build": "vite build",
     "lint": "oxlint",
     "ui:check": "node scripts/ui-check.mjs",

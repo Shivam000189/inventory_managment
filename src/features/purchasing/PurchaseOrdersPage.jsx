@@ -281,7 +281,7 @@ function PurchaseOrders({ business, onNavigate }) {
         return false
       return true
     })
-  }, [orders, tab, supplierFilter, paymentFilter, fromTime, toTime, search])
+  }, [orders, tab, supplierFilter, paymentFilter, search])
 
   const resetTo = (setter) => (value) => {
     setter(value)

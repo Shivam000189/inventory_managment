@@ -249,7 +249,7 @@ export default function DashboardOverview({
   return (
     <div className="modern-dashboard-content">
       {/* Getting Started Banner */}
-      <GettingStartedBanner
+      {/* <GettingStartedBanner
         account={account}
         checklistDismissed={checklistDismissed}
         setChecklistDismissed={setChecklistDismissed}
@@ -258,7 +258,7 @@ export default function DashboardOverview({
         capabilities={capabilities}
         navigateTo={navigateTo}
         business={business}
-      />
+      /> */}
 
       {/* 1. Top Row: 4 Metric KPI Cards */}
       <MetricCards

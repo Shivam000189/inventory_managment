@@ -1,16 +1,16 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './landing.css';
-import { RoiCalculator } from './components/calculator/RoiCalculator';
 import { Toast } from './components/common/Toast';
-import { BentoFeatures } from './components/features/BentoFeatures';
+import { BusinessModules } from './components/features/BusinessModules';
 import { Footer } from './components/footer/Footer';
 import { HeroHeader } from './components/hero/HeroHeader';
 import { DemoModal } from './components/modals/DemoModal';
 import { DashboardMockup } from './components/mockup/DashboardMockup';
 import { Navbar } from './components/navigation/Navbar';
+import { FeaturesGrid } from './components/features/FeaturesGrid';
 import { PricingSection } from './components/pricing/PricingSection';
-import { TrustedBrands } from './components/social-proof/TrustedBrands';
+import { WhyInventry } from './components/stats/WhyInventry';
 import {
   CATEGORIES,
   INITIAL_INVENTORY,
@@ -34,8 +34,6 @@ export default function LandingPage({
 
   // Landing Page Sections State
   const [billingCycle, setBillingCycle] = useState('annual');
-  const [monthlySKUs, setMonthlySKUs] = useState(2500);
-  const [warehousesCount, setWarehousesCount] = useState(3);
   const [demoModalOpen, setDemoModalOpen] = useState(false);
 
   const triggerToast = (msg) => {
@@ -131,7 +129,7 @@ export default function LandingPage({
 
       {/* Hero Section Container */}
       <div
-        className="relative w-full pb-16 overflow-hidden"
+        className="relative w-full pb-0 overflow-hidden"
         style={{
           background:
             'radial-gradient(circle at 12% 18%, #e9dbc8 0%, transparent 38%), radial-gradient(circle at 88% 42%, #e9dbc8 0%, transparent 40%), radial-gradient(circle at 50% 48%, #F6EDE1 0%, #f6ecdf 75%)'
@@ -171,28 +169,18 @@ export default function LandingPage({
           onToggleMenu={() => triggerToast('Sidebar navigation toggled')}
         />
 
-        {/* Trusted Partners and Manufacturing Process Steps Carousel */}
-        <TrustedBrands />
+        {/* Core Features Grid - Everything you need to keep business moving */}
+        <FeaturesGrid />
       </div>
 
-      {/* Bento Grid Features */}
-      <BentoFeatures
-        onInspectWarehouse={(name) =>
-          triggerToast(`Inspecting live bin map for ${name}`)
-        }
-        onApprovePO={() =>
-          triggerToast('Purchase Order #PO-9082 approved & sent to vendor!')
-        }
+      {/* Most Used Business Modules - Interactive Catalog & Capabilities Grid */}
+      <BusinessModules
+        onSelectModule={(mod) => triggerToast(`Selected ${mod} workflow`)}
+        onViewAll={() => setDemoModalOpen(true)}
       />
 
-      {/* Interactive ROI & Savings Calculator */}
-      <RoiCalculator
-        monthlySKUs={monthlySKUs}
-        warehousesCount={warehousesCount}
-        onSKUsChange={setMonthlySKUs}
-        onWarehousesChange={setWarehousesCount}
-        onGetReport={() => setDemoModalOpen(true)}
-      />
+      {/* Why Inventry - Stat & Impact Showcase */}
+      <WhyInventry />
 
       {/* Pricing Plans Section */}
       <PricingSection

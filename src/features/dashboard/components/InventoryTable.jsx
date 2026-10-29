@@ -78,15 +78,15 @@ export default function InventoryTable({
             <span>Inventory Ledger &amp; Catalog</span>
           </h2>
         </div>
-        <div style={{ display: "flex", gap: "8px" }}>
+        {/* <div style={{ display: "flex", gap: "8px" }}>
           <button
             className="outline-button"
             type="button"
             onClick={() => setInventoryTableOpen(!inventoryTableOpen)}
-          >
-            {inventoryTableOpen ? "Hide Table" : "Show Table"}
-          </button>
-        </div>
+          > */}
+            {/* {inventoryTableOpen ? "Hide Table" : "Show Table"} */}
+          {/* </button>
+        </div> */}
       </div>
 
       {inventoryTableOpen && (
