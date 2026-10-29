@@ -593,11 +593,60 @@ export default function AuthPage({
           <div className="auth-illustration-column" aria-hidden="true">
             <div className="auth-illustration-wrap">
               <div className="auth-illustration-ambient" />
-              <img
-                src="/auth-illustration.jpg"
-                alt="Aflix Inventory Analytics"
+              <svg
+                viewBox="0 0 460 380"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
                 className="auth-illustration-img"
-              />
+                style={{ width: '100%', height: 'auto', maxHeight: '390px', borderRadius: '16px' }}
+              >
+                <rect width="460" height="380" rx="16" fill="var(--surface, #ffffff)" stroke="var(--line, #e2e8f0)" strokeWidth="1.5" />
+                {/* Header bar */}
+                <rect x="24" y="24" width="140" height="18" rx="5" fill="var(--brand, #3b82f6)" fillOpacity="0.15" />
+                <rect x="24" y="52" width="220" height="12" rx="4" fill="var(--muted, #94a3b8)" fillOpacity="0.25" />
+                <rect x="360" y="24" width="76" height="26" rx="13" fill="#10b981" fillOpacity="0.12" />
+                <circle cx="374" cy="37" r="4" fill="#10b981" />
+
+                {/* Stat Cards Row */}
+                <rect x="24" y="86" width="128" height="74" rx="10" fill="var(--surface-subtle, #f8fafc)" stroke="var(--line, #e2e8f0)" />
+                <rect x="36" y="98" width="60" height="10" rx="3" fill="var(--muted, #94a3b8)" fillOpacity="0.3" />
+                <rect x="36" y="116" width="80" height="20" rx="4" fill="var(--brand, #3b82f6)" fillOpacity="0.85" />
+                <rect x="36" y="142" width="48" height="8" rx="2" fill="#10b981" fillOpacity="0.7" />
+
+                <rect x="166" y="86" width="128" height="74" rx="10" fill="var(--surface-subtle, #f8fafc)" stroke="var(--line, #e2e8f0)" />
+                <rect x="178" y="98" width="60" height="10" rx="3" fill="var(--muted, #94a3b8)" fillOpacity="0.3" />
+                <rect x="178" y="116" width="88" height="20" rx="4" fill="#10b981" fillOpacity="0.85" />
+                <rect x="178" y="142" width="56" height="8" rx="2" fill="var(--brand, #3b82f6)" fillOpacity="0.7" />
+
+                <rect x="308" y="86" width="128" height="74" rx="10" fill="var(--surface-subtle, #f8fafc)" stroke="var(--line, #e2e8f0)" />
+                <rect x="320" y="98" width="54" height="10" rx="3" fill="var(--muted, #94a3b8)" fillOpacity="0.3" />
+                <rect x="320" y="116" width="72" height="20" rx="4" fill="#f59e0b" fillOpacity="0.85" />
+                <rect x="320" y="142" width="50" height="8" rx="2" fill="var(--muted, #94a3b8)" fillOpacity="0.5" />
+
+                {/* Chart Graphic */}
+                <rect x="24" y="176" width="412" height="120" rx="10" fill="var(--surface-subtle, #f8fafc)" stroke="var(--line, #e2e8f0)" />
+                <line x1="44" y1="210" x2="416" y2="210" stroke="var(--line, #e2e8f0)" strokeDasharray="3 3" />
+                <line x1="44" y1="240" x2="416" y2="240" stroke="var(--line, #e2e8f0)" strokeDasharray="3 3" />
+                <line x1="44" y1="270" x2="416" y2="270" stroke="var(--line, #e2e8f0)" strokeDasharray="3 3" />
+
+                {/* Visual Area Trendline */}
+                <path d="M 44 260 Q 90 220, 136 235 T 228 195 T 320 225 T 412 185 L 412 280 L 44 280 Z" fill="url(#authChartGrad)" opacity="0.35" />
+                <path d="M 44 260 Q 90 220, 136 235 T 228 195 T 320 225 T 412 185" stroke="var(--brand, #3b82f6)" strokeWidth="3" strokeLinecap="round" />
+
+                {/* Table preview lines */}
+                <rect x="24" y="312" width="412" height="44" rx="8" fill="var(--surface-subtle, #f8fafc)" stroke="var(--line, #e2e8f0)" />
+                <circle cx="44" cy="334" r="8" fill="var(--brand, #3b82f6)" fillOpacity="0.2" />
+                <rect x="62" y="328" width="110" height="12" rx="3" fill="var(--text, #1e293b)" fillOpacity="0.75" />
+                <rect x="260" y="328" width="60" height="12" rx="3" fill="#10b981" fillOpacity="0.2" />
+                <rect x="360" y="328" width="56" height="12" rx="3" fill="var(--brand, #3b82f6)" fillOpacity="0.8" />
+
+                <defs>
+                  <linearGradient id="authChartGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="var(--brand, #3b82f6)" stopOpacity="0.6" />
+                    <stop offset="100%" stopColor="var(--brand, #3b82f6)" stopOpacity="0.0" />
+                  </linearGradient>
+                </defs>
+              </svg>
             </div>
           </div>
         </div>
