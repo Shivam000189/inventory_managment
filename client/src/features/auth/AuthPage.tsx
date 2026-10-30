@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { AnimatePresence, motion, MotionConfig } from "motion/react";
-import { authApi } from "../../api/authApi.js";
+import { authApi } from "../../api/authApi";
 import "./AuthPage.css";
 
 const AUTH_COPY = {
@@ -10,7 +10,7 @@ const AUTH_COPY = {
   reset: { title: "New Password", subtitle: "Enter your reset code and set a new password.", submit: "UPDATE PASSWORD" },
 };
 
-const iconProps = { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": true };
+const iconProps = { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, "aria-hidden": true };
 const IconEye = () => (<svg {...iconProps}><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z" /><circle cx="12" cy="12" r="3" /></svg>);
 const IconEyeOff = () => (<svg {...iconProps}><path d="M9.9 4.24A10.4 10.4 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.61 3.81M6.53 6.53A18.6 18.6 0 0 0 1 12s4 8 11 8a10.9 10.9 0 0 0 5.47-1.47M14.12 14.12a3 3 0 1 1-4.24-4.24" /><path d="m1 1 22 22" /></svg>);
 const IconMail = () => (<svg {...iconProps} strokeWidth={2}><rect width="20" height="16" x="2" y="4" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" /></svg>);
@@ -81,12 +81,20 @@ const DEMO_ACCOUNTS = [
   { roleName: "Aflix Default Admin", industry: "all", email: "demo@stockroom.test", password: "demo12345", role: "owner", badge: "Admin" },
 ];
 
+export interface AuthPageProps {
+  initialReset?: string;
+  initialMode?: "signin" | "signup" | "forgot" | "reset" | string;
+  onAuthenticated?: (payload: { user: any; business: any }) => void;
+  onBackToHome?: () => void;
+  [key: string]: unknown;
+}
+
 export default function AuthPage({
   initialReset = "",
   initialMode = "signin",
   onAuthenticated,
   onBackToHome,
-}) {
+}: AuthPageProps) {
   const [mode, setMode] = useState(initialReset ? "reset" : initialMode);
   const [role, setRole] = useState("owner");
   const [identifier, setIdentifier] = useState("");
@@ -94,10 +102,10 @@ export default function AuthPage({
   const [showPassword, setShowPassword] = useState(false);
   const [showDemoAccounts, setShowDemoAccounts] = useState(true);
   const [demoIndustryFilter, setDemoIndustryFilter] = useState("all");
-  const [message, setMessage] = useState(null);
+  const [message, setMessage] = useState<{ type: string; text?: string; message?: string } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [resetToken, setResetToken] = useState(initialReset);
-  const copy = AUTH_COPY[mode];
+  const copy = (AUTH_COPY as Record<string, any>)[mode] || AUTH_COPY.signin;
 
   const filteredDemoAccounts = demoIndustryFilter === "all"
     ? DEMO_ACCOUNTS
@@ -105,7 +113,7 @@ export default function AuthPage({
         (acc) => acc.industry === demoIndustryFilter || acc.industry === "all"
       );
 
-  const goToMode = (next) => {
+  const goToMode = (next: string) => {
     setMode(next);
     setMessage(null);
     setShowPassword(false);
@@ -119,7 +127,7 @@ export default function AuthPage({
     }
   };
 
-  const triggerLogin = async (loginEmail, loginPassword, loginRole) => {
+  const triggerLogin = async (loginEmail: string, loginPassword?: string, loginRole?: string) => {
     if (submitting) return;
     setSubmitting(true);
     setMessage(null);
@@ -129,15 +137,15 @@ export default function AuthPage({
         password: loginPassword,
         role: loginRole,
       });
-      onAuthenticated({ user: result.user, business: result.business });
+      onAuthenticated?.({ user: result.user, business: result.business });
     } catch (error) {
-      setMessage({ type: "error", text: error.message });
+      setMessage({ type: "error", text: (error as any)?.message || "Authentication failed." });
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleSelectDemoAccount = (acc, autoLogin = false) => {
+  const handleSelectDemoAccount = (acc: any, autoLogin = false) => {
     setIdentifier(acc.email);
     setPassword(acc.password || "Demo@12345");
     setRole(acc.role);
@@ -148,7 +156,7 @@ export default function AuthPage({
     }
   };
 
-  const handleSubmit = async (event) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (submitting) return;
     const form = event.currentTarget;
@@ -196,8 +204,8 @@ export default function AuthPage({
             ? `Reset code created for ${result.email}. It is filled in below - set a new password.`
             : result.message,
         });
-      } catch (error) {
-        setMessage({ type: "error", text: error.message });
+      } catch (error: any) {
+      setMessage({ type: "error", text: error?.message || "Operation failed." });
       } finally {
         setSubmitting(false);
       }
@@ -225,10 +233,10 @@ export default function AuthPage({
       try {
         const result = await authApi.resetPassword({ token, password: formPassword });
         clearResetUrl();
-        onAuthenticated({ user: result.user, business: result.business });
+        onAuthenticated?.({ user: result.user, business: result.business });
         setMessage(null);
-      } catch (error) {
-        setMessage({ type: "error", text: error.message });
+      } catch (error: any) {
+      setMessage({ type: "error", text: error?.message || "Operation failed." });
       } finally {
         setSubmitting(false);
       }
@@ -262,8 +270,8 @@ export default function AuthPage({
         setIdentifier("");
         setPassword("");
         form.reset();
-      } catch (error) {
-        setMessage({ type: "error", text: error.message });
+      } catch (error: any) {
+      setMessage({ type: "error", text: error?.message || "Operation failed." });
       } finally {
         setSubmitting(false);
       }
