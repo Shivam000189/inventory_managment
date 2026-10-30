@@ -42,7 +42,7 @@
 .invoice-search-input {
   width: 100%;
   min-height: var(--control-h);
-  padding-left: 38px;
+  padding-left: 40px !important;
   padding-right: var(--space-3);
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);

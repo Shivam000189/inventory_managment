@@ -947,8 +947,8 @@
   width: 100% !important;
   height: 38px !important;
   margin: 0 !important;
-  padding: 0 14px 0 38px !important;
-  padding-left: 38px !important;
+  padding: 0 14px 0 40px !important;
+  padding-left: 40px !important;
   border: 1px solid var(--line, #e2e8f0) !important;
   border-radius: 10px !important;
   background: var(--surface, #ffffff) !important;
