@@ -1,18 +1,28 @@
-import { useEffect, useId, useRef } from 'react'
+import React, { useEffect, useId, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { Icon } from './icons.jsx'
+import { Icon } from './icons'
 import './Drawer.css'
+
+export interface DrawerProps {
+  isOpen: boolean;
+  onClose?: () => void;
+  title?: ReactNode;
+  position?: 'left' | 'right';
+  children: ReactNode;
+  footer?: ReactNode;
+  className?: string;
+}
 
 export function Drawer({
   isOpen,
   onClose,
   title = null,
-  position = 'left', // 'left' | 'right'
+  position = 'left',
   children,
   footer = null,
   className = '',
-}) {
-  const drawerRef = useRef(null)
+}: DrawerProps) {
+  const drawerRef = useRef<HTMLDivElement>(null)
   const titleId = useId()
 
   useEffect(() => {
@@ -21,9 +31,9 @@ export function Drawer({
     const originalOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
 
-    const prevActive = document.activeElement
+    const prevActive = document.activeElement as HTMLElement | null
 
-    const handleKeyDown = (e) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.stopPropagation()
         onClose?.()
@@ -49,32 +59,32 @@ export function Drawer({
         role="presentation"
         onClick={onClose}
       />
-      <aside
+      <div
         ref={drawerRef}
+        className={`ui-drawer ui-drawer-${position} ${className}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby={title ? titleId : undefined}
         tabIndex={-1}
-        className={`ui-drawer ui-drawer-${position} ${className}`}
       >
-        {title && (
-          <div className="ui-drawer-header">
+        <div className="ui-drawer-header">
+          {title && (
             <h2 id={titleId} className="ui-drawer-title">
               {title}
             </h2>
-            <button
-              type="button"
-              className="ui-modal-close-btn close-button"
-              onClick={onClose}
-              aria-label="Close drawer"
-            >
-              <Icon name="close" size={18} />
-            </button>
-          </div>
-        )}
+          )}
+          <button
+            type="button"
+            className="ui-drawer-close"
+            onClick={onClose}
+            aria-label="Close drawer"
+          >
+            <Icon name="close" size={16} />
+          </button>
+        </div>
         <div className="ui-drawer-body">{children}</div>
         {footer && <div className="ui-drawer-footer">{footer}</div>}
-      </aside>
+      </div>
     </>
   )
 

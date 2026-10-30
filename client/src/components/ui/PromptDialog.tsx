@@ -1,7 +1,20 @@
-import { useEffect, useRef, useState } from 'react'
-import { Modal } from './Modal.jsx'
-import { Button } from './Button.jsx'
-import { Input } from './FormControls.jsx'
+import React, { useEffect, useRef, useState, type ReactNode } from 'react'
+import { Modal } from './Modal'
+import { Button } from './Button'
+import { Input } from './FormControls'
+
+export interface PromptDialogProps {
+  isOpen: boolean;
+  title?: string;
+  message?: ReactNode;
+  defaultValue?: string;
+  placeholder?: string;
+  inputType?: string;
+  confirmText?: string;
+  cancelText?: string;
+  onConfirm?: (value: string) => void;
+  onCancel?: () => void;
+}
 
 export function PromptDialog({
   isOpen,
@@ -14,9 +27,9 @@ export function PromptDialog({
   cancelText = 'Cancel',
   onConfirm,
   onCancel,
-}) {
+}: PromptDialogProps) {
   const [value, setValue] = useState(defaultValue)
-  const inputRef = useRef(null)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (isOpen) {
@@ -24,7 +37,7 @@ export function PromptDialog({
     }
   }, [isOpen])
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     onConfirm?.(value)
   }
@@ -59,7 +72,7 @@ export function PromptDialog({
           value={value}
           onChange={(e) => setValue(e.target.value)}
           placeholder={placeholder}
-          required
+          autoFocus
         />
       </form>
     </Modal>

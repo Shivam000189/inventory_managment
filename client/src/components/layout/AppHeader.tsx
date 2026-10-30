@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import NotificationCenter from "./NotificationCenter.jsx";
+import NotificationCenter from "./NotificationCenter";
 
 const NAVIGATION_LABELS = {
   Overview: "Overview",
@@ -24,8 +24,24 @@ const NAVIGATION_LABELS = {
   Settings: "Store Settings",
 };
 
-const navigationLabel = (item) => NAVIGATION_LABELS[item] || item;
-const capitalize = (value) => (value ? value.charAt(0).toUpperCase() + value.slice(1) : value);
+const navigationLabel = (item: any) => NAVIGATION_LABELS[item as keyof typeof NAVIGATION_LABELS] || item;
+const capitalize = (value: any) => (value ? String(value).charAt(0).toUpperCase() + String(value).slice(1) : value);
+
+export interface AppHeaderProps {
+  _business?: any;
+  account?: any;
+  activeNav?: string;
+  navigateTo?: (page: string) => void;
+  canOpen?: (permission: string) => boolean;
+  mobileNavOpen?: boolean;
+  setMobileNavOpen?: (open: boolean) => void;
+  theme?: string;
+  toggleTheme?: () => void;
+  openNotification?: (target?: string) => void;
+  setNotif?: (notifs: any) => void;
+  onLogout?: () => void;
+  menuButtonRef?: any;
+}
 
 export default function AppHeader({
   _business,
@@ -41,14 +57,14 @@ export default function AppHeader({
   setNotif,
   onLogout,
   menuButtonRef,
-}) {
+}: AppHeaderProps) {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
-  const userMenuRef = useRef(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!showUserMenu) return undefined;
-    const handleClickOutside = (event) => {
+    const handleClickOutside = (event: any) => {
       if (
         event.type === "keydown"
           ? event.key === "Escape"
@@ -84,7 +100,7 @@ export default function AppHeader({
           aria-label="Open navigation"
           aria-controls="dashboard-navigation"
           aria-expanded={mobileNavOpen}
-          onClick={() => setMobileNavOpen(true)}
+          onClick={() => setMobileNavOpen?.(true)}
         >
           <span />
           <span />
@@ -150,7 +166,7 @@ export default function AppHeader({
               placeholder="Search products, suppliers, orders..."
               aria-label="Search products, suppliers, orders"
               onKeyDown={(e) => {
-                if (e.key === "Enter" && e.target.value.trim() && navigateTo) {
+                if (e.key === "Enter" && (e.target as HTMLInputElement).value.trim() && navigateTo) {
                   navigateTo("Products");
                 }
               }}
@@ -254,11 +270,11 @@ export default function AppHeader({
                   title="View Main Profile"
                   onClick={() => {
                     if (canOpen?.("Business Profile")) {
-                      navigateTo("Business Profile");
+                      navigateTo?.("Business Profile");
                     } else if (canOpen?.("Users")) {
-                      navigateTo("Users");
+                      navigateTo?.("Users");
                     } else {
-                      navigateTo("Overview");
+                      navigateTo?.("Overview");
                     }
                     setShowUserMenu(false);
                   }}

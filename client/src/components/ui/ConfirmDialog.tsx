@@ -1,5 +1,17 @@
-import { Modal } from './Modal.jsx'
-import { Button } from './Button.jsx'
+import type { ReactNode } from 'react'
+import { Modal } from './Modal'
+import { Button } from './Button'
+
+export interface ConfirmDialogProps {
+  isOpen: boolean;
+  title?: string;
+  message?: ReactNode;
+  confirmText?: string;
+  cancelText?: string;
+  confirmTone?: 'danger' | 'primary' | string;
+  onConfirm?: () => void;
+  onCancel?: () => void;
+}
 
 export function ConfirmDialog({
   isOpen,
@@ -10,7 +22,7 @@ export function ConfirmDialog({
   confirmTone = 'danger',
   onConfirm,
   onCancel,
-}) {
+}: ConfirmDialogProps) {
   return (
     <Modal
       isOpen={isOpen}

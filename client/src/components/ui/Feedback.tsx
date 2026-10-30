@@ -1,5 +1,14 @@
-import { Icon } from './icons.jsx'
+import React, { type ReactNode, type HTMLAttributes } from 'react'
+import { Icon } from './icons'
 import './Feedback.css'
+
+export interface EmptyStateProps {
+  title?: string;
+  description?: ReactNode;
+  icon?: ReactNode;
+  action?: ReactNode;
+  className?: string;
+}
 
 export function EmptyState({
   title = 'No items found',
@@ -7,7 +16,7 @@ export function EmptyState({
   icon = 'package',
   action = null,
   className = '',
-}) {
+}: EmptyStateProps) {
   return (
     <div className={`ui-empty-state ${className}`}>
       <div className="ui-empty-icon" aria-hidden="true">
@@ -20,7 +29,13 @@ export function EmptyState({
   )
 }
 
-export function Spinner({ size = 24, className = '', ...props }) {
+export interface SpinnerProps extends HTMLAttributes<HTMLSpanElement> {
+  size?: number;
+  className?: string;
+  [key: string]: unknown;
+}
+
+export function Spinner({ size = 24, className = '', ...props }: SpinnerProps) {
   return (
     <span
       className={`ui-spinner ${className}`}
@@ -32,7 +47,15 @@ export function Spinner({ size = 24, className = '', ...props }) {
   )
 }
 
-export function Skeleton({ width = '100%', height = 20, borderRadius = 'var(--radius-xs)', className = '', style = {} }) {
+export interface SkeletonProps {
+  width?: string | number;
+  height?: string | number;
+  borderRadius?: string | number;
+  className?: string;
+  style?: React.CSSProperties;
+}
+
+export function Skeleton({ width = '100%', height = 20, borderRadius = 'var(--radius-xs)', className = '', style = {} }: SkeletonProps) {
   return (
     <div
       className={`ui-skeleton-pulse ${className}`}
@@ -68,8 +91,16 @@ export function PageSkeleton() {
   )
 }
 
+export interface FormStatusProps {
+  type?: string;
+  variant?: string;
+  message?: ReactNode;
+  children?: ReactNode;
+  onClose?: (() => void) | null;
+  className?: string;
+}
 
-export function FormStatus({ type = 'success', variant = type, message, children, onClose = null, className = '' }) {
+export function FormStatus({ type = 'success', variant = type, message, children, onClose = null, className = '' }: FormStatusProps) {
   const content = message || children
   if (!content) return null
   const statusType = variant || type

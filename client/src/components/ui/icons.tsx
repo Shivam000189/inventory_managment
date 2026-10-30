@@ -1,9 +1,18 @@
+import type { SVGProps } from 'react'
+
+export interface IconProps extends SVGProps<SVGSVGElement> {
+  name: string;
+  size?: number | string;
+  className?: string;
+  [key: string]: unknown;
+}
+
 /**
  * Centralized SVG Icon Registry
  * Extracted from dashboard and feature pages for consistent rendering and bundle hygiene.
  */
 
-export function Icon({ name, size = 18, className = '', ...props }) {
+export function Icon({ name, size = 18, className = "", ...props }: IconProps) {
   const s = typeof size === 'number' ? `${size}px` : size
 
   switch (name) {

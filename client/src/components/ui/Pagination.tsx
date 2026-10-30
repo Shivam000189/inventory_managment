@@ -1,5 +1,13 @@
-import { Button } from './Button.jsx'
+import { Button } from './Button'
 import './Pagination.css'
+
+export interface PaginationProps {
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+  totalItems?: number | null;
+  className?: string;
+}
 
 export function Pagination({
   currentPage,
@@ -7,7 +15,7 @@ export function Pagination({
   onPageChange,
   totalItems = null,
   className = '',
-}) {
+}: PaginationProps) {
   const pages = Math.max(1, totalPages || 1)
   const page = Math.min(Math.max(1, currentPage), pages)
 

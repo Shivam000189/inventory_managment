@@ -1,9 +1,45 @@
-import { Fragment, useCallback, useMemo } from 'react'
-import { Icon } from './icons.jsx'
-import { Button } from './Button.jsx'
+import React, { Fragment, useCallback, useMemo, type ReactNode } from 'react'
+import { Icon } from './icons'
+import { Button } from './Button'
 import './DataTable.css'
 
-export function DataTable({
+export interface DataTableColumn<T = any> {
+  key?: string;
+  id?: string;
+  label?: ReactNode;
+  title?: ReactNode;
+  render?: (row: T, index: number) => ReactNode;
+  sortable?: boolean;
+  align?: 'left' | 'center' | 'right';
+  width?: string | number;
+  className?: string;
+  [key: string]: unknown;
+}
+
+export interface DataTableProps<T = any> {
+  columns?: DataTableColumn<T>[];
+  data?: T[];
+  keyField?: string | null;
+  loading?: boolean;
+  error?: any;
+  onRetry?: (() => void) | null;
+  emptyText?: string;
+  emptyAction?: ReactNode;
+  selectable?: boolean;
+  selectedKeys?: any[];
+  onSelectKey?: ((key: any, row?: any) => void) | null;
+  onSelectAll?: ((selectAll: boolean) => void) | null;
+  expandedKeys?: any[];
+  onToggleExpand?: ((key: any, row?: any) => void) | null;
+  renderExpanded?: ((row: T) => ReactNode) | null;
+  sortKey?: string | null;
+  sortDirection?: 'asc' | 'desc' | string;
+  onSort?: ((key: string) => void) | null;
+  pagination?: any;
+  className?: string;
+}
+
+export function DataTable<T = any>({
   columns = [],
   data = [],
   keyField = null,
@@ -24,9 +60,9 @@ export function DataTable({
   onSort = null,
   pagination = null,
   className = '',
-}) {
+}: DataTableProps<T>) {
   const getRowKey = useCallback(
-    (row, index) => {
+    (row: any, index: number) => {
       if (keyField && row[keyField] !== undefined) return row[keyField]
       return (
         row.productId ||
@@ -49,7 +85,7 @@ export function DataTable({
     return data.every((row, i) => selectedKeys.includes(getRowKey(row, i)))
   }, [data, selectedKeys, getRowKey])
 
-  const handleSelectAll = (e) => {
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!onSelectAll) return
     onSelectAll(e.target.checked)
   }
@@ -101,7 +137,7 @@ export function DataTable({
             Could not load data
           </h3>
           <p style={{ color: 'var(--text-soft)', marginBottom: '16px' }}>
-            {error.message || String(error)}
+            {(error as any)?.message || String(error)}
           </p>
           {onRetry && (
             <Button variant="primary" size="sm" onClick={onRetry}>
@@ -193,9 +229,9 @@ export function DataTable({
                           : 'descending'
                         : undefined
                     }
-                    onClick={() => isSortable && onSort(col.key)}
+                    onClick={() => isSortable && onSort && onSort(col.key || "")}
                   >
-                    <span>{col.header}</span>
+                    <span>{col.header || (col as any).title || (col as any).label}</span>
                     {isSortable && isSorted && (
                       <span className="sort-icon" aria-hidden="true">
                         <Icon
@@ -244,7 +280,7 @@ export function DataTable({
                     {columns.map((col) => {
                       const content = col.render
                         ? col.render(row, index)
-                        : row[col.key]
+                        : (col.key ? (row as any)[col.key] : null)
 
                       return (
                         <td

@@ -1,4 +1,21 @@
+import React, { type ReactNode } from 'react'
 import './Tabs.css'
+
+export interface TabItem {
+  id: string;
+  label: ReactNode;
+  icon?: ReactNode;
+  count?: number | string;
+  [key: string]: unknown;
+}
+
+export interface TabsProps {
+  tabs?: TabItem[];
+  activeTab?: string;
+  onChange: (tabId: string) => void;
+  className?: string;
+  'aria-label'?: string;
+}
 
 export function Tabs({
   tabs = [],
@@ -6,7 +23,7 @@ export function Tabs({
   onChange,
   className = '',
   'aria-label': ariaLabel = 'Navigation tabs',
-}) {
+}: TabsProps) {
   return (
     <nav className={`ui-tabs ${className}`} aria-label={ariaLabel}>
       <div className="ui-tabs-list" role="tablist">

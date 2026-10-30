@@ -1,5 +1,14 @@
-import { Icon } from './icons.jsx'
+import React, { type HTMLAttributes, type ReactNode, type ElementType } from 'react'
+import { Icon } from './icons'
 import './Card.css'
+
+export interface CardProps extends HTMLAttributes<HTMLElement> {
+  children?: ReactNode;
+  className?: string;
+  as?: ElementType;
+  interactive?: boolean;
+  [key: string]: unknown;
+}
 
 export function Card({
   children,
@@ -7,7 +16,7 @@ export function Card({
   as: Component = 'div',
   interactive = false,
   ...props
-}) {
+}: CardProps) {
   const classes = [
     'ui-card',
     'modern-panel-card',
@@ -26,7 +35,12 @@ export function Card({
 
 export const Panel = Card
 
-export function StatGrid({ children, className = '', ...props }) {
+export interface StatGridProps extends HTMLAttributes<HTMLDivElement> {
+  children?: ReactNode;
+  className?: string;
+}
+
+export function StatGrid({ children, className = '', ...props }: StatGridProps) {
   const classes = ['ui-stat-grid', 'modern-kpi-row', className]
     .filter(Boolean)
     .join(' ')
@@ -36,6 +50,23 @@ export function StatGrid({ children, className = '', ...props }) {
       {children}
     </div>
   )
+}
+
+export interface StatCardProps extends Omit<HTMLAttributes<HTMLElement>, "title" | "onClick"> {
+  title?: ReactNode;
+  label?: ReactNode;
+  value?: ReactNode;
+  subtitle?: ReactNode;
+  helpText?: ReactNode;
+  subtext?: ReactNode;
+  delta?: ReactNode;
+  deltaType?: string | null;
+  icon?: ReactNode;
+  tone?: string;
+  onClick?: any;
+  href?: string | null;
+  className?: string;
+  [key: string]: unknown;
 }
 
 export function StatCard({
@@ -53,7 +84,7 @@ export function StatCard({
   href = null,
   className = '',
   ...props
-}) {
+}: StatCardProps) {
   const isClickable = Boolean(onClick || href)
   const Component = href ? 'a' : isClickable ? 'button' : 'div'
   const componentProps = href ? { href } : isClickable ? { type: 'button', onClick } : {}
@@ -84,7 +115,7 @@ export function StatCard({
   const bubbleClass = `ui-stat-bubble modern-kpi-icon-bubble bubble-${normalizedTone}`
 
   return (
-    <Component className={classes} {...componentProps} {...props}>
+    <Component className={classes} {...(componentProps as any)} {...props}>
       <div className="ui-stat-texts modern-kpi-texts">
         <span className="ui-stat-title modern-kpi-title">{displayTitle}</span>
         <span className="ui-stat-value modern-kpi-value">

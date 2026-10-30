@@ -1,5 +1,24 @@
+import React, { type ButtonHTMLAttributes, type ReactNode } from 'react'
 import './Button.css'
-import { Icon } from './icons.jsx'
+import { Icon } from './icons'
+
+export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'danger' | 'ghost' | string;
+export type ButtonSize = 'sm' | 'md' | 'lg' | string;
+
+export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  children?: ReactNode;
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+  loading?: boolean;
+  isLoading?: boolean;
+  icon?: ReactNode;
+  leftIcon?: ReactNode;
+  rightIcon?: ReactNode;
+  className?: string;
+  disabled?: boolean;
+  type?: 'button' | 'submit' | 'reset';
+  [key: string]: unknown;
+}
 
 export function Button({
   children,
@@ -14,7 +33,7 @@ export function Button({
   disabled = false,
   type = 'button',
   ...props
-}) {
+}: ButtonProps) {
   const classes = [
     'ui-btn',
     `ui-btn-${variant}`,
@@ -25,7 +44,7 @@ export function Button({
     .filter(Boolean)
     .join(' ')
 
-  const renderIcon = (ic) => {
+  const renderIcon = (ic: any) => {
     if (!ic) return null
     if (typeof ic === 'string') {
       return <Icon name={ic} size={size === 'sm' ? 14 : size === 'lg' ? 18 : 16} />
@@ -50,4 +69,5 @@ export function Button({
     </button>
   )
 }
+
 export default Button

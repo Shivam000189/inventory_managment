@@ -1,5 +1,28 @@
-import { forwardRef, useId } from 'react'
+import React, {
+  forwardRef,
+  useId,
+  type ReactNode,
+  type InputHTMLAttributes,
+  type SelectHTMLAttributes,
+  type TextareaHTMLAttributes,
+} from 'react'
 import './FormControls.css'
+
+export interface FieldRenderProps {
+  id: string;
+  'aria-describedby'?: string;
+  isInvalid: boolean;
+}
+
+export interface FieldProps {
+  label?: ReactNode;
+  required?: boolean;
+  hint?: ReactNode;
+  error?: ReactNode;
+  id?: string;
+  children: ReactNode | ((props: FieldRenderProps) => ReactNode);
+  className?: string;
+}
 
 export function Field({
   label,
@@ -9,7 +32,7 @@ export function Field({
   id: explicitId,
   children,
   className = '',
-}) {
+}: FieldProps) {
   const generatedId = useId()
   const fieldId = explicitId || generatedId
   const hintId = hint ? `${fieldId}-hint` : undefined
@@ -40,7 +63,11 @@ export function Field({
   )
 }
 
-export const Input = forwardRef(function Input(
+export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
+  isInvalid?: boolean;
+}
+
+export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   { isInvalid = false, className = '', type = 'text', ...props },
   ref
 ) {
@@ -55,7 +82,11 @@ export const Input = forwardRef(function Input(
   )
 })
 
-export const Select = forwardRef(function Select(
+export interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
+  isInvalid?: boolean;
+}
+
+export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select(
   { isInvalid = false, className = '', children, ...props },
   ref
 ) {
@@ -71,7 +102,11 @@ export const Select = forwardRef(function Select(
   )
 })
 
-export const Textarea = forwardRef(function Textarea(
+export interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
+  isInvalid?: boolean;
+}
+
+export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function Textarea(
   { isInvalid = false, className = '', rows = 3, ...props },
   ref
 ) {
@@ -86,7 +121,11 @@ export const Textarea = forwardRef(function Textarea(
   )
 })
 
-export const Checkbox = forwardRef(function Checkbox(
+export interface CheckboxProps extends InputHTMLAttributes<HTMLInputElement> {
+  label?: ReactNode;
+}
+
+export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(function Checkbox(
   { label, className = '', id: explicitId, ...props },
   ref
 ) {

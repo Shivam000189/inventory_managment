@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { notificationApi } from '../../api/notificationApi.js'
+import { notificationApi } from '../../api/notificationApi'
 
 const TABS = [
   { id: 'all', label: 'All' },
@@ -71,7 +71,7 @@ const SAMPLE_NOTIFICATIONS = [
   },
 ]
 
-function formatNotifTime(value) {
+function formatNotifTime(value: any) {
   if (!value) return ''
   const date = new Date(value)
   if (isNaN(date.getTime())) return ''
@@ -94,7 +94,7 @@ function formatNotifTime(value) {
   return date.toLocaleDateString([], { month: 'short', day: 'numeric', year: '2-digit' })
 }
 
-function getCategoryLabel(category, severity) {
+function getCategoryLabel(category: any, severity: any) {
   if (severity === 'critical') return 'Cost Alert'
   if (category === 'inventory') return 'Device Status'
   if (category === 'reminders') return 'Reminders'
@@ -105,7 +105,7 @@ function getCategoryLabel(category, severity) {
   return 'System Alert'
 }
 
-function renderCategoryIcon(category, severity) {
+function renderCategoryIcon(category: any, severity: any) {
   if (severity === 'critical' || category === 'alerts') {
     // Lightning bolt (matches rows 3-7 of reference screenshot)
     return (
@@ -153,16 +153,22 @@ function renderCategoryIcon(category, severity) {
   )
 }
 
-export default function NotificationCenter({ onNavigate, onOpen, onChange }) {
+export interface NotificationCenterProps {
+  onNavigate?: (page: string, entityId?: any) => void;
+  onOpen?: (open?: boolean) => void;
+  onChange?: (result: any) => void;
+}
+
+export default function NotificationCenter({ onNavigate, onOpen, onChange }: NotificationCenterProps) {
   const [open, setOpen] = useState(false)
   const [activeTab, setActiveTab] = useState('all')
   const [all, setAll] = useState(false)
-  const [data, setData] = useState({ items: [], unreadCount: 0 })
+  const [data, setData] = useState<{ items: any[]; unreadCount: number }>({ items: [], unreadCount: 0 })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [sampleState, setSampleState] = useState(SAMPLE_NOTIFICATIONS)
   const previousUnread = useRef(0)
-  const popoverRef = useRef(null)
+  const popoverRef = useRef<HTMLDivElement>(null)
   const [pulse, setPulse] = useState(false)
 
   const load = useCallback(async () => {
@@ -176,7 +182,7 @@ export default function NotificationCenter({ onNavigate, onOpen, onChange }) {
         setTimeout(() => setPulse(false), 700)
       }
       previousUnread.current = result.unreadCount
-    } catch (caught) {
+    } catch (caught: any) {
       setError(caught.message || 'Could not load notifications.')
     } finally {
       setLoading(false)
@@ -200,7 +206,7 @@ export default function NotificationCenter({ onNavigate, onOpen, onChange }) {
 
   useEffect(() => {
     if (!open) return undefined
-    const close = (event) => {
+    const close = (event: any) => {
       if (event.type === 'keydown' ? event.key === 'Escape' : !popoverRef.current?.contains(event.target)) {
         setOpen(false)
       }
@@ -227,13 +233,13 @@ export default function NotificationCenter({ onNavigate, onOpen, onChange }) {
     return true
   })
 
-  const view = async (item) => {
+  const view = async (item: any) => {
     if (data.items.length > 0) {
       if (!item.readAt) await notificationApi.markRead(item.notificationId)
       setData((current) => ({
         ...current,
         unreadCount: Math.max(0, current.unreadCount - (item.readAt ? 0 : 1)),
-        items: current.items.map((row) =>
+        items: current.items.map((row: any) =>
           row.notificationId === item.notificationId ? { ...row, readAt: new Date().toISOString() } : row,
         ),
       }))
@@ -261,7 +267,7 @@ export default function NotificationCenter({ onNavigate, onOpen, onChange }) {
     }
   }
 
-  const dismiss = async (event, item) => {
+  const dismiss = async (event: any, item: any) => {
     event.stopPropagation()
     if (data.items.length > 0) {
       await notificationApi.dismiss(item.notificationId)

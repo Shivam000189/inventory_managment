@@ -1,4 +1,17 @@
+import React, { type HTMLAttributes, type ReactNode } from 'react'
 import './Badge.css'
+
+export type BadgeTone = 'neutral' | 'success' | 'warning' | 'danger' | 'info' | 'green' | 'yellow' | 'amber' | 'red' | 'rose' | 'blue' | string;
+export type BadgeVariant = 'solid' | 'soft' | string;
+
+export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
+  children?: ReactNode;
+  tone?: BadgeTone;
+  variant?: BadgeVariant;
+  dot?: boolean;
+  className?: string;
+  [key: string]: unknown;
+}
 
 export function Badge({
   children,
@@ -7,7 +20,7 @@ export function Badge({
   dot = false,
   className = '',
   ...props
-}) {
+}: BadgeProps) {
   const normalizedTone =
     tone === 'green'
       ? 'success'
