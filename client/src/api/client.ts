@@ -1,4 +1,4 @@
-const getApiBaseUrl = () => {
+const getApiBaseUrl = (): string => {
   if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
   if (import.meta.env.DEV) {
     if (typeof window !== "undefined" && window.location.hostname) {
@@ -14,7 +14,10 @@ const API_BASE_URL = getApiBaseUrl();
 const CSRF_COOKIE = "sr_csrf";
 
 export class ApiError extends Error {
-  constructor(message, status, payload) {
+  status: number;
+  payload: unknown;
+
+  constructor(message: string, status: number, payload?: unknown) {
     super(message);
     this.name = "ApiError";
     this.status = status;
@@ -27,7 +30,7 @@ export class ApiError extends Error {
  * so there is no token for JS to read or store. The readable `sr_csrf` cookie is
  * echoed back in a header on writes to prove the request came from our app.
  */
-function readCookie(name) {
+function readCookie(name: string): string | null {
   try {
     if (typeof document === "undefined") return null;
     const prefix = `${name}=`;
@@ -43,11 +46,11 @@ function readCookie(name) {
   }
 }
 
-export function getCsrfToken() {
+export function getCsrfToken(): string | null {
   return readCookie(CSRF_COOKIE);
 }
 
-export function getAuthToken() {
+export function getAuthToken(): string | null {
   try {
     if (typeof localStorage === 'undefined') return null;
     return localStorage.getItem('sr_token') || localStorage.getItem('token');
@@ -56,8 +59,14 @@ export function getAuthToken() {
   }
 }
 
-export function clearSession() {
+export function clearSession(): void {
   window.dispatchEvent(new CustomEvent("stockroom:unauthorized"));
+}
+
+export interface RequestOptions {
+  method?: string;
+  body?: unknown;
+  params?: Record<string, unknown>;
 }
 
 /**
@@ -65,10 +74,10 @@ export function clearSession() {
  * cookie, CSRF header, consistent error handling, and unwrapping of the
  * { success, data } envelope.
  */
-export async function request(
-  path,
-  { method = "GET", body, params } = {},
-) {
+export async function request<T = any>(
+  path: string,
+  { method = "GET", body, params }: RequestOptions = {},
+): Promise<T> {
   const url = new URL(
     `${API_BASE_URL}${path}`,
     typeof window !== "undefined" ? window.location.origin : "http://localhost"
@@ -76,13 +85,13 @@ export async function request(
   if (params) {
     for (const [key, value] of Object.entries(params)) {
       if (value !== undefined && value !== null && value !== "")
-        url.searchParams.set(key, value);
+        url.searchParams.set(key, String(value));
     }
   }
 
   const isFormData =
     typeof FormData !== "undefined" && body instanceof FormData;
-  const headers = isFormData ? {} : { "Content-Type": "application/json" };
+  const headers: Record<string, string> = isFormData ? {} : { "Content-Type": "application/json" };
   if (method !== "GET" && method !== "HEAD") {
     const csrf = getCsrfToken();
     if (csrf) headers["X-CSRF-Token"] = csrf;
@@ -92,7 +101,7 @@ export async function request(
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  let response;
+  let response: Response;
   try {
     response = await fetch(url, {
       method,
@@ -102,7 +111,7 @@ export async function request(
         body === undefined
           ? undefined
           : isFormData
-            ? body
+            ? (body as FormData)
             : JSON.stringify(body),
     });
   } catch {
@@ -112,7 +121,7 @@ export async function request(
     );
   }
 
-  let payload = null;
+  let payload: any = null;
   const text = await response.text();
   if (text) {
     try {
@@ -143,18 +152,20 @@ export async function request(
     }
   }
 
-  return payload ? payload.data : null;
+  return (payload ? payload.data : null) as T;
 }
 
 export const apiClient = {
-  get: (path, options) => request(path, { ...options, method: "GET" }),
-  post: (path, body, options) =>
-    request(path, { ...options, method: "POST", body }),
-  put: (path, body, options) =>
-    request(path, { ...options, method: "PUT", body }),
-  patch: (path, body, options) =>
-    request(path, { ...options, method: "PATCH", body }),
-  delete: (path, options) => request(path, { ...options, method: "DELETE" }),
-  upload: (path, formData, options) =>
-    request(path, { ...options, method: "POST", body: formData }),
+  get: <T = any>(path: string, options?: Omit<RequestOptions, "method">) =>
+    request<T>(path, { ...options, method: "GET" }),
+  post: <T = any>(path: string, body?: unknown, options?: Omit<RequestOptions, "method" | "body">) =>
+    request<T>(path, { ...options, method: "POST", body }),
+  put: <T = any>(path: string, body?: unknown, options?: Omit<RequestOptions, "method" | "body">) =>
+    request<T>(path, { ...options, method: "PUT", body }),
+  patch: <T = any>(path: string, body?: unknown, options?: Omit<RequestOptions, "method" | "body">) =>
+    request<T>(path, { ...options, method: "PATCH", body }),
+  delete: <T = any>(path: string, options?: Omit<RequestOptions, "method">) =>
+    request<T>(path, { ...options, method: "DELETE" }),
+  upload: <T = any>(path: string, formData: FormData, options?: Omit<RequestOptions, "method" | "body">) =>
+    request<T>(path, { ...options, method: "POST", body: formData }),
 };
