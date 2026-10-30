@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { ProductSVG } from '../common/ProductSVG';
 
-export const ProductCard = ({ product, onSelect }) => {
+export const ProductCard = ({ product, onSelect }: { product: any; onSelect?: (product: any) => void }) => {
   const isSelected = product.orderQty > 0;
 
   return (
@@ -11,7 +11,7 @@ export const ProductCard = ({ product, onSelect }) => {
       whileHover={{ y: -4, scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
       transition={{ type: 'spring', stiffness: 400, damping: 22 }}
-      onClick={() => onSelect(product)}
+      onClick={() => onSelect?.(product)}
       className={`group relative bg-[#ffffff] rounded-xl p-3 border transition-colors cursor-pointer flex flex-col justify-between hover:shadow-md ${
         isSelected
           ? 'border-[#e2d3c0] shadow-sm'

@@ -244,11 +244,11 @@ const CATEGORY_SELLING_PRESETS = {
 };
 
 const getCategoryStockPreset = (category = '') => {
-  return CATEGORY_STOCK_PRESETS[category] || CATEGORY_STOCK_PRESETS.default;
+  return (CATEGORY_STOCK_PRESETS as Record<string, any>)[category] || CATEGORY_STOCK_PRESETS.default;
 };
 
 const getCategorySellingPreset = (category = '') => {
-  return CATEGORY_SELLING_PRESETS[category] || CATEGORY_SELLING_PRESETS.default;
+  return (CATEGORY_SELLING_PRESETS as Record<string, any>)[category] || CATEGORY_SELLING_PRESETS.default;
 };
 
 const getProductIconComponent = (name = '') => {
@@ -300,25 +300,40 @@ const getProductIconComponent = (name = '') => {
   return { icon: Package };
 };
 
+export interface DashboardMockupProps {
+  categories?: any[];
+  activeCategory?: string;
+  onSelectCategory?: (cat: string) => void;
+  searchQuery?: string;
+  onSearchChange?: (q: string) => void;
+  filteredInventory?: any[];
+  topSelling?: any[];
+  onQuickAction?: (action: string) => void;
+  onToggleMenu?: () => void;
+  [key: string]: unknown;
+}
+
 export const DashboardMockup = ({
-  searchQuery = '',
+  categories: _categories,
+  activeCategory = "Apparel",
+  onSelectCategory,
+  searchQuery = "",
   onSearchChange,
   onQuickAction,
   topSelling: propTopSelling,
-  activeCategory = 'All Stock',
-  _filteredInventory = [],
-  _categories = []
-}) => {
+  filteredInventory: propFilteredInventory,
+  onToggleMenu,
+}: DashboardMockupProps) => {
   const { session, account } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [activeMonthIdx, setActiveMonthIdx] = useState(6); // Default July (index 6)
   const [localSearch, setLocalSearch] = useState(searchQuery);
   const [topViewMode, setTopViewMode] = useState('stock'); // 'stock' | 'selling'
 
-  const [userTopStock, setUserTopStock] = useState([]);
-  const [userTopSelling, setUserTopSelling] = useState([]);
-  const [userRecentTransactions, setUserRecentTransactions] = useState([]);
-  const [userStockAlerts, setUserStockAlerts] = useState([]);
+  const [userTopStock, setUserTopStock] = useState<any[]>([]);
+  const [userTopSelling, setUserTopSelling] = useState<any[]>([]);
+  const [userRecentTransactions, setUserRecentTransactions] = useState<any[]>([]);
+  const [userStockAlerts, setUserStockAlerts] = useState<any[]>([]);
 
   useEffect(() => {
     let active = true;
@@ -345,7 +360,7 @@ export const DashboardMockup = ({
             const sortedByStock = [...products]
               .sort((a, b) => Number(b.currentStock ?? b.stock ?? 0) - Number(a.currentStock ?? a.stock ?? 0))
               .slice(0, 4)
-              .map((p, idx) => ({
+              .map((p: any, idx: number) => ({
                 id: p.productId || p.id || `stock-${idx}`,
                 name: p.name,
                 stock: Number(p.currentStock ?? p.stock ?? 0),
@@ -359,13 +374,13 @@ export const DashboardMockup = ({
 
             // Real low stock alerts from actual catalog
             const lowStockProducts = products
-              .filter((p) => {
+              .filter((p: any) => {
                 const stock = Number(p.currentStock ?? p.stock ?? 0);
                 const min = Number(p.minimumStock ?? p.reorderLevel ?? 10);
                 return stock <= min || stock <= 10;
               })
               .slice(0, 3)
-              .map((p) => ({
+              .map((p: any) => ({
                 id: p.productId || p.id,
                 name: p.name,
                 sku: p.sku || 'SKU',
@@ -379,9 +394,9 @@ export const DashboardMockup = ({
 
           // 2. Real sales data if any
           const productSalesMap = new Map();
-          salesOrders.forEach((order) => {
+          salesOrders.forEach((order: any) => {
             if (order.status !== 'Cancelled') {
-              (order.items || []).forEach((item) => {
+              (order.items || []).forEach((item: any) => {
                 const name = item.productName || item.name;
                 const qty = Number(item.quantity) || 0;
                 if (name) {
@@ -413,7 +428,7 @@ export const DashboardMockup = ({
 
           // 3. Real recent transactions
           if (salesOrders.length > 0) {
-            const recent = salesOrders.slice(0, 4).map((order) => ({
+            const recent = salesOrders.slice(0, 4).map((order: any) => ({
               date: new Date(order.createdAt).toLocaleDateString('en-IN', {
                 day: 'numeric',
                 month: 'short',
@@ -422,7 +437,7 @@ export const DashboardMockup = ({
               }),
               type: order.channel === 'POS' ? 'Sale (POS)' : 'Sale',
               item: order.items?.[0]?.productName || 'Order Items',
-              qty: order.items?.reduce((s, it) => s + (Number(it.quantity) || 0), 0) || 1,
+              qty: order.items?.reduce((s: any, it: any) => s + (Number(it.quantity) || 0), 0) || 1,
               amount: `₹ ${Number(order.totalAmount || 0).toLocaleString('en-IN')}`
             }));
             if (active && recent.length > 0) {
@@ -451,13 +466,13 @@ export const DashboardMockup = ({
     // Default 'stock': Top Stock according to the business
     if (userTopStock.length > 0) return userTopStock;
 
-    const bizIndustry = (session?.business?.industry || session?.business?.business_type || '').toLowerCase();
-    if (bizIndustry && INDUSTRY_STOCK_PRESETS[bizIndustry]) {
-      return INDUSTRY_STOCK_PRESETS[bizIndustry];
+    const bizIndustry = ((session?.business as any)?.industry || (session?.business as any)?.business_type || '').toLowerCase();
+    if (bizIndustry && (INDUSTRY_STOCK_PRESETS as Record<string, any>)[bizIndustry]) {
+      return (INDUSTRY_STOCK_PRESETS as Record<string, any>)[bizIndustry];
     }
 
-    if (activeCategory && activeCategory !== 'All Stock' && CATEGORY_STOCK_PRESETS[activeCategory]) {
-      return CATEGORY_STOCK_PRESETS[activeCategory];
+    if (activeCategory && activeCategory !== 'All Stock' && (CATEGORY_STOCK_PRESETS as Record<string, any>)[activeCategory]) {
+      return (CATEGORY_STOCK_PRESETS as Record<string, any>)[activeCategory];
     }
 
     return CATEGORY_STOCK_PRESETS.default;
@@ -472,24 +487,24 @@ export const DashboardMockup = ({
 
   const displayStockAlerts = useMemo(() => {
     if (userStockAlerts.length > 0) return userStockAlerts;
-    const bizIndustry = (session?.business?.industry || session?.business?.business_type || '').toLowerCase();
+    const bizIndustry = ((session?.business as any)?.industry || (session?.business as any)?.business_type || '').toLowerCase();
     const indKey = bizIndustry || (activeCategory || 'default').toLowerCase();
-    return INDUSTRY_ALERT_PRESETS[indKey] || INDUSTRY_ALERT_PRESETS.default;
+    return (INDUSTRY_ALERT_PRESETS as Record<string, any>)[indKey] || INDUSTRY_ALERT_PRESETS.default;
   }, [userStockAlerts, session, activeCategory]);
 
   const displayTransactions = useMemo(() => {
     if (userRecentTransactions.length > 0) return userRecentTransactions;
-    const bizIndustry = (session?.business?.industry || session?.business?.business_type || '').toLowerCase();
+    const bizIndustry = ((session?.business as any)?.industry || (session?.business as any)?.business_type || '').toLowerCase();
     const indKey = bizIndustry || (activeCategory || 'default').toLowerCase();
-    return INDUSTRY_TRANSACTION_PRESETS[indKey] || INDUSTRY_TRANSACTION_PRESETS.default;
+    return (INDUSTRY_TRANSACTION_PRESETS as Record<string, any>)[indKey] || INDUSTRY_TRANSACTION_PRESETS.default;
   }, [userRecentTransactions, session, activeCategory]);
 
-  const handleNavClick = (navId, label) => {
+  const handleNavClick = (navId: string, label: string) => {
     setActiveTab(navId);
     if (onQuickAction) onQuickAction(`Navigated to ${label}`);
   };
 
-  const handleActionClick = (actionName) => {
+  const handleActionClick = (actionName: string) => {
     if (onQuickAction) onQuickAction(actionName);
   };
 
@@ -497,7 +512,7 @@ export const DashboardMockup = ({
     <motion.div
       initial={{ opacity: 0, y: 35, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ duration: 0.8, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
+      transition={{ duration: 0.8, delay: 0.25, ease: [0.16, 1, 0.3, 1] as any }}
       className="relative w-full max-w-6xl mx-auto px-3 sm:px-6 pt-2 lg:pt-14 select-none"
     >
       {/* HANDWRITTEN ANNOTATION (LEFT) - pointing to Dashboard */}
@@ -887,7 +902,7 @@ export const DashboardMockup = ({
 
                   {/* Stock Alerts List */}
                   <div className="space-y-1.5 sm:space-y-2">
-                    {displayStockAlerts.map((alert) => {
+                    {displayStockAlerts.map((alert: any) => {
                       const Icon = alert.icon;
                       return (
                         <div
@@ -948,7 +963,7 @@ export const DashboardMockup = ({
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-[#f7f2ea]">
-                        {displayTransactions.map((tx, idx) => (
+                        {displayTransactions.map((tx: any, idx: number) => (
                           <tr
                             key={`${tx.date}-${tx.item}-${idx}`}
                             className="hover:bg-[#faf8f5]/60 transition-colors"
@@ -1019,7 +1034,7 @@ export const DashboardMockup = ({
 
                   {/* Top Products List */}
                   <div className="space-y-2">
-                    {displayProductsList.map((prod) => {
+                    {displayProductsList.map((prod: any) => {
                       const Icon = prod.icon || Package;
                       return (
                         <div

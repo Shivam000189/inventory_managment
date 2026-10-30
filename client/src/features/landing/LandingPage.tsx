@@ -17,10 +17,16 @@ import {
   INITIAL_ORDER_LIST
 } from './data/inventoryData';
 
+export interface LandingPageProps {
+  isLoggedIn?: boolean;
+  onNavigateAuth?: (page: string) => void;
+  [key: string]: unknown;
+}
+
 export default function LandingPage({
   isLoggedIn = false,
   onNavigateAuth
-}) {
+}: LandingPageProps) {
   const navigate = useNavigate();
 
   // Navigation & Interactive States
@@ -36,7 +42,7 @@ export default function LandingPage({
   const [billingCycle, setBillingCycle] = useState('annual');
   const [demoModalOpen, setDemoModalOpen] = useState(false);
 
-  const triggerToast = (msg) => {
+  const triggerToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(''), 3000);
   };
@@ -56,7 +62,7 @@ export default function LandingPage({
   }, [inventory, activeCategory, searchQuery]);
 
   // Click handler for product cards inside the dashboard preview
-  const handleSelectProduct = (product) => {
+  const handleSelectProduct = (product: any) => {
     setInventory((prev) =>
       prev.map((it) =>
         it.id === product.id
@@ -121,7 +127,7 @@ export default function LandingPage({
         '--primary': '#2f2a25',
         '--secondary': '#0d0d0d',
         '--accent': '#7bbd65'
-      }}
+      } as any}
       className="min-h-screen bg-[#f6ecdf] text-[#2f1f13] font-sans selection:bg-[#2f2a25] selection:text-[#F6EDE1] overflow-x-hidden"
     >
       {/* Toast Notification */}
@@ -138,7 +144,7 @@ export default function LandingPage({
         {/* Navigation Bar Component */}
         <Navbar
           activeNav={activeNav}
-          onNavClick={(label) => setActiveNav(label)}
+          onNavClick={(label: string) => setActiveNav(label)}
           onLoginClick={handleLoginClick}
           isLoggedIn={isLoggedIn}
           onDashboardClick={handleDashboardClick}
@@ -154,16 +160,16 @@ export default function LandingPage({
         <DashboardMockup
           categories={CATEGORIES}
           activeCategory={activeCategory}
-          onSelectCategory={(cat) => setActiveCategory(cat)}
+          onSelectCategory={(cat: string) => setActiveCategory(cat)}
           searchQuery={searchQuery}
-          onSearchChange={(query) => setSearchQuery(query)}
+          onSearchChange={(query: string) => setSearchQuery(query)}
           filteredInventory={filteredInventory}
           onSelectProduct={handleSelectProduct}
           orderMode={orderMode}
-          onOrderModeChange={(mode) => setOrderMode(mode)}
+          onOrderModeChange={(mode: any) => setOrderMode(mode)}
           orderItems={orderItems}
           onClearOrders={handleClearOrders}
-          onQuickAction={(actionName) =>
+          onQuickAction={(actionName: string) =>
             triggerToast(`${actionName} quick-action opened`)
           }
           onToggleMenu={() => triggerToast('Sidebar navigation toggled')}
@@ -186,7 +192,7 @@ export default function LandingPage({
       <PricingSection
         billingCycle={billingCycle}
         onBillingCycleChange={setBillingCycle}
-        onSelectPlan={(planName) => {
+        onSelectPlan={(planName: string) => {
           setDemoModalOpen(true);
           triggerToast(`Selected ${planName} plan`);
         }}
@@ -199,7 +205,7 @@ export default function LandingPage({
       <DemoModal
         isOpen={demoModalOpen}
         onClose={() => setDemoModalOpen(false)}
-        onSubmitSuccess={(email, company) => {
+        onSubmitSuccess={(email: any, company: any) => {
           triggerToast(`Workspace invite & demo sent to ${email}!`);
           // Navigate to register with prefilled query params
           navigate(`/register?email=${encodeURIComponent(email)}&company=${encodeURIComponent(company)}`);

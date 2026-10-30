@@ -1,7 +1,7 @@
 import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 
-export const Toast = ({ message }) => {
+export const Toast = ({ message }: { message: string }) => {
   return (
     <AnimatePresence>
       {message && (

@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Calendar } from 'lucide-react';
 
-const containerVariants = {
+const containerVariants: any = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
@@ -13,7 +13,7 @@ const containerVariants = {
   }
 };
 
-const itemVariants = {
+const itemVariants: any = {
   hidden: { opacity: 0, y: 16 },
   visible: {
     opacity: 1,
@@ -25,10 +25,7 @@ const itemVariants = {
   }
 };
 
-export const HeroHeader = ({
-  onGetStarted,
-  onBookDemo
-}) => {
+export const HeroHeader = ({ onGetStarted, onBookDemo }: { onGetStarted?: () => void; onBookDemo?: () => void }) => {
   return (
     <motion.section
       id="home"

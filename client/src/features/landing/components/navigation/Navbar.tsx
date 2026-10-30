@@ -17,8 +17,16 @@ export const Navbar = ({
   activeNav,
   onNavClick,
   onLoginClick,
+  _onRegisterClick,
+  onDashboardClick,
   isLoggedIn = false,
-  onDashboardClick
+}: {
+  activeNav?: string;
+  onNavClick?: (nav: string) => void;
+  onLoginClick?: () => void;
+  _onRegisterClick?: () => void;
+  onDashboardClick?: () => void;
+  isLoggedIn?: boolean;
 }) => {
   const navItems = [
     { label: 'Product', href: '#feature' },
