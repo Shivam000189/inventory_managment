@@ -154,9 +154,10 @@ export const CustomersPage: React.FC = () => {
             onClick={() => setCustomersActiveTab('all')}
             className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold cursor-pointer ${
               customersActiveTab === 'all'
-                ? 'bg-[#1C1B18] text-white'
+                ? 'bg-[#1C1B18] !text-white'
                 : 'bg-white border border-[#EEE6DA] text-[#6B665E]'
             }`}
+            style={{ color: customersActiveTab === 'all' ? '#ffffff' : undefined }}
           >
             All Customers ({customers.length})
           </button>
@@ -165,9 +166,10 @@ export const CustomersPage: React.FC = () => {
             onClick={() => setCustomersActiveTab('credit')}
             className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold cursor-pointer ${
               customersActiveTab === 'credit'
-                ? 'bg-[#1C1B18] text-white'
+                ? 'bg-[#1C1B18] !text-white'
                 : 'bg-white border border-[#EEE6DA] text-[#6B665E]'
             }`}
+            style={{ color: customersActiveTab === 'credit' ? '#ffffff' : undefined }}
           >
             Credit / Ledger ({creditCustomers.length})
           </button>
@@ -555,7 +557,8 @@ export const CustomersPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setViewingCustomer(null)}
-                  className="px-4 py-1.5 bg-[#1C1B18] text-white text-xs font-semibold rounded-xl"
+                  className="px-4 py-1.5 bg-[#1C1B18] !text-white text-xs font-semibold rounded-xl"
+                  style={{ color: '#ffffff' }}
                 >
                   Close
                 </button>

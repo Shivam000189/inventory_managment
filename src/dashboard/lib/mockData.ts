@@ -12,10 +12,10 @@ import {
 
 export const initialBusinessProfile: BusinessProfile = {
   id: 'biz-01',
-  name: 'Inventry Retail & Distribution',
+  name: 'Inventory Retail & Distribution',
   businessType: 'Retail & Wholesale Store',
   phone: '+91 98765 43210',
-  email: 'hello@inventry.app',
+  email: 'hello@Inventory.app',
   address: 'Shop 14, Commercial Complex, MG Road, Bengaluru, Karnataka 560001',
   currency: 'INR',
   taxNumber: '29ABCDE1234F1Z5',
@@ -26,7 +26,7 @@ export const initialBusinessProfile: BusinessProfile = {
   allowNegativeStock: false,
   receiptFooterText: 'Thank you for shopping with us! Visit again.',
   receiptPaperSize: '80mm',
-  upiId: 'inventry.store@icici',
+  upiId: 'Inventory.store@icici',
   lowStockThreshold: 10,
 };
 
@@ -43,7 +43,7 @@ export const initialUsers: User[] = [
   {
     id: 'user-02',
     name: 'Rohan Mehra',
-    email: 'rohan.pos@inventry.app',
+    email: 'rohan.pos@Inventory.app',
     role: 'salesperson',
     avatarInitials: 'RM',
     status: 'active',
@@ -52,7 +52,7 @@ export const initialUsers: User[] = [
   {
     id: 'user-03',
     name: 'Ananya Rao',
-    email: 'ananya.pos@inventry.app',
+    email: 'ananya.pos@Inventory.app',
     role: 'salesperson',
     avatarInitials: 'AR',
     status: 'active',

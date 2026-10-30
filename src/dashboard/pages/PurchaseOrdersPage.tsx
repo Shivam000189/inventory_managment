@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Building2,
   Plus,
@@ -11,6 +11,10 @@ import {
   ChevronRight,
   PackageCheck,
   AlertCircle,
+  Phone,
+  Mail,
+  MapPin,
+  CreditCard,
 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { useApp } from '../context/AppContext';
@@ -24,6 +28,7 @@ export const PurchaseOrdersPage: React.FC = () => {
     updatePOStatus,
     receivePOItems,
     suppliers,
+    addSupplier,
     products,
     businessProfile,
   } = useApp();
@@ -40,6 +45,34 @@ export const PurchaseOrdersPage: React.FC = () => {
   // New PO Form State
   const [selectedSupplierId, setSelectedSupplierId] = useState(suppliers[0]?.id || '');
   const [expectedDate, setExpectedDate] = useState('05 Nov 2026');
+  const [poError, setPoError] = useState('');
+  const [isSubmittingPO, setIsSubmittingPO] = useState(false);
+
+  // New Vendor Form State
+  const [isAddVendorOpen, setIsAddVendorOpen] = useState(false);
+  const [newVendorData, setNewVendorData] = useState({
+    name: '',
+    contactPerson: '',
+    phone: '',
+    email: '',
+    gstin: '',
+    address: '',
+    city: '',
+    state: '',
+    paymentTerms: 'Net 30' as 'COD' | 'Net 15' | 'Net 30' | 'Net 60',
+    notes: '',
+  });
+  const [vendorError, setVendorError] = useState('');
+  const [isSubmittingVendor, setIsSubmittingVendor] = useState(false);
+
+  useEffect(() => {
+    if (!selectedSupplierId && suppliers.length > 0) {
+      setSelectedSupplierId(suppliers[0].id);
+    }
+  }, [suppliers, selectedSupplierId]);
+
+  const selectedSupplier = suppliers.find((s) => s.id === selectedSupplierId) || suppliers[0];
+
   const [poLines, setPoLines] = useState<
     { productId: string; quantity: number; unitCost: number; taxRate: number }[]
   >([
@@ -114,24 +147,96 @@ export const PurchaseOrdersPage: React.FC = () => {
   );
   const grandTotal = Math.round(subtotal + totalTax + shippingFee - discountAmount);
 
-  const handleCreateSubmit = (e: React.FormEvent) => {
+  const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const sup = suppliers.find((s) => s.id === selectedSupplierId) || suppliers[0];
-    createPurchaseOrder({
-      supplierId: sup.id,
-      supplierName: sup.name,
-      orderDate: '26 Oct 2026',
-      expectedDate,
-      items: calculatedItems,
-      subtotal,
-      discount: discountAmount,
-      tax: totalTax,
-      shipping: shippingFee,
-      total: grandTotal,
-      paymentStatus: 'Unpaid',
-      status: 'Ordered',
-    });
-    setIsCreateOpen(false);
+    if (!sup) {
+      setPoError('Please select or add a supplier before creating a purchase order.');
+      return;
+    }
+    if (calculatedItems.length === 0) {
+      setPoError('Please add at least one line item to the purchase order.');
+      return;
+    }
+    setPoError('');
+    setIsSubmittingPO(true);
+    try {
+      await createPurchaseOrder({
+        supplierId: sup.id,
+        supplierName: sup.name,
+        orderDate: '26 Oct 2026',
+        expectedDate,
+        items: calculatedItems,
+        subtotal,
+        discount: discountAmount,
+        tax: totalTax,
+        shipping: shippingFee,
+        total: grandTotal,
+        paymentStatus: 'Unpaid',
+        status: 'Ordered',
+      });
+      setIsCreateOpen(false);
+    } catch (err: any) {
+      setPoError(err?.message || 'Failed to create purchase order.');
+    } finally {
+      setIsSubmittingPO(false);
+    }
+  };
+
+  const handleSaveVendor = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newVendorData.name.trim()) {
+      setVendorError('Please enter a supplier/vendor name.');
+      return;
+    }
+    if (!newVendorData.phone.trim()) {
+      setVendorError('Please enter a contact phone number.');
+      return;
+    }
+    setVendorError('');
+    setIsSubmittingVendor(true);
+    try {
+      const fullAddress = [
+        newVendorData.address.trim(),
+        newVendorData.city.trim(),
+        newVendorData.state.trim()
+      ].filter(Boolean).join(', ');
+
+      const created = await addSupplier({
+        name: newVendorData.name.trim(),
+        contactPerson: newVendorData.contactPerson.trim(),
+        phone: newVendorData.phone.trim(),
+        email: newVendorData.email.trim(),
+        gstin: newVendorData.gstin.trim(),
+        address: fullAddress,
+        paymentTerms: newVendorData.paymentTerms,
+        outstandingBalance: 0,
+        lastOrderDate: 'Never',
+        status: 'active',
+        notes: newVendorData.notes.trim(),
+      });
+
+      if (created && created.id) {
+        setSelectedSupplierId(created.id);
+      }
+      setIsAddVendorOpen(false);
+      setNewVendorData({
+        name: '',
+        contactPerson: '',
+        phone: '',
+        email: '',
+        gstin: '',
+        address: '',
+        city: '',
+        state: '',
+        paymentTerms: 'Net 30',
+        notes: '',
+      });
+    } catch (err: any) {
+      setVendorError(err?.message || 'Failed to add vendor.');
+    } finally {
+      setIsSubmittingVendor(false);
+    }
   };
 
   const handleReceiveConfirm = () => {
@@ -153,14 +258,32 @@ export const PurchaseOrdersPage: React.FC = () => {
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setIsCreateOpen(true)}
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#7FAE82] hover:bg-[#6C9C70] text-white text-xs font-semibold transition-colors cursor-pointer shadow-2xs self-start"
-        >
-          <Plus size={16} />
-          <span>+ New PO</span>
-        </button>
+        <div className="flex items-center gap-2.5">
+          <button
+            type="button"
+            onClick={() => {
+              setVendorError('');
+              setIsAddVendorOpen(true);
+            }}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-[#EEE6DA] bg-white hover:bg-[#FAF6EF] text-[#1C1B18] text-xs font-semibold transition-colors cursor-pointer shadow-2xs"
+          >
+            <Building2 size={15} className="text-[#6B665E]" />
+            <span>Add Vendor</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setPoError('');
+              setIsCreateOpen(true);
+            }}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#7FAE82] hover:bg-[#6C9C70] !text-white text-xs font-semibold transition-colors cursor-pointer shadow-2xs self-start"
+            style={{ color: '#ffffff' }}
+          >
+            <Plus size={16} />
+            <span>New Purchase Order</span>
+          </button>
+        </div>
       </div>
 
       {/* Tabs and Search Bar */}
@@ -319,31 +442,78 @@ export const PurchaseOrdersPage: React.FC = () => {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                 <div>
-                  <label className="block text-xs font-semibold text-[#1C1B18] mb-1">
-                    Select Supplier *
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-semibold text-[#1C1B18]">
+                      Select Supplier / Vendor *
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setVendorError('');
+                        setIsAddVendorOpen(true);
+                      }}
+                      className="text-xs font-semibold text-[#7FAE82] hover:text-[#5F8B62] flex items-center gap-1 cursor-pointer transition-colors"
+                    >
+                      <Plus size={13} className="stroke-[2.5]" />
+                      <span>+ Add New Vendor</span>
+                    </button>
+                  </div>
                   <select
                     value={selectedSupplierId}
                     onChange={(e) => setSelectedSupplierId(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs bg-white outline-none"
+                    className="w-full px-3 py-2.5 rounded-xl border border-[#EEE6DA] text-xs bg-white text-[#1C1B18] font-medium outline-none focus:border-[#7FAE82] transition-colors"
                   >
-                    {suppliers.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name} ({s.contactPerson})
-                      </option>
-                    ))}
+                    {suppliers.length === 0 ? (
+                      <option value="">No suppliers found — click + Add New Vendor</option>
+                    ) : (
+                      suppliers.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name} {s.contactPerson ? `(${s.contactPerson})` : ''} {s.phone ? `— ${s.phone}` : ''}
+                        </option>
+                      ))
+                    )}
                   </select>
+
+                  {/* Selected Supplier Preview Card */}
+                  {selectedSupplier && (
+                    <div className="mt-2.5 p-3 rounded-xl bg-[#FAF6EF] border border-[#EEE6DA] text-xs space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-[#1C1B18]">{selectedSupplier.name}</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#EBF3EB] text-[#4A784E] font-semibold">
+                          Active Vendor
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 text-[#6B665E] text-[11px] pt-1 border-t border-[#EEE6DA]/70">
+                        {selectedSupplier.contactPerson && (
+                          <div>Contact: <span className="text-[#1C1B18] font-medium">{selectedSupplier.contactPerson}</span></div>
+                        )}
+                        {selectedSupplier.phone && (
+                          <div>Phone: <span className="text-[#1C1B18] font-medium">{selectedSupplier.phone}</span></div>
+                        )}
+                        {selectedSupplier.gstin && (
+                          <div>GSTIN: <span className="text-[#1C1B18] font-medium">{selectedSupplier.gstin}</span></div>
+                        )}
+                        {selectedSupplier.paymentTerms && (
+                          <div>Terms: <span className="text-[#1C1B18] font-medium">{selectedSupplier.paymentTerms}</span></div>
+                        )}
+                        {selectedSupplier.address && (
+                          <div className="col-span-2 truncate">Address: <span className="text-[#1C1B18] font-medium">{selectedSupplier.address}</span></div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-[#1C1B18] mb-1">
+                  <label className="block text-xs font-semibold text-[#1C1B18] mb-1.5">
                     Expected Delivery Date *
                   </label>
                   <input
                     type="text"
                     value={expectedDate}
                     onChange={(e) => setExpectedDate(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs outline-none"
+                    className="w-full px-3 py-2.5 rounded-xl border border-[#EEE6DA] text-xs outline-none focus:border-[#7FAE82]"
+                    placeholder="e.g. 05 Nov 2026"
                   />
                 </div>
               </div>
@@ -468,20 +638,29 @@ export const PurchaseOrdersPage: React.FC = () => {
               </div>
             </div>
 
+            {poError && (
+              <div className="mt-3 p-3 rounded-xl bg-[#FDECEC] border border-[#FAC7C7] text-xs text-[#D64545] flex items-center gap-2">
+                <AlertCircle size={15} />
+                <span>{poError}</span>
+              </div>
+            )}
+
             <div className="mt-6 flex justify-end gap-3 pt-3 border-t border-[#EEE6DA]">
               <button
                 type="button"
                 onClick={() => setIsCreateOpen(false)}
-                className="px-4 py-2 text-xs font-semibold text-[#6B665E]"
+                className="px-4 py-2 text-xs font-semibold text-[#6B665E] hover:bg-[#FAF6EF] rounded-xl"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleCreateSubmit}
-                className="px-5 py-2 rounded-xl bg-[#7FAE82] hover:bg-[#6C9C70] text-white text-xs font-semibold shadow-xs cursor-pointer"
+                disabled={isSubmittingPO}
+                className="px-5 py-2 rounded-xl bg-[#7FAE82] hover:bg-[#6C9C70] !text-white text-xs font-semibold shadow-xs cursor-pointer disabled:opacity-50"
+                style={{ color: '#ffffff' }}
               >
-                Send Purchase Order
+                {isSubmittingPO ? 'Sending PO...' : 'Send Purchase Order'}
               </button>
             </div>
           </div>
@@ -636,11 +815,206 @@ export const PurchaseOrdersPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setViewingPO(null)}
-                className="px-4 py-1.5 bg-[#1C1B18] text-white text-xs font-semibold rounded-xl hover:bg-black cursor-pointer"
+                className="px-4 py-1.5 bg-[#1C1B18] !text-white text-xs font-semibold rounded-xl hover:bg-black cursor-pointer"
+                style={{ color: '#ffffff' }}
               >
                 Close
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add New Vendor Modal */}
+      {isAddVendorOpen && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl max-w-lg w-full border border-[#EEE6DA] shadow-2xl p-6 animate-in zoom-in-95 duration-150 max-h-[92vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-[#EEE6DA] pb-3 mb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-[#FAF6EF] border border-[#EEE6DA] flex items-center justify-center text-[#7FAE82]">
+                  <Building2 size={18} />
+                </div>
+                <div>
+                  <h3 className="text-base font-semibold text-[#1C1B18]">Add New Vendor</h3>
+                  <p className="text-xs text-[#6B665E]">Enter supplier information to save to your database.</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAddVendorOpen(false)}
+                className="p-1.5 rounded-lg text-[#6B665E] hover:bg-[#FAF6EF] cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {vendorError && (
+              <div className="mb-4 p-3 rounded-xl bg-[#FDECEC] border border-[#FAC7C7] text-xs text-[#D64545] flex items-center gap-2">
+                <AlertCircle size={15} />
+                <span>{vendorError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSaveVendor} className="space-y-3.5">
+              <div>
+                <label className="block text-xs font-semibold text-[#1C1B18] mb-1">
+                  Vendor / Supplier Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={newVendorData.name}
+                  onChange={(e) => setNewVendorData({ ...newVendorData, name: e.target.value })}
+                  placeholder="e.g. Apex Health Logistics"
+                  className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs outline-none focus:border-[#7FAE82]"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-[#1C1B18] mb-1">
+                    Contact Person
+                  </label>
+                  <input
+                    type="text"
+                    value={newVendorData.contactPerson}
+                    onChange={(e) => setNewVendorData({ ...newVendorData, contactPerson: e.target.value })}
+                    placeholder="e.g. Rahul Sharma"
+                    className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs outline-none focus:border-[#7FAE82]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-[#1C1B18] mb-1">
+                    Phone Number *
+                  </label>
+                  <input
+                    type="tel"
+                    required
+                    value={newVendorData.phone}
+                    onChange={(e) => setNewVendorData({ ...newVendorData, phone: e.target.value })}
+                    placeholder="e.g. +91 98765 43210"
+                    className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs outline-none focus:border-[#7FAE82]"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-[#1C1B18] mb-1">
+                    Email Address
+                  </label>
+                  <input
+                    type="email"
+                    value={newVendorData.email}
+                    onChange={(e) => setNewVendorData({ ...newVendorData, email: e.target.value })}
+                    placeholder="vendor@example.com"
+                    className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs outline-none focus:border-[#7FAE82]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-[#1C1B18] mb-1">
+                    GSTIN / Tax ID
+                  </label>
+                  <input
+                    type="text"
+                    value={newVendorData.gstin}
+                    onChange={(e) => setNewVendorData({ ...newVendorData, gstin: e.target.value.toUpperCase() })}
+                    placeholder="e.g. 09ABCDE1234F1Z5"
+                    className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs outline-none focus:border-[#7FAE82] uppercase"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[#1C1B18] mb-1">
+                  Address / Warehouse Location
+                </label>
+                <input
+                  type="text"
+                  value={newVendorData.address}
+                  onChange={(e) => setNewVendorData({ ...newVendorData, address: e.target.value })}
+                  placeholder="e.g. Plot 45, Sector 62 Industrial Area"
+                  className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs outline-none focus:border-[#7FAE82]"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-[#1C1B18] mb-1">
+                    City
+                  </label>
+                  <input
+                    type="text"
+                    value={newVendorData.city}
+                    onChange={(e) => setNewVendorData({ ...newVendorData, city: e.target.value })}
+                    placeholder="e.g. Noida"
+                    className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs outline-none focus:border-[#7FAE82]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-[#1C1B18] mb-1">
+                    State
+                  </label>
+                  <input
+                    type="text"
+                    value={newVendorData.state}
+                    onChange={(e) => setNewVendorData({ ...newVendorData, state: e.target.value })}
+                    placeholder="e.g. Uttar Pradesh"
+                    className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs outline-none focus:border-[#7FAE82]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-[#1C1B18] mb-1">
+                    Payment Terms
+                  </label>
+                  <select
+                    value={newVendorData.paymentTerms}
+                    onChange={(e) => setNewVendorData({ ...newVendorData, paymentTerms: e.target.value as any })}
+                    className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs outline-none focus:border-[#7FAE82] bg-white"
+                  >
+                    <option value="Net 30">Net 30</option>
+                    <option value="Net 15">Net 15</option>
+                    <option value="Net 60">Net 60</option>
+                    <option value="COD">COD</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[#1C1B18] mb-1">
+                  Notes / Terms (Optional)
+                </label>
+                <textarea
+                  rows={2}
+                  value={newVendorData.notes}
+                  onChange={(e) => setNewVendorData({ ...newVendorData, notes: e.target.value })}
+                  placeholder="Primary supplier for pharmacy items, discount agreements, etc."
+                  className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs outline-none focus:border-[#7FAE82]"
+                />
+              </div>
+
+              <div className="pt-3 border-t border-[#EEE6DA] flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsAddVendorOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-[#EEE6DA] text-xs font-semibold text-[#6B665E] hover:bg-[#FAF6EF] cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingVendor}
+                  className="px-4 py-2 rounded-xl bg-[#7FAE82] hover:bg-[#6C9C70] !text-white text-xs font-semibold shadow-xs cursor-pointer disabled:opacity-50"
+                  style={{ color: '#ffffff' }}
+                >
+                  {isSubmittingVendor ? 'Saving Vendor...' : 'Save & Select Vendor'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

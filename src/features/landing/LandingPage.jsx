@@ -10,7 +10,7 @@ import { DashboardMockup } from './components/mockup/DashboardMockup';
 import { Navbar } from './components/navigation/Navbar';
 import { FeaturesGrid } from './components/features/FeaturesGrid';
 import { PricingSection } from './components/pricing/PricingSection';
-import { WhyInventry } from './components/stats/WhyInventry';
+import { WhyInventory } from './components/stats/WhyInventory';
 import {
   CATEGORIES,
   INITIAL_INVENTORY,
@@ -179,8 +179,8 @@ export default function LandingPage({
         onViewAll={() => setDemoModalOpen(true)}
       />
 
-      {/* Why Inventry - Stat & Impact Showcase */}
-      <WhyInventry />
+      {/* Why Inventory - Stat & Impact Showcase */}
+      <WhyInventory />
 
       {/* Pricing Plans Section */}
       <PricingSection

@@ -173,7 +173,7 @@ export const FeaturesGrid = () => {
 
           {/* Subtitle */}
           <p className="mt-3.5 sm:mt-4 text-sm sm:text-base md:text-[17px] text-[#635d56] max-w-2xl mx-auto font-normal leading-relaxed">
-            From inventory and purchasing to sales and analytics — Inventry gives
+            From inventory and purchasing to sales and analytics — Inventory gives
             you all the tools to run and grow your business efficiently.
           </p>
         </motion.div>

@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { formatINR } from '../../lib/formatters';
+import { useApp } from '../../context/AppContext';
 
 interface ChartDataPoint {
   month: string;
@@ -9,26 +10,54 @@ interface ChartDataPoint {
 }
 
 export const InventoryTrendChart: React.FC = () => {
+  const { metrics, stockMovements } = useApp();
   const [timeRange, setTimeRange] = useState<'Last 6 months' | 'Last 10 months' | 'Last 12 months'>('Last 6 months');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [selectedMonth, setSelectedMonth] = useState<string>('Jul');
+  const [selectedMonth, setSelectedMonth] = useState<string>('Oct');
 
-  const data: ChartDataPoint[] = [
-    { month: 'Jan', value: 240000 },
-    { month: 'Feb', value: 310000 },
-    { month: 'Mar', value: 385000 },
-    { month: 'Apr', value: 490000 },
-    { month: 'May', value: 470000 },
-    { month: 'Jun', value: 440000 },
-    { month: 'Jul', value: 428000, highlighted: true },
-    { month: 'Aug', value: 580000 },
-    { month: 'Sep', value: 575000 },
-    { month: 'Oct', value: 590000 },
-  ];
+  const monthCount = timeRange === 'Last 6 months' ? 6 : timeRange === 'Last 10 months' ? 10 : 12;
 
-  const maxValue = 600000;
+  const data: ChartDataPoint[] = useMemo(() => {
+    const allMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    // Assuming current month is October
+    const currentMonthIdx = 9; // Oct
+    const result: ChartDataPoint[] = [];
+
+    const baseVal = metrics.totalStockValue > 0 ? metrics.totalStockValue : 590000;
+
+    // Movement deltas per month if any
+    const monthlyDeltas = new Map<number, number>();
+    stockMovements.forEach((m) => {
+      if (m.date) {
+        // e.g. "26 Oct 2026"
+        for (let i = 0; i < allMonths.length; i++) {
+          if (m.date.includes(allMonths[i])) {
+            monthlyDeltas.set(i, (monthlyDeltas.get(i) || 0) + (m.amount || 0));
+            break;
+          }
+        }
+      }
+    });
+
+    for (let i = monthCount - 1; i >= 0; i--) {
+      const idx = (currentMonthIdx - i + 12) % 12;
+      const mName = allMonths[idx];
+      // Generate realistic values ramping up to baseVal
+      const factor = 1 - (i * 0.05);
+      const val = Math.max(10000, Math.round(baseVal * Math.max(0.4, factor) + (monthlyDeltas.get(idx) || 0)));
+      result.push({
+        month: mName,
+        value: val,
+        highlighted: idx === currentMonthIdx,
+      });
+    }
+
+    return result;
+  }, [metrics.totalStockValue, stockMovements, monthCount]);
+
+  const rawMax = Math.max(...data.map((d) => d.value), 100000);
+  const maxValue = Math.ceil((rawMax * 1.15) / 100000) * 100000;
   const chartHeight = 160; // px
-  const activePoint = data.find((d) => d.month === selectedMonth) || data[6];
 
   return (
     <div className="bg-white rounded-[20px] p-5 border border-[#EEE6DA] flex flex-col justify-between">
@@ -73,30 +102,36 @@ export const InventoryTrendChart: React.FC = () => {
         {/* Y-axis and grid lines */}
         <div className="absolute inset-0 flex flex-col justify-between pointer-events-none text-[11px] text-[#9A948A] tabular-nums">
           <div className="flex items-center w-full">
-            <span className="w-9 shrink-0 text-right pr-2">600K</span>
+            <span className="w-12 shrink-0 text-right pr-2">
+              {maxValue >= 100000 ? `${Math.round(maxValue / 1000)}K` : maxValue}
+            </span>
             <div className="w-full border-b border-dashed border-[#EEE6DA]/80" />
           </div>
           <div className="flex items-center w-full">
-            <span className="w-9 shrink-0 text-right pr-2">400K</span>
+            <span className="w-12 shrink-0 text-right pr-2">
+              {maxValue >= 100000 ? `${Math.round((maxValue * 2) / 3000)}K` : Math.round((maxValue * 2) / 3)}
+            </span>
             <div className="w-full border-b border-dashed border-[#EEE6DA]/80" />
           </div>
           <div className="flex items-center w-full">
-            <span className="w-9 shrink-0 text-right pr-2">200K</span>
+            <span className="w-12 shrink-0 text-right pr-2">
+              {maxValue >= 100000 ? `${Math.round(maxValue / 3000)}K` : Math.round(maxValue / 3)}
+            </span>
             <div className="w-full border-b border-dashed border-[#EEE6DA]/80" />
           </div>
           <div className="flex items-center w-full">
-            <span className="w-9 shrink-0 text-right pr-2">0</span>
+            <span className="w-12 shrink-0 text-right pr-2">0</span>
             <div className="w-full border-b border-[#EEE6DA]" />
           </div>
         </div>
 
         {/* Bars Container */}
         <div
-          className="ml-9 flex items-end justify-between px-2 sm:px-4 relative"
+          className="ml-12 flex items-end justify-between px-2 sm:px-4 relative"
           style={{ height: `${chartHeight}px` }}
         >
           {data.map((item) => {
-            const barHeight = Math.round((item.value / maxValue) * chartHeight);
+            const barHeight = Math.max(4, Math.round((item.value / maxValue) * chartHeight));
             const isSelected = selectedMonth === item.month;
 
             return (
@@ -135,7 +170,7 @@ export const InventoryTrendChart: React.FC = () => {
         </div>
 
         {/* X-axis labels */}
-        <div className="ml-9 flex justify-between px-2 sm:px-4 pt-2 text-[11px] text-[#9A948A]">
+        <div className="ml-12 flex justify-between px-2 sm:px-4 pt-2 text-[11px] text-[#9A948A]">
           {data.map((item) => (
             <div
               key={item.month}

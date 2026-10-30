@@ -19,11 +19,13 @@ export const TeamPage: React.FC = () => {
       name,
       email,
       role,
+      tempPassword,
       avatarInitials: name.slice(0, 2).toUpperCase(),
       status: 'active',
     });
     setName('');
     setEmail('');
+    setTempPassword('Pass@1234');
     setIsAddDrawerOpen(false);
   };
 
@@ -176,7 +178,7 @@ export const TeamPage: React.FC = () => {
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="deepak@inventry.app"
+                      placeholder="deepak@Inventory.app"
                       className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs outline-none focus:border-[#7FAE82]"
                     />
                   </div>

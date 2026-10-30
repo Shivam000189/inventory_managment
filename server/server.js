@@ -8,6 +8,7 @@ app.listen(env.port, '0.0.0.0', () => {
   console.log(`Stockroom API listening on http://0.0.0.0:${env.port} (${env.nodeEnv})`)
   // console.log(`Database Driver: ${env.databaseDriver || 'mongodb'}`)
   console.log(`Health check: http://localhost:${env.port}/api/health`)
+  
 })
 
 // Connect to database (Supabase / MongoDB) in the background. The HTTP server is

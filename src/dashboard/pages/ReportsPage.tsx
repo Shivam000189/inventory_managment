@@ -74,7 +74,7 @@ export const ReportsPage: React.FC = () => {
         b.status,
         b.total,
       ]);
-      downloadCSV('inventry-sales-report', headers, rows);
+      downloadCSV('Inventory-sales-report', headers, rows);
     } else if (activeTab === 'valuation') {
       const headers = ['SKU', 'Product Name', 'Category', 'Quantity On Hand', 'Unit Cost', 'Stock Valuation (Cost)', 'Retail Value'];
       const rows = products.map((p) => [
@@ -86,7 +86,7 @@ export const ReportsPage: React.FC = () => {
         p.stock * p.purchasePrice,
         p.stock * p.sellingPrice,
       ]);
-      downloadCSV('inventry-valuation-report', headers, rows);
+      downloadCSV('Inventory-valuation-report', headers, rows);
     } else {
       const headers = ['Date', 'Metric', 'Amount (INR)'];
       const rows = [
@@ -94,7 +94,7 @@ export const ReportsPage: React.FC = () => {
         ['26 Oct 2026', 'Gross Profit', estimatedGrossProfit],
         ['26 Oct 2026', 'GST Tax Collected', totalTaxesCollected],
       ];
-      downloadCSV('inventry-financial-summary', headers, rows);
+      downloadCSV('Inventory-financial-summary', headers, rows);
     }
   };
 
@@ -140,11 +140,11 @@ export const ReportsPage: React.FC = () => {
             key={tab.id}
             type="button"
             onClick={() => setActiveTab(tab.id as any)}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
-              activeTab === tab.id
-                ? 'bg-[#1C1B18] text-white'
+            className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${activeTab === tab.id
+                ? 'bg-[#1C1B18] !text-white'
                 : 'text-[#6B665E] hover:text-[#1C1B18] hover:bg-[#FAF6EF]'
-            }`}
+              }`}
+            style={{ color: activeTab === tab.id ? '#ffffff' : undefined }}
           >
             {tab.label}
           </button>
@@ -197,11 +197,10 @@ export const ReportsPage: React.FC = () => {
                       {formatINR(d.revenue)}
                     </span>
                     <div
-                      className={`w-full max-w-[42px] rounded-t-lg transition-all ${
-                        i === monthlyRevenueData.length - 1
+                      className={`w-full max-w-[42px] rounded-t-lg transition-all ${i === monthlyRevenueData.length - 1
                           ? 'bg-[#7FAE82]'
                           : 'bg-[#B9D4BA] hover:bg-[#a3c9a5]'
-                      }`}
+                        }`}
                       style={{ height: `${heightPercent}%` }}
                     />
                     <span className="text-xs text-[#6B665E] font-medium mt-1">{d.month}</span>

@@ -16,12 +16,12 @@ async function buildItems(businessId, rawItems) {
   return rawItems.map((item) => {
     const product = byId.get(String(item.productId))
     if (!product) throw ApiError.badRequest('One of the selected products does not exist.')
-    const quantity = toNumber(item.quantity, 'Quantity', { min: 1 })
-    const purchasePrice = toNumber(item.purchasePrice, 'Purchase price', { min: 0 })
-    const discount = toNumber(item.discount ?? 0, 'Discount', { min: 0 })
-    const tax = toNumber(item.tax ?? 0, 'Tax', { min: 0 })
+    const quantity = toNumber(item.quantity ?? item.orderedQty, 'Quantity', { min: 1 })
+    const purchasePrice = toNumber(item.purchasePrice ?? item.unitCost, 'Purchase price', { min: 0 })
+    const discount = toNumber(item.discount ?? item.discountAmount ?? 0, 'Discount', { min: 0 })
+    const tax = toNumber(item.tax ?? (item.taxRate ? (quantity * purchasePrice * item.taxRate) / 100 : 0), 'Tax', { min: 0 })
     const total = Math.max(0, quantity * purchasePrice - discount + tax)
-    return { productId: product._id, productName: product.name, quantity, purchasePrice, discount, tax, total }
+    return { productId: product._id, productName: product.name, sku: product.sku || item.sku || '', quantity, orderedQty: quantity, unitCost: purchasePrice, purchasePrice, discount, taxRate: item.taxRate || product.gstRate || 0, tax, total, lineTotal: total }
   })
 }
 
@@ -59,16 +59,16 @@ export async function createOrder(businessId, payload, createdBy) {
   const now = Date.now()
   const doc = await PurchaseOrder.create({
     business: scoped(businessId).business,
-    orderNumber: `PO-${String(now).slice(-6)}`,
+    orderNumber: payload.orderNumber || payload.poNumber || ('PO-' + String(now).slice(-6)),
     supplierId: supplier._id,
-    supplierName: supplier.supplierName,
+    supplierName: supplier.supplierName || supplier.name,
     items,
-    ...totals(items, payload.shippingCharges),
-    status: 'Draft',
-    paymentStatus: 'Unpaid',
-    expectedDeliveryDate: payload.expectedDeliveryDate || '',
+    ...totals(items, payload.shippingCharges ?? payload.shipping),
+    status: payload.status || 'Ordered',
+    paymentStatus: payload.paymentStatus || 'Unpaid',
+    expectedDeliveryDate: payload.expectedDeliveryDate || payload.expectedDate || '',
     notes: (payload.notes || '').trim(),
-    createdBy,
+    createdBy: createdBy || 'Admin',
   })
   return doc.toJSON()
 }

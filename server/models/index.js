@@ -154,7 +154,7 @@ export const ALL_PERMISSIONS = DEFAULT_PERMISSIONS
 
 export const DEFAULT_ROLES = [
   { roleId: 'ROLE-ADMIN', name: 'Admin', description: 'Full access to this business', permissions: DEFAULT_PERMISSIONS },
-  { roleId: 'ROLE-SALESPERSON', name: 'Salesperson', description: 'POS terminal sales, billing records, customer service, and order processing', permissions: ['view_dashboard', 'create_order', 'process_pos_sale', 'view_returns', 'create_returns'] },
+  { roleId: 'ROLE-SALESPERSON', name: 'Salesperson', description: 'POS terminal sales, billing records, customer service, and order processing', permissions: ['view_dashboard', 'view_inventory', 'create_order', 'process_pos_sale', 'view_returns', 'create_returns'] },
 ]
 
 // ==========================================

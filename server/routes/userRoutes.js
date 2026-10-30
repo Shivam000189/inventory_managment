@@ -9,6 +9,7 @@ userRoutes.get('/', controller.listMembersController)
 userRoutes.post('/', controller.createMemberController)
 userRoutes.put('/:id', controller.updateMemberController)
 userRoutes.patch('/:id', controller.updateMemberController)
+userRoutes.delete('/:id', controller.deleteMemberController)
 
 userRoutes.get('/roles/all', controller.listRolesController)
 userRoutes.post('/roles', controller.saveRoleController)

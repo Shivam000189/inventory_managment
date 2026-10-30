@@ -194,7 +194,7 @@ export const purchaseOrdersApi = {
   get: (id: string) => request<any>(`/purchase-orders/${id}`),
   update: (id: string, po: any) => request<any>(`/purchase-orders/${id}`, { method: 'PUT', body: JSON.stringify(po) }),
   updateStatus: (id: string, status: string) =>
-    request<any>(`/purchase-orders/${id}/status`, { method: 'POST', body: JSON.stringify({ status }) }),
+    request<any>(`/purchase-orders/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
 };
 
 // 8. Sales Orders & Bills API
@@ -205,6 +205,17 @@ export const salesOrdersApi = {
   },
   create: (order: any) => request<any>('/sales-orders', { method: 'POST', body: JSON.stringify(order) }),
   get: (id: string) => request<any>(`/sales-orders/${id}`),
+  update: (id: string, order: any) => request<any>(`/sales-orders/${id}`, { method: 'PUT', body: JSON.stringify(order) }),
+  cancel: (id: string) => request<any>(`/sales-orders/${id}/cancel`, { method: 'PATCH' }),
+  complete: (id: string) => request<any>(`/sales-orders/${id}/complete`, { method: 'PATCH' }),
+};
+
+export const paymentsApi = {
+  list: (params: Record<string, any> = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return request<any[]>(`/payments${qs ? `?${qs}` : ''}`);
+  },
+  create: (payload: any) => request<any>('/payments', { method: 'POST', body: JSON.stringify(payload) }),
 };
 
 // 9. POS Terminal Checkout API
@@ -233,5 +244,39 @@ export const usersApi = {
 export const notificationsApi = {
   list: () => request<any[]>('/notifications'),
   markRead: (id: string) => request<any>(`/notifications/${id}/read`, { method: 'POST' }),
+};
+
+// 13. Product Imports (CSV & PDF)
+export const productImportsApi = {
+  extract: (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return request<{
+      fileName: string;
+      fileType: string;
+      rows: any[];
+      summary?: { total: number; valid: number; invalid: number; duplicates: number };
+      mappingDebug?: any;
+    }>('/product-imports/extract', {
+      method: 'POST',
+      body: formData,
+    });
+  },
+  confirm: (payload: {
+    fileName: string;
+    fileType: string;
+    supplierId?: string;
+    purchaseReference?: string;
+    variantMode?: boolean;
+    rows: any[];
+  }) =>
+    request<{
+      counts: { created: number; updated: number; merged: number; skipped: number };
+      failures: any[];
+    }>('/product-imports/confirm', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  history: () => request<any[]>('/product-imports/history'),
 };
 

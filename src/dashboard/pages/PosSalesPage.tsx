@@ -17,6 +17,8 @@ import {
   FileText,
   Clock,
   ChevronRight,
+  User,
+  Phone,
 } from 'lucide-react';
 import { ProductIcon } from '../components/common/ProductIcon';
 import { Badge } from '../components/common/Badge';
@@ -51,7 +53,8 @@ export const PosSalesPage: React.FC = () => {
 
   // Cart State
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [selectedCustomerId, setSelectedCustomerId] = useState(customers[0]?.id || 'cust-01');
+  const [custName, setCustName] = useState('');
+  const [custPhone, setCustPhone] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('UPI');
   const [cashTendered, setCashTendered] = useState<number>(0);
   const [billNotes, setBillNotes] = useState('');
@@ -60,9 +63,22 @@ export const PosSalesPage: React.FC = () => {
   // Modals & Drawers
   const [receiptBill, setReceiptBill] = useState<Bill | null>(null);
   const [selectedBillDetail, setSelectedBillDetail] = useState<Bill | null>(null);
-  const [isQuickAddCustomerOpen, setIsQuickAddCustomerOpen] = useState(false);
-  const [newCustName, setNewCustName] = useState('');
-  const [newCustPhone, setNewCustPhone] = useState('');
+
+  // Matching customer suggestion if cashier types a phone or name
+  const suggestedCustomer = React.useMemo(() => {
+    const qPhone = custPhone.trim().replace(/\D/g, '');
+    const qName = custName.trim().toLowerCase();
+    if (!qPhone && (!qName || qName.length < 2)) return null;
+
+    return (
+      customers.find((c) => {
+        const cPhone = (c.phone || '').replace(/\D/g, '');
+        if (qPhone && qPhone.length >= 4 && cPhone.includes(qPhone)) return true;
+        if (qName && qName.length >= 2 && c.name.toLowerCase().includes(qName)) return true;
+        return false;
+      }) || null
+    );
+  }, [custName, custPhone, customers]);
 
   // Bills filter
   const [billSearch, setBillSearch] = useState('');
@@ -170,7 +186,30 @@ export const PosSalesPage: React.FC = () => {
   const handleCreateBill = () => {
     if (cart.length === 0) return;
 
-    const customer = customers.find((c) => c.id === selectedCustomerId) || customers[0];
+    const trimmedName = custName.trim();
+    const trimmedPhone = custPhone.trim();
+    const finalCustomerName = trimmedName || 'Walk-in Customer';
+
+    // Check if an existing customer matches by phone or exact name
+    const existing = customers.find(
+      (c) =>
+        (trimmedPhone && c.phone && c.phone.replace(/\D/g, '') === trimmedPhone.replace(/\D/g, '')) ||
+        (trimmedName && c.name.toLowerCase() === trimmedName.toLowerCase())
+    );
+
+    let customerId = existing?.id;
+
+    // Automatically persist customer in database if a custom name is entered and not yet registered
+    if (!customerId && trimmedName && trimmedName.toLowerCase() !== 'walk-in customer') {
+      const added = addCustomer({
+        name: trimmedName,
+        phone: trimmedPhone || '—',
+        email: `${trimmedName.toLowerCase().replace(/[^a-z0-9]/g, '') || 'cust'}@customer.local`,
+        type: 'Retail',
+        creditLimit: 5000,
+      });
+      customerId = added.id;
+    }
 
     const billItems: BillItem[] = cart.map((it) => ({
       productId: it.product.id,
@@ -184,9 +223,9 @@ export const PosSalesPage: React.FC = () => {
     }));
 
     const newBill = createBill({
-      customerId: customer.id,
-      customerName: customer.name,
-      customerPhone: customer.phone,
+      customerId: customerId || 'cust-01',
+      customerName: finalCustomerName,
+      customerPhone: trimmedPhone || (existing?.phone !== '—' ? existing?.phone : undefined),
       items: billItems,
       subtotal: rawSubtotal - totalTax - totalDiscount,
       discount: totalDiscount,
@@ -199,27 +238,13 @@ export const PosSalesPage: React.FC = () => {
       notes: billNotes,
     });
 
-    // Reset cart and open receipt modal
+    // Reset cart and customer inputs, and open receipt modal
     setCart([]);
     setBillNotes('');
     setCashTendered(0);
+    setCustName('');
+    setCustPhone('');
     setReceiptBill(newBill);
-  };
-
-  const handleQuickAddCustomer = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newCustName) return;
-    const added = addCustomer({
-      name: newCustName,
-      phone: newCustPhone || '+91 90000 00000',
-      email: `${newCustName.toLowerCase().replace(/\s+/g, '')}@example.com`,
-      type: 'Retail',
-      creditLimit: 5000,
-    });
-    setSelectedCustomerId(added.id);
-    setNewCustName('');
-    setNewCustPhone('');
-    setIsQuickAddCustomerOpen(false);
   };
 
   // Bills filtering: Salesperson only sees own bills; Admin sees all!
@@ -249,22 +274,48 @@ export const PosSalesPage: React.FC = () => {
             onClick={() => setPosActiveTab('new_bill')}
             className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               posActiveTab === 'new_bill'
-                ? 'bg-[#1C1B18] text-white shadow-xs'
+                ? 'bg-[#1C1B18] !text-white shadow-xs'
                 : 'bg-white border border-[#EEE6DA] text-[#6B665E] hover:text-[#1C1B18]'
             }`}
+            style={{
+              backgroundColor: posActiveTab === 'new_bill' ? '#1C1B18' : '#ffffff',
+              color: posActiveTab === 'new_bill' ? '#ffffff' : '#6B665E',
+              WebkitTextFillColor: posActiveTab === 'new_bill' ? '#ffffff' : '#6B665E',
+            }}
           >
-            New Bill (POS Terminal)
+            <span
+              className={posActiveTab === 'new_bill' ? '!text-white' : 'text-[#6B665E]'}
+              style={{
+                color: posActiveTab === 'new_bill' ? '#ffffff' : '#6B665E',
+                WebkitTextFillColor: posActiveTab === 'new_bill' ? '#ffffff' : '#6B665E',
+              }}
+            >
+              New Bill (POS Terminal)
+            </span>
           </button>
           <button
             type="button"
             onClick={() => setPosActiveTab('bills')}
             className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               posActiveTab === 'bills'
-                ? 'bg-[#1C1B18] text-white shadow-xs'
+                ? 'bg-[#1C1B18] !text-white shadow-xs'
                 : 'bg-white border border-[#EEE6DA] text-[#6B665E] hover:text-[#1C1B18]'
             }`}
+            style={{
+              backgroundColor: posActiveTab === 'bills' ? '#1C1B18' : '#ffffff',
+              color: posActiveTab === 'bills' ? '#ffffff' : '#6B665E',
+              WebkitTextFillColor: posActiveTab === 'bills' ? '#ffffff' : '#6B665E',
+            }}
           >
-            {currentUser.role === 'salesperson' ? 'My Bills' : 'All Bills'} ({userFilteredBills.length})
+            <span
+              className={posActiveTab === 'bills' ? '!text-white' : 'text-[#6B665E]'}
+              style={{
+                color: posActiveTab === 'bills' ? '#ffffff' : '#6B665E',
+                WebkitTextFillColor: posActiveTab === 'bills' ? '#ffffff' : '#6B665E',
+              }}
+            >
+              {currentUser.role === 'salesperson' ? 'My Bills' : 'All Bills'} ({userFilteredBills.length})
+            </span>
           </button>
         </div>
 
@@ -315,11 +366,12 @@ export const PosSalesPage: React.FC = () => {
                   onClick={() => setSelectedCategory(cat)}
                   className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer shrink-0 ${
                     selectedCategory === cat
-                      ? 'bg-[#1C1B18] text-white'
+                      ? 'bg-[#1C1B18] !text-white'
                       : 'bg-white border border-[#EEE6DA] text-[#6B665E] hover:bg-[#FAF6EF]'
                   }`}
+                  style={{ color: selectedCategory === cat ? '#ffffff' : '#6B665E' }}
                 >
-                  {cat}
+                  <span style={{ color: selectedCategory === cat ? '#ffffff' : 'inherit' }}>{cat}</span>
                 </button>
               ))}
             </div>
@@ -388,9 +440,9 @@ export const PosSalesPage: React.FC = () => {
 
           {/* Right Pane (≈38% / 5 cols on lg, 4 on xl): Sticky Billing Cart Panel */}
           <div className="lg:col-span-5 xl:col-span-4 bg-white rounded-3xl border border-[#EEE6DA] p-4 shadow-sm space-y-4 sticky top-20">
-            {/* Cart Header & Customer Selector */}
+            {/* Cart Header & Customer Fields */}
             <div>
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center justify-between mb-2.5">
                 <div className="flex items-center gap-2">
                   <ShoppingBag size={17} className="text-[#1C1B18]" />
                   <h3 className="font-bold text-sm text-[#1C1B18]">Current Bill</h3>
@@ -398,7 +450,11 @@ export const PosSalesPage: React.FC = () => {
                 {cart.length > 0 && (
                   <button
                     type="button"
-                    onClick={() => setCart([])}
+                    onClick={() => {
+                      setCart([]);
+                      setCustName('');
+                      setCustPhone('');
+                    }}
                     className="text-[11px] text-[#D64545] hover:underline cursor-pointer"
                   >
                     Clear cart
@@ -406,27 +462,46 @@ export const PosSalesPage: React.FC = () => {
                 )}
               </div>
 
-              {/* Customer Selector with quick add */}
-              <div className="flex items-center gap-1.5">
-                <select
-                  value={selectedCustomerId}
-                  onChange={(e) => setSelectedCustomerId(e.target.value)}
-                  className="flex-1 px-3 py-1.5 rounded-xl border border-[#EEE6DA] text-xs bg-white text-[#1C1B18] outline-none"
-                >
-                  {customers.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} {c.phone !== '—' ? `(${c.phone})` : ''}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  onClick={() => setIsQuickAddCustomerOpen(true)}
-                  className="p-1.5 rounded-xl border border-[#EEE6DA] hover:bg-[#FAF6EF] text-[#6B665E] cursor-pointer"
-                  title="Quick add customer"
-                >
-                  <Plus size={15} />
-                </button>
+              {/* Customer Name & Phone Number Fields (Replaced dropdown selector) */}
+              <div className="space-y-1.5">
+                <div className="relative">
+                  <User size={13} className="absolute left-3 top-2.5 text-[#9A948A] pointer-events-none" />
+                  <input
+                    type="text"
+                    value={custName}
+                    onChange={(e) => setCustName(e.target.value)}
+                    placeholder="Customer Name (optional / Walk-in)"
+                    className="w-full pl-8 pr-3 py-1.5 rounded-xl border border-[#EEE6DA] text-xs bg-white text-[#1C1B18] placeholder:text-[#9A948A] outline-none focus:border-[#7FAE82] transition-colors"
+                  />
+                </div>
+                <div className="relative">
+                  <Phone size={13} className="absolute left-3 top-2.5 text-[#9A948A] pointer-events-none" />
+                  <input
+                    type="tel"
+                    value={custPhone}
+                    onChange={(e) => setCustPhone(e.target.value)}
+                    placeholder="Mobile / Phone Number"
+                    className="w-full pl-8 pr-3 py-1.5 rounded-xl border border-[#EEE6DA] text-xs bg-white text-[#1C1B18] placeholder:text-[#9A948A] outline-none focus:border-[#7FAE82] transition-colors"
+                  />
+                </div>
+
+                {suggestedCustomer && (
+                  <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-[#FAF6EF] border border-[#EEE6DA] text-[11px]">
+                    <span className="text-[#6B665E] truncate">
+                      Found: <strong className="text-[#1C1B18]">{suggestedCustomer.name}</strong> {suggestedCustomer.phone !== '—' ? `(${suggestedCustomer.phone})` : ''}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCustName(suggestedCustomer.name);
+                        setCustPhone(suggestedCustomer.phone !== '—' ? suggestedCustomer.phone : '');
+                      }}
+                      className="ml-2 text-[#7FAE82] font-semibold hover:underline cursor-pointer shrink-0"
+                    >
+                      Fill
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -875,7 +950,8 @@ export const PosSalesPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => window.print()}
-                  className="px-4 py-1.5 bg-[#1C1B18] text-white text-xs font-semibold rounded-xl hover:bg-black cursor-pointer ml-auto"
+                  className="px-4 py-1.5 bg-[#1C1B18] !text-white text-xs font-semibold rounded-xl hover:bg-black cursor-pointer ml-auto"
+                  style={{ color: '#ffffff' }}
                 >
                   Print Invoice
                 </button>
@@ -885,53 +961,6 @@ export const PosSalesPage: React.FC = () => {
         </div>
       )}
 
-      {/* Quick Add Customer Modal */}
-      {isQuickAddCustomerOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-          <form
-            onSubmit={handleQuickAddCustomer}
-            className="bg-white rounded-3xl max-w-sm w-full border border-[#EEE6DA] shadow-2xl p-5 space-y-3"
-          >
-            <h3 className="text-sm font-bold text-[#1C1B18]">Quick Add Customer</h3>
-            <div>
-              <label className="block text-xs font-semibold text-[#1C1B18] mb-1">Customer Name *</label>
-              <input
-                type="text"
-                required
-                value={newCustName}
-                onChange={(e) => setNewCustName(e.target.value)}
-                placeholder="e.g. Ramesh Kumar"
-                className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs outline-none focus:border-[#7FAE82]"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-[#1C1B18] mb-1">Phone Number</label>
-              <input
-                type="text"
-                value={newCustPhone}
-                onChange={(e) => setNewCustPhone(e.target.value)}
-                placeholder="+91 98..."
-                className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs outline-none focus:border-[#7FAE82]"
-              />
-            </div>
-            <div className="flex justify-end gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setIsQuickAddCustomerOpen(false)}
-                className="px-3 py-1.5 text-xs text-[#6B665E]"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="px-4 py-1.5 bg-[#7FAE82] text-white text-xs font-semibold rounded-xl hover:bg-[#6C9C70]"
-              >
-                Save Customer
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
     </div>
   );
 };

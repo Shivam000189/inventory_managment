@@ -1,10 +1,10 @@
 import React, { useState, useMemo } from 'react';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, PackagePlus } from 'lucide-react';
 import { ProductIcon } from '../common/ProductIcon';
 import { useApp } from '../../context/AppContext';
 
 export const TopSellingProductsCard: React.FC = () => {
-  const { products, bills, stockMovements, navigate } = useApp();
+  const { products, bills, stockMovements, isLoadingBackend, navigate } = useApp();
   const [viewMode, setViewMode] = useState<'stock' | 'selling'>('stock');
 
   // Calculate sold quantities per product from bills and stock movements
@@ -40,7 +40,8 @@ export const TopSellingProductsCard: React.FC = () => {
         id: p.id,
         name: p.name,
         sku: p.sku,
-        stock: p.stock ?? 0,
+        stock: Number(p.stock ?? 0),
+        reorderLevel: Number(p.reorderLevel ?? 10),
         unit: p.unit || 'pcs',
         sold: soldQty,
         iconType: p.iconType,
@@ -109,46 +110,91 @@ export const TopSellingProductsCard: React.FC = () => {
         </div>
 
         <div className="divide-y divide-[#EEE6DA]">
-          {displayProducts.length === 0 ? (
-            <div className="py-6 text-center text-xs text-[#9A948A]">
-              No products found for this business.
+          {isLoadingBackend && products.length === 0 ? (
+            <div className="py-3 space-y-3">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="flex items-center justify-between animate-pulse py-1">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-[#FAF6EF]" />
+                    <div className="space-y-1.5">
+                      <div className="h-3 w-28 bg-[#FAF6EF] rounded" />
+                      <div className="h-2.5 w-16 bg-[#FAF6EF] rounded" />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5 text-right">
+                    <div className="h-3 w-12 bg-[#FAF6EF] rounded ml-auto" />
+                    <div className="h-2.5 w-10 bg-[#FAF6EF] rounded ml-auto" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : displayProducts.length === 0 ? (
+            <div className="py-8 text-center flex flex-col items-center justify-center">
+              <p className="text-xs text-[#9A948A] mb-3">No products found for this business.</p>
+              <button
+                type="button"
+                onClick={() => navigate('/app/products')}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#2E8B57] text-white text-xs font-semibold hover:bg-[#257247] transition-colors cursor-pointer shadow-2xs"
+              >
+                <PackagePlus size={14} />
+                <span>Add First Product</span>
+              </button>
             </div>
           ) : (
-            displayProducts.map((p) => (
-              <div
-                key={p.id || p.name}
-                onClick={() => navigate('/app/products')}
-                className="py-2.5 flex items-center justify-between group cursor-pointer hover:bg-[#FAF6EF]/50 -mx-2 px-2 rounded-xl transition-colors"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <ProductIcon name={p.name} type={p.iconType} />
-                  <div className="min-w-0">
-                    <span className="text-[13px] font-medium text-[#1C1B18] truncate block">
-                      {p.name}
+            displayProducts.map((p) => {
+              const isOutOfStock = p.stock <= 0;
+              const isLowStock = !isOutOfStock && p.stock <= p.reorderLevel;
+
+              return (
+                <div
+                  key={p.id || p.name}
+                  onClick={() => navigate('/app/products')}
+                  className="py-2.5 flex items-center justify-between group cursor-pointer hover:bg-[#FAF6EF]/50 -mx-2 px-2 rounded-xl transition-colors"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <ProductIcon name={p.name} type={p.iconType} />
+                    <div className="min-w-0">
+                      <span className="text-[13px] font-medium text-[#1C1B18] truncate block">
+                        {p.name}
+                      </span>
+                      {p.sku && (
+                        <span className="text-[11px] font-normal text-[#9A948A] block">
+                          SKU: {p.sku}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0 ml-3">
+                    <span className="text-xs font-semibold text-[#1C1B18] tabular-nums block">
+                      {p.stock.toLocaleString('en-IN')} {p.unit}
                     </span>
-                    {p.sku && (
-                      <span className="text-[11px] font-normal text-[#9A948A] block">
-                        SKU: {p.sku}
+                    {viewMode === 'stock' ? (
+                      isOutOfStock ? (
+                        <span className="text-[11px] font-medium text-[#DC2626] block">
+                          Out of Stock
+                        </span>
+                      ) : isLowStock ? (
+                        <span className="text-[11px] font-medium text-[#D97706] block">
+                          Low Stock
+                        </span>
+                      ) : (
+                        <span className="text-[11px] font-medium text-[#2E8B57] block">
+                          In Stock
+                        </span>
+                      )
+                    ) : p.sold > 0 ? (
+                      <span className="text-[11px] font-medium text-[#2E8B57] tabular-nums block">
+                        {p.sold} sold
+                      </span>
+                    ) : (
+                      <span className="text-[11px] text-[#9A948A] block">
+                        0 sold
                       </span>
                     )}
                   </div>
                 </div>
-                <div className="text-right shrink-0 ml-3">
-                  <span className="text-xs font-semibold text-[#1C1B18] tabular-nums block">
-                    {p.stock.toLocaleString('en-IN')} {p.unit}
-                  </span>
-                  {p.sold > 0 ? (
-                    <span className="text-[11px] font-medium text-[#2E8B57] tabular-nums block">
-                      {p.sold} sold
-                    </span>
-                  ) : (
-                    <span className="text-[11px] text-[#9A948A] block">
-                      In Stock
-                    </span>
-                  )}
-                </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>

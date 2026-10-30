@@ -49,7 +49,7 @@ export const DemoModal = ({
               <Zap className="w-5 h-5 text-[#7bbd65] fill-[#7bbd65]" />
             </div>
             <h3 className="text-2xl font-bold text-[#0d0d0d] mb-1">
-              Launch your Inventry workspace
+              Launch your Inventory workspace
             </h3>
             <p className="text-sm text-[#2f1f13]/70 mb-6">
               Get instant sandbox access or schedule a 1-on-1 guided tour with our

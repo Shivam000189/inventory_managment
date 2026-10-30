@@ -27,11 +27,19 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = () => {
   const { activeRoute, currentUser } = useApp();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Role Guard: Salesperson can ONLY access POS!
+  const isDefaultOverviewRoute =
+    activeRoute === '/' ||
+    activeRoute === '/dashboard' ||
+    activeRoute === '/overview' ||
+    activeRoute === '/app' ||
+    activeRoute === '/app/overview';
+
+  // Role Guard: Salesperson can access POS; back-office routes are restricted
   const isSalespersonBlocked =
     currentUser.role === 'salesperson' &&
     !activeRoute.startsWith('/pos') &&
-    !activeRoute.startsWith('/app/pos');
+    !activeRoute.startsWith('/app/pos') &&
+    !isDefaultOverviewRoute;
 
   const renderCurrentPage = () => {
     if (isSalespersonBlocked) {
@@ -39,13 +47,10 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = () => {
     }
 
     const path = activeRoute;
-    if (
-      path === '/' ||
-      path === '/dashboard' ||
-      path === '/overview' ||
-      path === '/app' ||
-      path === '/app/overview'
-    ) {
+    if (isDefaultOverviewRoute) {
+      if (currentUser.role === 'salesperson') {
+        return <PosSalesPage />;
+      }
       return <OverviewPage />;
     }
     if (

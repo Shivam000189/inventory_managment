@@ -42,7 +42,7 @@ export const Footer = ({ onOpenDemo }) => {
           </h2>
 
           <p className="text-[#c2b5a6] max-w-lg mx-auto text-xs sm:text-sm mb-7 font-normal">
-            Join businesses that are growing with Inventry's all-in-one platform.
+            Join businesses that are growing with Inventory's all-in-one platform.
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-3.5">
@@ -80,14 +80,14 @@ export const Footer = ({ onOpenDemo }) => {
             >
               <Zap className="w-4 h-4 text-[#7bbd65] fill-[#7bbd65]" />
             </motion.div>
-            <span className="text-xl font-bold text-[#2f1f13]">Inventry</span>
+            <span className="text-xl font-bold text-[#2f1f13]">Inventory</span>
           </div>
           <p className="text-sm text-[#2f1f13]/70 max-w-xs mb-5">
             The all-in-one inventory, warehouse, and purchase order platform crafted
             for clarity and speed.
           </p>
           <div className="text-xs text-[#2f1f13]/60 space-y-1">
-            <p>hello@inventry.io • +1 (800) 555-0194</p>
+            <p>hello@Inventory.io • +1 (800) 555-0194</p>
             <p>San Francisco • Amsterdam • Singapore</p>
           </div>
         </div>
@@ -124,7 +124,7 @@ export const Footer = ({ onOpenDemo }) => {
       </div>
 
       <div className="pt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-[#2f1f13]/60 gap-4">
-        <p>© {new Date().getFullYear()} Inventry Inc. All rights reserved.</p>
+        <p>© {new Date().getFullYear()} Inventory Inc. All rights reserved.</p>
         <div className="flex gap-6">
           <span className="hover:text-[#2f1f13] cursor-pointer transition-colors">Privacy Policy</span>
           <span className="hover:text-[#2f1f13] cursor-pointer transition-colors">Terms of Service</span>

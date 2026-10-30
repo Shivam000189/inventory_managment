@@ -16,7 +16,7 @@ export const NotFoundPage: React.FC = () => {
       </h1>
 
       <p className="text-sm text-[#6B665E] max-w-md mt-2 leading-relaxed">
-        The requested screen or URL route does not exist in Inventry.
+        The requested screen or URL route does not exist in Inventory.
       </p>
 
       <div className="mt-6">

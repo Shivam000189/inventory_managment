@@ -68,7 +68,7 @@ export const HeroHeader = ({
         >
           Manage your stock, suppliers, purchases, sales and business insights
           <br className="hidden sm:inline" />
-          with Inventry — a modern, all-in-one solution for growing businesses.
+          with Inventory — a modern, all-in-one solution for growing businesses.
         </motion.p>
 
         {/* Action CTA Buttons */}

@@ -17,30 +17,53 @@ async function findNameDuplicate(businessId, supplierName, excludedId) {
   return suppliers.find((supplier) => normalizeName(supplier.supplierName) === normalizedName)
 }
 
+function normalize(payload) {
+  const out = { ...payload }
+  if (payload.name && !payload.supplierName) out.supplierName = String(payload.name).trim()
+  if (payload.supplierName) out.supplierName = String(payload.supplierName).trim()
+  if (payload.gstin && !payload.taxNumber) out.taxNumber = String(payload.gstin).trim()
+  if (payload.taxNumber) out.taxNumber = String(payload.taxNumber).trim()
+  if (payload.phone) out.phone = String(payload.phone).trim()
+  if (payload.contactPerson) out.contactPerson = String(payload.contactPerson).trim()
+  if (payload.email) out.email = String(payload.email).trim().toLowerCase()
+  if (payload.address) out.address = String(payload.address).trim()
+  if (payload.city) out.city = String(payload.city).trim()
+  if (payload.state) out.state = String(payload.state).trim()
+  if (payload.paymentTerms) out.paymentTerms = String(payload.paymentTerms).trim()
+  if (!out.status) out.status = 'active'
+  return out
+}
+
 function validate(payload, { partial } = {}) {
-  if (!partial) requireFields(payload, ['supplierName', 'phone'])
+  const name = payload.supplierName || payload.name
+  if (!partial) {
+    assert(Boolean(name && String(name).trim().length > 0), 'Supplier name is required.')
+    requireFields(payload, ['phone'])
+  }
   if (payload.phone !== undefined && payload.phone !== '') assert(PHONE.test(payload.phone), 'Enter a valid supplier phone number.')
   if (payload.email) assert(isEmail(payload.email), 'Enter a valid supplier email address.')
 }
 
 async function create(businessId, payload) {
-  validate(payload)
-  const nameDupe = await findNameDuplicate(businessId, payload.supplierName)
+  const data = normalize(payload)
+  validate(data)
+  const nameDupe = await findNameDuplicate(businessId, data.supplierName)
   if (nameDupe) throw ApiError.conflict('A supplier with this name already exists.')
-  if (payload.email) {
-    const dupe = await Supplier.findOne({ business: base.scoped(businessId).business, email: String(payload.email).toLowerCase() })
+  if (data.email) {
+    const dupe = await Supplier.findOne({ business: base.scoped(businessId).business, email: String(data.email).toLowerCase() })
     if (dupe) throw ApiError.conflict('A supplier with this email already exists.')
   }
-  return base.create(businessId, payload)
+  return base.create(businessId, data)
 }
 
 async function update(businessId, id, payload) {
-  validate(payload, { partial: true })
-  if (payload.supplierName !== undefined) {
-    const duplicate = await findNameDuplicate(businessId, payload.supplierName, id)
+  const data = normalize(payload)
+  validate(data, { partial: true })
+  if (data.supplierName !== undefined) {
+    const duplicate = await findNameDuplicate(businessId, data.supplierName, id)
     if (duplicate) throw ApiError.conflict('A supplier with this name already exists.')
   }
-  return base.update(businessId, id, payload)
+  return base.update(businessId, id, data)
 }
 
 async function archive(businessId, id) {

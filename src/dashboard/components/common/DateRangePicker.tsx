@@ -15,14 +15,22 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const now = new Date();
+  const todayStr = now.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  const yesterday = new Date(Date.now() - 86400000);
+  const yesterdayStr = yesterday.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  const monthStr = now.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
+  const currentYear = now.getFullYear();
+  const nextYearShort = (currentYear + 1).toString().slice(-2);
+
   const options = [
-    'Today, 26 Oct 2026',
-    'Yesterday, 25 Oct 2026',
+    `Today, ${todayStr}`,
+    `Yesterday, ${yesterdayStr}`,
     'Last 7 days',
     'Last 30 days',
-    'This month (Oct 2026)',
-    'Last Quarter (Q3 2026)',
-    'Financial Year 2026-27',
+    `This month (${monthStr})`,
+    'Last Quarter',
+    `Financial Year ${currentYear}-${nextYearShort}`,
   ];
 
   useEffect(() => {

@@ -16,6 +16,10 @@ export const updateMemberController = asyncHandler(async (req, res) => {
   await notificationEvents.member(req.businessId, member, 'updated')
   ok(res, member, 'User updated.')
 })
+export const deleteMemberController = asyncHandler(async (req, res) => {
+  await userService.deleteMember(req.businessId, req.params.id)
+  ok(res, { deleted: true }, 'Team member removed.')
+})
 
 export const listRolesController = asyncHandler(async (req, res) => {
   ok(res, await userService.listRoles(req.businessId))

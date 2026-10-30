@@ -20,7 +20,7 @@ export const registerController = asyncHandler(async (req, res) => {
 })
 
 export const loginController = asyncHandler(async (req, res) => {
-  const session = await authService.login(req.body)
+  const session = await authService.login(req.body);
   ok(res, withCookies(res, session), 'Signed in.')
 })
 

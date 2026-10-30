@@ -214,6 +214,58 @@ function docToRowData(doc, tableName) {
   const validCols = TABLE_COLUMNS[tableName]
   const row = {}
 
+  if (validCols) {
+    for (const col of validCols) {
+      if (col === 'id') {
+        const idVal = doc.id !== undefined ? doc.id : (doc._id !== undefined ? doc._id : (doc._model?._idField ? doc[doc._model._idField] : undefined))
+        if (idVal !== undefined) row.id = objectIdToUuid(idVal) || idVal
+        continue
+      }
+      if (col === 'business_id') {
+        const bVal = doc.business_id !== undefined ? doc.business_id : (doc.businessId !== undefined ? doc.businessId : doc.business)
+        if (bVal !== undefined) row.business_id = objectIdToUuid(bVal) || bVal
+        continue
+      }
+      if (col === 'owner_id') {
+        const oVal = doc.owner_id !== undefined ? doc.owner_id : (doc.ownerId !== undefined ? doc.ownerId : doc.owner)
+        if (oVal !== undefined) row.owner_id = objectIdToUuid(oVal) || oVal
+        continue
+      }
+      if (col === 'recipient_id') {
+        const rVal = doc.recipient_id !== undefined ? doc.recipient_id : (doc.recipientId !== undefined ? doc.recipientId : doc.recipient)
+        if (rVal !== undefined) row.recipient_id = objectIdToUuid(rVal) || rVal
+        continue
+      }
+      if (col === 'account_id') {
+        const aVal = doc.account_id !== undefined ? doc.account_id : (doc.accountId !== undefined ? doc.accountId : doc.account)
+        if (aVal !== undefined) row.account_id = objectIdToUuid(aVal) || aVal
+        continue
+      }
+
+      const camel = snakeToCamel(col)
+      const orig = doc._original || {}
+      let val
+      if (doc[camel] !== undefined && doc[camel] !== orig[camel]) {
+        val = doc[camel]
+      } else if (doc[col] !== undefined && doc[col] !== orig[col]) {
+        val = doc[col]
+      } else if (doc[camel] !== undefined) {
+        val = doc[camel]
+      } else if (doc[col] !== undefined) {
+        val = doc[col]
+      }
+
+      if (val !== undefined && typeof val !== 'function') {
+        if (col.endsWith('_id')) {
+          row[col] = objectIdToUuid(val) || val
+        } else {
+          row[col] = val
+        }
+      }
+    }
+    return row
+  }
+
   for (const [key, val] of Object.entries(doc)) {
     if (key.startsWith('_') && key !== '_id') continue
     if (typeof val === 'function') continue
@@ -409,6 +461,10 @@ export class SupabaseQuery {
         if (conditions.length > 0) {
           query = query.or(conditions.join(','))
         }
+        continue
+      }
+
+      if (key.startsWith('$')) {
         continue
       }
 

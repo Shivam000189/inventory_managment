@@ -60,7 +60,12 @@ code, kbd, pre, samp {
 }
 
 /* Interactive elements */
-button,
+button {
+  font-family: inherit;
+  font-size: var(--fs-md);
+  color: inherit;
+}
+
 input,
 select,
 textarea {

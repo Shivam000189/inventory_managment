@@ -1,4 +1,4 @@
-import { Member, Role, DEFAULT_ROLES } from '../models/index.js'
+import { User, Member, Role, DEFAULT_ROLES } from '../models/index.js'
 import { ApiError } from '../utils/ApiError.js'
 import { toObjectId, requireFields, assert, isEmail } from '../validators/assert.js'
 
@@ -16,11 +16,48 @@ export async function listMembers(businessId) {
 export async function createMember(businessId, payload) {
   requireFields(payload, ['name', 'email'])
   assert(isEmail(payload.email), 'Enter a valid email address.')
+  const normalizedEmail = String(payload.email).trim().toLowerCase()
   const roleId = await resolveRoleId(businessId, payload.roleId || payload.role)
-  const exists = await Member.findOne(scoped(businessId, { email: String(payload.email).toLowerCase() }))
+
+  const exists = await Member.findOne(scoped(businessId, { email: normalizedEmail }))
   if (exists) throw ApiError.conflict('A team member with this email already exists.')
-  const doc = await Member.create({ business: scoped(businessId).business, name: payload.name.trim(), email: payload.email.trim().toLowerCase(), roleId, status: 'pending' })
-  return doc.toJSON()
+
+  const rawPassword = payload.password || payload.tempPassword || 'Pass@1234'
+
+  // Find or create user in users table so they can immediately sign in
+  let user = await User.findOne({ email: normalizedEmail })
+  if (!user) {
+    user = await User.create({
+      name: payload.name.trim(),
+      email: normalizedEmail,
+      password: rawPassword,
+      role: 'team',
+      business: businessId,
+    })
+  } else {
+    user.business = businessId
+    user.role = 'team'
+    if (payload.password || payload.tempPassword) {
+      user.password = rawPassword
+    }
+    await user.save()
+  }
+
+  // Create active member record linked to user account
+  const doc = await Member.create({
+    business: scoped(businessId).business,
+    account: user._id || user.id,
+    name: payload.name.trim(),
+    email: normalizedEmail,
+    roleId,
+    status: payload.status || 'active',
+  })
+
+  return {
+    ...doc.toJSON(),
+    userId: doc.toJSON().id || doc.toJSON()._id,
+    accountId: user._id || user.id,
+  }
 }
 
 export async function updateMember(businessId, id, payload) {
@@ -37,7 +74,32 @@ export async function updateMember(businessId, id, payload) {
     doc.status = payload.status
   }
   await doc.save()
+
+  // Keep corresponding user account synced
+  if (doc.account || doc.email) {
+    const user = await User.findOne(doc.account ? { _id: doc.account } : { email: doc.email })
+    if (user) {
+      if (payload.name) user.name = payload.name.trim()
+      if (payload.password || payload.tempPassword) user.password = payload.password || payload.tempPassword
+      await user.save()
+    }
+  }
+
   return doc.toJSON()
+}
+
+export async function deleteMember(businessId, id) {
+  const doc = await Member.findOne(scoped(businessId, { _id: toObjectId(id, 'user id') }))
+  if (!doc) return { deleted: false }
+  const accountId = doc.account
+  await Member.deleteOne({ _id: doc._id })
+  if (accountId) {
+    const remaining = await Member.find({ account: accountId })
+    if (!remaining || remaining.length === 0) {
+      await User.deleteOne({ _id: accountId })
+    }
+  }
+  return { deleted: true }
 }
 
 async function resolveRoleId(businessId, roleOrId) {
@@ -82,4 +144,4 @@ export async function setRolePermissions(businessId, roleId, permissions) {
   return doc.toJSON()
 }
 
-export const userService = { listMembers, createMember, updateMember, listRoles, saveRole, setRolePermissions }
+export const userService = { listMembers, createMember, updateMember, deleteMember, listRoles, saveRole, setRolePermissions }

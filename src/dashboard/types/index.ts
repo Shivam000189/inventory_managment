@@ -8,6 +8,7 @@ export interface User {
   avatarInitials: string;
   status: 'active' | 'suspended';
   lastLogin: string;
+  tempPassword?: string;
 }
 
 export interface BusinessProfile {
@@ -129,6 +130,7 @@ export interface Bill {
   id: string;
   billNumber: string;
   date: string;
+  createdAt?: string;
   customerId: string;
   customerName: string;
   customerPhone?: string;

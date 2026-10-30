@@ -22,6 +22,7 @@ import {
 import { useAuth } from '../../../../hooks/useAuth.js';
 import { salesOrderApi } from '../../../../api/salesOrderApi.js';
 import { productApi } from '../../../../api/productApi.js';
+import { getAuthToken } from '../../../../api/client.js';
 
 // Cube logo icon
 const CubeLogo = () => (
@@ -92,67 +93,163 @@ const INVENTORY_TREND = [
   { month: 'Oct', value: '₹ 5,80,000', heightPct: 94 }
 ];
 
-const STOCK_ALERTS = [
-  {
-    id: 'ts001',
-    name: "Men's T-Shirt",
-    sku: 'TS001',
-    stockText: 'Only 5 left in stock',
-    icon: Shirt
-  },
-  {
-    id: 'pm002',
-    name: 'Paracetamol 500mg',
-    sku: 'PM002',
-    stockText: 'Only 8 left in stock',
-    icon: Pill
-  },
-  {
-    id: 'wm003',
-    name: 'Wireless Mouse',
-    sku: 'WM003',
-    stockText: 'Only 3 left in stock',
-    icon: Mouse
-  }
-];
+const INDUSTRY_ALERT_PRESETS = {
+  pharmacy: [
+    { id: 'ph-a1', name: 'Asthalin Inhaler 200 MDI', sku: 'AS002', stockText: 'Only 3 left in stock', icon: Pill },
+    { id: 'ph-a2', name: 'Azithral 500mg Tablet', sku: 'AZ005', stockText: 'Only 5 left in stock', icon: Pill },
+    { id: 'ph-a3', name: 'Liv 52 Syrup 200ml', sku: 'LV010', stockText: 'Only 8 left in stock', icon: Pill }
+  ],
+  clothing: [
+    { id: 'ap-a1', name: 'Pure Linen Summer Kurta', sku: 'LK004', stockText: 'Only 2 left in stock', icon: Shirt },
+    { id: 'ap-a2', name: 'Stretch Chino Trousers', sku: 'CT008', stockText: 'Out of stock (0 left)', icon: Shirt },
+    { id: 'ap-a3', name: 'Slim Fit Denim Jeans', sku: 'DJ009', stockText: 'Only 5 left in stock', icon: Shirt }
+  ],
+  apparel: [
+    { id: 'ap-a1', name: 'Pure Linen Summer Kurta', sku: 'LK004', stockText: 'Only 2 left in stock', icon: Shirt },
+    { id: 'ap-a2', name: 'Stretch Chino Trousers', sku: 'CT008', stockText: 'Out of stock (0 left)', icon: Shirt },
+    { id: 'ap-a3', name: 'Slim Fit Denim Jeans', sku: 'DJ009', stockText: 'Only 5 left in stock', icon: Shirt }
+  ],
+  electronics: [
+    { id: 'el-a1', name: 'Fast Wireless Charging Stand 15W', sku: 'CS015', stockText: 'Only 2 left in stock', icon: Cpu },
+    { id: 'el-a2', name: '4K IPS Smart Monitor 27-inch', sku: 'MN027', stockText: 'Only 4 left in stock', icon: Cpu },
+    { id: 'el-a3', name: 'Active Noise Cancelling Wireless Headphones', sku: 'HP032', stockText: 'Only 5 left in stock', icon: Cpu }
+  ],
+  default: [
+    { id: 'def-a1', name: 'Heavy Duty Plastic Crate 50L', sku: 'PC050', stockText: 'Only 3 left in stock', icon: Package },
+    { id: 'def-a2', name: 'Fast Wireless Charging Stand 15W', sku: 'CS015', stockText: 'Only 2 left in stock', icon: Cpu },
+    { id: 'def-a3', name: 'Pure Linen Summer Kurta', sku: 'LK004', stockText: 'Only 2 left in stock', icon: Shirt }
+  ]
+};
 
-const RECENT_TRANSACTIONS = [
-  {
-    date: '26 Oct, 10:24 AM',
-    type: 'Sale',
-    item: "Men's T-Shirt",
-    qty: 2,
-    amount: '₹ 1,198'
-  },
-  {
-    date: '26 Oct, 09:15 AM',
-    type: 'Purchase',
-    item: 'Running Shoes',
-    qty: 20,
-    amount: '₹ 24,000'
-  },
-  {
-    date: '25 Oct, 06:42 PM',
-    type: 'Stock In',
-    item: 'Paracetamol 500mg',
-    qty: 100,
-    amount: '₹ 4,500'
-  },
-  {
-    date: '25 Oct, 04:11 PM',
-    type: 'Sale',
-    item: 'Wireless Mouse',
-    qty: 1,
-    amount: '₹ 799'
-  }
-];
+const STOCK_ALERTS = INDUSTRY_ALERT_PRESETS.default;
 
-const DEFAULT_TOP_SELLING = [
-  { id: '1', name: 'Classic Oxford Button-Down Shirt', sold: '118 sold', icon: Shirt },
-  { id: '2', name: 'Heavyweight Cotton Graphic Tee', sold: '142 sold', icon: Shirt },
-  { id: '3', name: 'Slim Fit Denim Jeans', sold: '84 sold', icon: Package },
-  { id: '4', name: 'Stretch Chino Trousers', sold: '62 sold', icon: Package }
-];
+const INDUSTRY_TRANSACTION_PRESETS = {
+  pharmacy: [
+    { date: 'Today, 10:24 AM', type: 'Sale', item: 'Dolo 650 Tablet', qty: 10, amount: '₹ 320' },
+    { date: 'Today, 09:15 AM', type: 'Stock In', item: 'Becosules Z Capsule', qty: 100, amount: '₹ 3,400' },
+    { date: 'Yesterday', type: 'Purchase', item: 'Augmentin 625 Duo', qty: 50, amount: '₹ 5,200' },
+    { date: 'Yesterday', type: 'Sale', item: 'Glycomet-GP 2 Tablet', qty: 4, amount: '₹ 480' }
+  ],
+  clothing: [
+    { date: 'Today, 10:24 AM', type: 'Sale', item: 'Heavyweight Cotton Graphic Tee', qty: 3, amount: '₹ 2,697' },
+    { date: 'Today, 09:15 AM', type: 'Sale', item: 'Classic Oxford Button-Down Shirt', qty: 2, amount: '₹ 2,998' },
+    { date: 'Yesterday', type: 'Purchase', item: 'Slim Fit Denim Jeans', qty: 25, amount: '₹ 22,500' },
+    { date: 'Yesterday', type: 'Sale', item: 'Pique Knit Polo T-Shirt', qty: 1, amount: '₹ 999' }
+  ],
+  apparel: [
+    { date: 'Today, 10:24 AM', type: 'Sale', item: 'Heavyweight Cotton Graphic Tee', qty: 3, amount: '₹ 2,697' },
+    { date: 'Today, 09:15 AM', type: 'Sale', item: 'Classic Oxford Button-Down Shirt', qty: 2, amount: '₹ 2,998' },
+    { date: 'Yesterday', type: 'Purchase', item: 'Slim Fit Denim Jeans', qty: 25, amount: '₹ 22,500' },
+    { date: 'Yesterday', type: 'Sale', item: 'Pique Knit Polo T-Shirt', qty: 1, amount: '₹ 999' }
+  ],
+  electronics: [
+    { date: 'Today, 10:24 AM', type: 'Sale', item: 'Wireless Ergonomic Optical Mouse', qty: 2, amount: '₹ 1,598' },
+    { date: 'Today, 09:15 AM', type: 'Sale', item: 'Mechanical Gaming Keyboard RGB', qty: 1, amount: '₹ 2,499' },
+    { date: 'Yesterday', type: 'Purchase', item: 'High Capacity Power Bank 20000mAh', qty: 20, amount: '₹ 19,000' },
+    { date: 'Yesterday', type: 'Sale', item: 'Active Noise Cancelling Headphones', qty: 1, amount: '₹ 3,999' }
+  ],
+  default: [
+    { date: 'Today, 10:24 AM', type: 'Sale', item: 'Heavyweight Cotton Graphic Tee', qty: 3, amount: '₹ 2,697' },
+    { date: 'Today, 09:15 AM', type: 'Stock In', item: 'Dolo 650 Tablet', qty: 100, amount: '₹ 3,200' },
+    { date: 'Yesterday', type: 'Purchase', item: 'Corrugated Eco Box 50p', qty: 40, amount: '₹ 1,680' },
+    { date: 'Yesterday', type: 'Sale', item: 'Wireless Ergonomic Optical Mouse', qty: 1, amount: '₹ 799' }
+  ]
+};
+
+const CATEGORY_STOCK_PRESETS = {
+  Apparel: [
+    { id: 'app-1', name: 'Heavyweight Cotton Graphic Tee', badge: '85 in stock', sold: '85 in stock', icon: Shirt },
+    { id: 'app-2', name: 'Classic Oxford Button-Down Shirt', badge: '60 in stock', sold: '60 in stock', icon: Shirt },
+    { id: 'app-3', name: 'Pique Knit Polo T-Shirt', badge: '50 in stock', sold: '50 in stock', icon: Shirt },
+    { id: 'app-4', name: 'Slim Fit Denim Jeans', badge: '45 in stock', sold: '45 in stock', icon: Package }
+  ],
+  Electronics: [
+    { id: 'el-1', name: 'Wireless Ergonomic Optical Mouse', badge: '60 in stock', sold: '60 in stock', icon: Mouse },
+    { id: 'el-2', name: 'Mechanical Gaming Keyboard RGB Backlit', badge: '45 in stock', sold: '45 in stock', icon: Cpu },
+    { id: 'el-3', name: 'High Capacity Power Bank 20000mAh', badge: '40 in stock', sold: '40 in stock', icon: Cpu },
+    { id: 'el-4', name: 'Active Noise Cancelling Wireless Headphones', badge: '32 in stock', sold: '32 in stock', icon: Cpu }
+  ],
+  Pharmacy: [
+    { id: 'ph-1', name: 'Dolo 650 Tablet', badge: '180 in stock', sold: '180 in stock', icon: Pill },
+    { id: 'ph-2', name: 'Becosules Z Capsule', badge: '120 in stock', sold: '120 in stock', icon: Pill },
+    { id: 'ph-3', name: 'Augmentin 625 Duo Tablet', badge: '95 in stock', sold: '95 in stock', icon: Pill },
+    { id: 'ph-4', name: 'Glycomet-GP 2 Tablet', badge: '85 in stock', sold: '85 in stock', icon: Pill }
+  ],
+  Packaging: [
+    { id: 'pkg-1', name: 'Corrugated Eco Box 50p', badge: '110 in stock', sold: '110 in stock', icon: Package },
+    { id: 'pkg-2', name: 'Euro Wood Pallet Grade A', badge: '85 in stock', sold: '85 in stock', icon: Package },
+    { id: 'pkg-3', name: 'Cast Stretch Wrap Film 500m', badge: '75 in stock', sold: '75 in stock', icon: Package },
+    { id: 'pkg-4', name: 'Heavy Duty Plastic Crate 50L', badge: '60 in stock', sold: '60 in stock', icon: Package }
+  ],
+  'Raw Materials': [
+    { id: 'raw-1', name: 'Polypropylene Granules Virgin Grade', badge: '1,850 in stock', sold: '1,850 in stock', icon: Package },
+    { id: 'raw-2', name: 'High Density Polyethylene (HDPE)', badge: '1,400 in stock', sold: '1,400 in stock', icon: Package },
+    { id: 'raw-3', name: 'Raw Kraft Filament Spool', badge: '53 in stock', sold: '53 in stock', icon: Package },
+    { id: 'raw-4', name: 'Industrial Jerry Can 20L', badge: '35 in stock', sold: '35 in stock', icon: Package }
+  ],
+  default: [
+    { id: 'def-1', name: 'Dolo 650 Tablet', badge: '222 in stock', sold: '222 in stock', icon: Pill },
+    { id: 'def-2', name: 'Glycomet-GP 2 Tablet', badge: '155 in stock', sold: '155 in stock', icon: Pill },
+    { id: 'def-3', name: 'Cetcip 10 Tablet', badge: '153 in stock', sold: '153 in stock', icon: Pill },
+    { id: 'def-4', name: 'Azithral 500 Tablet', badge: '143 in stock', sold: '143 in stock', icon: Pill }
+  ]
+};
+
+const INDUSTRY_STOCK_PRESETS = {
+  pharmacy: CATEGORY_STOCK_PRESETS.Pharmacy,
+  clothing: CATEGORY_STOCK_PRESETS.Pharmacy,
+  apparel: CATEGORY_STOCK_PRESETS.Apparel,
+  electronics: CATEGORY_STOCK_PRESETS.Electronics,
+  packaging: CATEGORY_STOCK_PRESETS.Packaging,
+  manufacturing: CATEGORY_STOCK_PRESETS['Raw Materials'],
+  grocery: [
+    { id: 'gr-1', name: 'Iodized Natural Crystal Salt 1kg', badge: '150 in stock', sold: '150 in stock', icon: Package },
+    { id: 'gr-2', name: 'Unpolished Toor Dal 1kg', badge: '90 in stock', sold: '90 in stock', icon: Package },
+    { id: 'gr-3', name: 'Cold Pressed Mustard Oil 1L', badge: '80 in stock', sold: '80 in stock', icon: Package },
+    { id: 'gr-4', name: 'Natural Kashmiri Red Chilli Powder', badge: '70 in stock', sold: '70 in stock', icon: Package }
+  ],
+  hardware: [
+    { id: 'hw-1', name: 'UPVC Solvent Weld Elbow 25mm', badge: '180 in stock', sold: '180 in stock', icon: Package },
+    { id: 'hw-2', name: 'Stainless Steel Ball Bearing Hinges', badge: '110 in stock', sold: '110 in stock', icon: Package },
+    { id: 'hw-3', name: 'Zinc Plated Hex Head Bolt M12', badge: '75 in stock', sold: '75 in stock', icon: Package },
+    { id: 'hw-4', name: 'Industrial Duct Cloth Tape 48mm', badge: '65 in stock', sold: '65 in stock', icon: Package }
+  ]
+};
+
+const CATEGORY_SELLING_PRESETS = {
+  Apparel: [
+    { id: 'app-s1', name: 'Heavyweight Cotton Graphic Tee', badge: '142 sold', sold: '142 sold', icon: Shirt },
+    { id: 'app-s2', name: 'Classic Oxford Button-Down Shirt', badge: '118 sold', sold: '118 sold', icon: Shirt },
+    { id: 'app-s3', name: 'Slim Fit Denim Jeans', badge: '84 sold', sold: '84 sold', icon: Package },
+    { id: 'app-s4', name: 'Stretch Chino Trousers', badge: '62 sold', sold: '62 sold', icon: Package }
+  ],
+  Electronics: [
+    { id: 'el-s1', name: 'Wireless Ergonomic Optical Mouse', badge: '89 sold', sold: '89 sold', icon: Mouse },
+    { id: 'el-s2', name: 'Active Noise Cancelling Headphones', badge: '64 sold', sold: '64 sold', icon: Cpu },
+    { id: 'el-s3', name: 'High Capacity Power Bank 20000mAh', badge: '58 sold', sold: '58 sold', icon: Cpu },
+    { id: 'el-s4', name: 'Mechanical Gaming Keyboard RGB', badge: '42 sold', sold: '42 sold', icon: Cpu }
+  ],
+  Pharmacy: [
+    { id: 'ph-s1', name: 'Dolo 650 Tablet', badge: '310 sold', sold: '310 sold', icon: Pill },
+    { id: 'ph-s2', name: 'Azithral 500 Tablet', badge: '194 sold', sold: '194 sold', icon: Pill },
+    { id: 'ph-s3', name: 'Cetcip 10 Tablet', badge: '165 sold', sold: '165 sold', icon: Pill },
+    { id: 'ph-s4', name: 'Glycomet-GP 2 Tablet', badge: '128 sold', sold: '128 sold', icon: Pill }
+  ],
+  default: [
+    { id: 'def-s1', name: 'Dolo 650 Tablet', badge: '310 sold', sold: '310 sold', icon: Pill },
+    { id: 'def-s2', name: 'Azithral 500 Tablet', badge: '194 sold', sold: '194 sold', icon: Pill },
+    { id: 'def-s3', name: 'Cetcip 10 Tablet', badge: '165 sold', sold: '165 sold', icon: Pill },
+    { id: 'def-s4', name: 'Glycomet-GP 2 Tablet', badge: '128 sold', sold: '128 sold', icon: Pill }
+  ]
+};
+
+const getCategoryStockPreset = (category = '') => {
+  return CATEGORY_STOCK_PRESETS[category] || CATEGORY_STOCK_PRESETS.default;
+};
+
+const getCategorySellingPreset = (category = '') => {
+  return CATEGORY_SELLING_PRESETS[category] || CATEGORY_SELLING_PRESETS.default;
+};
 
 const getProductIconComponent = (name = '') => {
   const lower = name.toLowerCase();
@@ -167,7 +264,8 @@ const getProductIconComponent = (name = '') => {
     lower.includes('hoodie') ||
     lower.includes('jean') ||
     lower.includes('trouser') ||
-    lower.includes('polo')
+    lower.includes('polo') ||
+    lower.includes('apparel')
   ) {
     return { icon: Shirt };
   }
@@ -176,7 +274,13 @@ const getProductIconComponent = (name = '') => {
     lower.includes('tablet') ||
     lower.includes('syrup') ||
     lower.includes('capsule') ||
-    lower.includes('med')
+    lower.includes('med') ||
+    lower.includes('dolo') ||
+    lower.includes('cetcip') ||
+    lower.includes('azithral') ||
+    lower.includes('glycomet') ||
+    lower.includes('pharma') ||
+    lower.includes('pill')
   ) {
     return { icon: Pill };
   }
@@ -185,7 +289,11 @@ const getProductIconComponent = (name = '') => {
     lower.includes('keyboard') ||
     lower.includes('headset') ||
     lower.includes('router') ||
-    lower.includes('scanner')
+    lower.includes('scanner') ||
+    lower.includes('cable') ||
+    lower.includes('charger') ||
+    lower.includes('power bank') ||
+    lower.includes('electronic')
   ) {
     return { icon: Cpu };
   }
@@ -196,21 +304,27 @@ export const DashboardMockup = ({
   searchQuery = '',
   onSearchChange,
   onQuickAction,
-  topSelling: propTopSelling
+  topSelling: propTopSelling,
+  activeCategory = 'All Stock',
+  _filteredInventory = [],
+  _categories = []
 }) => {
   const { session, account } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [activeMonthIdx, setActiveMonthIdx] = useState(6); // Default July (index 6)
   const [localSearch, setLocalSearch] = useState(searchQuery);
+  const [topViewMode, setTopViewMode] = useState('stock'); // 'stock' | 'selling'
 
+  const [userTopStock, setUserTopStock] = useState([]);
   const [userTopSelling, setUserTopSelling] = useState([]);
   const [userRecentTransactions, setUserRecentTransactions] = useState([]);
+  const [userStockAlerts, setUserStockAlerts] = useState([]);
 
   useEffect(() => {
     let active = true;
 
     async function loadUserData() {
-      if (session?.user) {
+      if (session?.user || getAuthToken()) {
         try {
           const [salesRes, prodRes] = await Promise.allSettled([
             salesOrderApi.list({ limit: 50 }),
@@ -226,7 +340,44 @@ export const DashboardMockup = ({
               ? (prodRes.value?.data || prodRes.value)
               : [];
 
-          // Aggregate sales count per product from user's actual orders
+          // 1. User's real top stock products sorted by stock descending
+          if (products.length > 0) {
+            const sortedByStock = [...products]
+              .sort((a, b) => Number(b.currentStock ?? b.stock ?? 0) - Number(a.currentStock ?? a.stock ?? 0))
+              .slice(0, 4)
+              .map((p, idx) => ({
+                id: p.productId || p.id || `stock-${idx}`,
+                name: p.name,
+                stock: Number(p.currentStock ?? p.stock ?? 0),
+                sold: `${Number(p.currentStock ?? p.stock ?? 0)} in stock`,
+                badge: `${Number(p.currentStock ?? p.stock ?? 0)} in stock`,
+                ...getProductIconComponent(p.name)
+              }));
+            if (active && sortedByStock.length > 0) {
+              setUserTopStock(sortedByStock);
+            }
+
+            // Real low stock alerts from actual catalog
+            const lowStockProducts = products
+              .filter((p) => {
+                const stock = Number(p.currentStock ?? p.stock ?? 0);
+                const min = Number(p.minimumStock ?? p.reorderLevel ?? 10);
+                return stock <= min || stock <= 10;
+              })
+              .slice(0, 3)
+              .map((p) => ({
+                id: p.productId || p.id,
+                name: p.name,
+                sku: p.sku || 'SKU',
+                stockText: `Only ${Number(p.currentStock ?? p.stock ?? 0)} left in stock`,
+                ...getProductIconComponent(p.name)
+              }));
+            if (active && lowStockProducts.length > 0) {
+              setUserStockAlerts(lowStockProducts);
+            }
+          }
+
+          // 2. Real sales data if any
           const productSalesMap = new Map();
           salesOrders.forEach((order) => {
             if (order.status !== 'Cancelled') {
@@ -240,49 +391,27 @@ export const DashboardMockup = ({
             }
           });
 
-          let calculatedTop = [];
           if (productSalesMap.size > 0) {
-            calculatedTop = Array.from(productSalesMap.entries())
+            const calculatedSelling = Array.from(productSalesMap.entries())
               .map(([name, soldQty], idx) => {
                 const iconInfo = getProductIconComponent(name);
                 return {
                   id: `user-top-${idx}`,
                   name,
                   sold: `${soldQty} sold`,
+                  badge: `${soldQty} sold`,
                   count: soldQty,
                   ...iconInfo
                 };
               })
               .sort((a, b) => b.count - a.count)
               .slice(0, 4);
-          }
-
-          // If fewer than 4 sales, backfill with user's actual product catalog sorted by top stock
-          if (calculatedTop.length < 4 && products.length > 0) {
-            const seen = new Set(calculatedTop.map((item) => item.name));
-            const sortedByStock = [...products].sort(
-              (a, b) => Number(b.currentStock || b.stock || 0) - Number(a.currentStock || a.stock || 0)
-            );
-            for (const prod of sortedByStock) {
-              if (calculatedTop.length >= 4) break;
-              if (!seen.has(prod.name)) {
-                const iconInfo = getProductIconComponent(prod.name);
-                calculatedTop.push({
-                  id: prod.id || prod.productId || `prod-${calculatedTop.length}`,
-                  name: prod.name,
-                  sold: `${prod.currentStock || prod.stock || 0} in stock`,
-                  ...iconInfo
-                });
-                seen.add(prod.name);
-              }
+            if (active && calculatedSelling.length > 0) {
+              setUserTopSelling(calculatedSelling);
             }
           }
 
-          if (active && calculatedTop.length > 0) {
-            setUserTopSelling(calculatedTop);
-          }
-
-          // Live transactions from actual orders
+          // 3. Real recent transactions
           if (salesOrders.length > 0) {
             const recent = salesOrders.slice(0, 4).map((order) => ({
               date: new Date(order.createdAt).toLocaleDateString('en-IN', {
@@ -312,16 +441,48 @@ export const DashboardMockup = ({
     };
   }, [session]);
 
-  const displayTopSelling = useMemo(() => {
-    if (propTopSelling && propTopSelling.length > 0) return propTopSelling;
-    if (userTopSelling.length > 0) return userTopSelling;
-    return DEFAULT_TOP_SELLING;
-  }, [propTopSelling, userTopSelling]);
+  const displayProductsList = useMemo(() => {
+    if (topViewMode === 'selling') {
+      if (propTopSelling && propTopSelling.length > 0) return propTopSelling;
+      if (userTopSelling.length > 0) return userTopSelling;
+      return getCategorySellingPreset(activeCategory);
+    }
+
+    // Default 'stock': Top Stock according to the business
+    if (userTopStock.length > 0) return userTopStock;
+
+    const bizIndustry = (session?.business?.industry || session?.business?.business_type || '').toLowerCase();
+    if (bizIndustry && INDUSTRY_STOCK_PRESETS[bizIndustry]) {
+      return INDUSTRY_STOCK_PRESETS[bizIndustry];
+    }
+
+    if (activeCategory && activeCategory !== 'All Stock' && CATEGORY_STOCK_PRESETS[activeCategory]) {
+      return CATEGORY_STOCK_PRESETS[activeCategory];
+    }
+
+    return CATEGORY_STOCK_PRESETS.default;
+  }, [
+    topViewMode,
+    propTopSelling,
+    userTopSelling,
+    userTopStock,
+    session,
+    activeCategory
+  ]);
+
+  const displayStockAlerts = useMemo(() => {
+    if (userStockAlerts.length > 0) return userStockAlerts;
+    const bizIndustry = (session?.business?.industry || session?.business?.business_type || '').toLowerCase();
+    const indKey = bizIndustry || (activeCategory || 'default').toLowerCase();
+    return INDUSTRY_ALERT_PRESETS[indKey] || INDUSTRY_ALERT_PRESETS.default;
+  }, [userStockAlerts, session, activeCategory]);
 
   const displayTransactions = useMemo(() => {
     if (userRecentTransactions.length > 0) return userRecentTransactions;
-    return RECENT_TRANSACTIONS;
-  }, [userRecentTransactions]);
+    const bizIndustry = (session?.business?.industry || session?.business?.business_type || '').toLowerCase();
+    const indKey = bizIndustry || (activeCategory || 'default').toLowerCase();
+    return INDUSTRY_TRANSACTION_PRESETS[indKey] || INDUSTRY_TRANSACTION_PRESETS.default;
+  }, [userRecentTransactions, session, activeCategory]);
 
   const handleNavClick = (navId, label) => {
     setActiveTab(navId);
@@ -426,7 +587,7 @@ export const DashboardMockup = ({
                   <CubeLogo />
                 </div>
                 <span className="text-base font-extrabold tracking-tight text-[#1a1715]">
-                  Inventry
+                  Inventory
                 </span>
               </div>
 
@@ -724,9 +885,9 @@ export const DashboardMockup = ({
                     </button>
                   </div>
 
-                  {/* 3 Alerts List */}
+                  {/* Stock Alerts List */}
                   <div className="space-y-1.5 sm:space-y-2">
-                    {STOCK_ALERTS.map((alert) => {
+                    {displayStockAlerts.map((alert) => {
                       const Icon = alert.icon;
                       return (
                         <div
@@ -814,15 +975,41 @@ export const DashboardMockup = ({
                   </div>
                 </div>
 
-                {/* Top Selling Products (5 cols) */}
+                {/* Top Stock / Top Selling Products (5 cols) */}
                 <div className="lg:col-span-5 min-w-0 rounded-xl sm:rounded-2xl bg-[#ffffff] border border-[#ede7df] p-3.5 sm:p-4 shadow-2xs">
                   <div className="flex items-center justify-between mb-2.5">
-                    <h2 className="font-bold text-xs sm:text-[13.5px] text-[#1a1715]">
-                      Top Selling Products
-                    </h2>
+                    <div className="flex items-center gap-1.5">
+                      <h2 className="font-bold text-xs sm:text-[13.5px] text-[#1a1715]">
+                        {topViewMode === 'stock' ? 'Top Stock' : 'Top Selling'}
+                      </h2>
+                      <div className="flex items-center bg-[#faf8f5] p-0.5 rounded-lg border border-[#ede7df] ml-1">
+                        <button
+                          type="button"
+                          onClick={() => setTopViewMode('stock')}
+                          className={`px-1.5 py-0.5 text-[9.5px] font-semibold rounded transition-all cursor-pointer ${
+                            topViewMode === 'stock'
+                              ? 'bg-white text-[#1a1715] shadow-2xs font-bold'
+                              : 'text-[#78726b] hover:text-[#1a1715]'
+                          }`}
+                        >
+                          Stock
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setTopViewMode('selling')}
+                          className={`px-1.5 py-0.5 text-[9.5px] font-semibold rounded transition-all cursor-pointer ${
+                            topViewMode === 'selling'
+                              ? 'bg-white text-[#1a1715] shadow-2xs font-bold'
+                              : 'text-[#78726b] hover:text-[#1a1715]'
+                          }`}
+                        >
+                          Sales
+                        </button>
+                      </div>
+                    </div>
                     <button
                       type="button"
-                      onClick={() => handleActionClick('View All Top Selling')}
+                      onClick={() => handleActionClick(topViewMode === 'stock' ? 'View All Stock' : 'View All Top Selling')}
                       className="text-[11px] font-semibold text-[#635d56] hover:text-[#1a1715] flex items-center gap-1 cursor-pointer"
                     >
                       <span>View all</span>
@@ -830,9 +1017,9 @@ export const DashboardMockup = ({
                     </button>
                   </div>
 
-                  {/* Top Selling Products List */}
+                  {/* Top Products List */}
                   <div className="space-y-2">
-                    {displayTopSelling.map((prod) => {
+                    {displayProductsList.map((prod) => {
                       const Icon = prod.icon || Package;
                       return (
                         <div
@@ -851,8 +1038,12 @@ export const DashboardMockup = ({
                               {prod.name}
                             </span>
                           </div>
-                          <span className="text-[11px] font-semibold text-[#78726b] shrink-0 ml-2">
-                            {prod.sold}
+                          <span
+                            className={`text-[11px] font-semibold shrink-0 ml-2 ${
+                              topViewMode === 'stock' ? 'text-[#2e8b57]' : 'text-[#78726b]'
+                            }`}
+                          >
+                            {prod.badge || prod.sold}
                           </span>
                         </div>
                       );

@@ -47,6 +47,15 @@ export function getCsrfToken() {
   return readCookie(CSRF_COOKIE);
 }
 
+export function getAuthToken() {
+  try {
+    if (typeof localStorage === 'undefined') return null;
+    return localStorage.getItem('sr_token') || localStorage.getItem('token');
+  } catch {
+    return null;
+  }
+}
+
 export function clearSession() {
   window.dispatchEvent(new CustomEvent("stockroom:unauthorized"));
 }
@@ -77,6 +86,10 @@ export async function request(
   if (method !== "GET" && method !== "HEAD") {
     const csrf = getCsrfToken();
     if (csrf) headers["X-CSRF-Token"] = csrf;
+  }
+  const token = getAuthToken();
+  if (token && !headers["Authorization"]) {
+    headers["Authorization"] = `Bearer ${token}`;
   }
 
   let response;

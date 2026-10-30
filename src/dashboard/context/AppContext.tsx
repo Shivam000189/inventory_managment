@@ -14,17 +14,6 @@ import {
   POStatus,
 } from '../types';
 import {
-  initialBusinessProfile,
-  initialUsers,
-  initialProducts,
-  initialSuppliers,
-  initialPurchaseOrders,
-  initialBills,
-  initialCustomers,
-  initialRecentTransactions,
-  initialNotifications,
-} from '../lib/mockData';
-import {
   authApi,
   businessApi,
   productsApi,
@@ -34,24 +23,66 @@ import {
   salesOrdersApi,
   inventoryApi,
   posApi,
+  usersApi,
+  paymentsApi,
   clearAuthSession,
 } from '../lib/api';
+
+const defaultBusinessProfile: BusinessProfile = {
+  id: '00000000-6ade-f06e-2068-a3fe86739d2c',
+  name: 'aflix',
+  legalName: 'aflix pharma',
+  gstin: 'SKA',
+  pan: '',
+  phone: '9999999999',
+  email: 'shivam12@gmail.com',
+  address: 'amita nagar 64, Agra, Uttar Pradesh, India',
+  city: 'Agra',
+  state: 'Uttar Pradesh',
+  pincode: '282001',
+  currency: 'INR',
+  currencySymbol: '₹',
+  financialYearStart: 'April',
+  invoicePrefix: 'AFLX-',
+  startingInvoiceNumber: 1001,
+  defaultPaymentTerms: 'Net 30',
+  defaultTaxRate: 12,
+  allowNegativeStock: false,
+  enableBatchTracking: true,
+  enableSerialTracking: false,
+  lowStockThreshold: 12,
+  businessType: 'Wholesale',
+  taxEnabled: true,
+  defaultGstRate: 12,
+  upiId: 'aflixpharma@icici',
+};
+
+const defaultUser: User = {
+  id: '00000000-6ade-f033-2068-a3fe86739d2b',
+  name: 'shivam12',
+  email: 'shivam12@gmail.com',
+  role: 'admin',
+  avatarInitials: 'SS',
+  status: 'active',
+  lastLogin: 'Just now',
+};
 
 // --- Mappers between Backend API payloads and Frontend models ---
 
 function mapBackendProduct(p: any): Product {
+  const stockVal = Number(p.currentStock ?? p.current_stock ?? p.stock ?? 0);
   return {
     id: String(p.productId || p.id || p._id || `prod-${Date.now()}`),
     name: p.name || 'Unnamed Product',
     sku: p.sku || '',
     barcode: p.barcode || '',
     category: p.category || 'General',
-    unit: p.unit || 'piece',
-    purchasePrice: Number(p.purchasePrice || p.purchase_price || 0),
-    sellingPrice: Number(p.sellingPrice || p.selling_price || 0),
-    taxRate: Number(p.gstRate || p.gst_rate || p.taxRate || 0),
-    stock: Number(p.currentStock || p.current_stock || p.stock || 0),
-    reorderLevel: Number(p.minimumStock || p.minimum_stock || p.reorderLevel || 10),
+    unit: p.unit || 'pcs',
+    purchasePrice: Number(p.purchasePrice ?? p.purchase_price ?? 0),
+    sellingPrice: Number(p.sellingPrice ?? p.selling_price ?? 0),
+    taxRate: Number(p.gstRate ?? p.gst_rate ?? p.taxRate ?? 0),
+    stock: stockVal,
+    reorderLevel: Number(p.minimumStock ?? p.minimum_stock ?? p.reorderLevel ?? 10),
     supplierId: p.supplierId || p.supplier_id || '',
     supplierName: p.supplier || p.supplierName || '',
     description: p.description || '',
@@ -79,17 +110,31 @@ function mapProductToBackend(p: Partial<Product>) {
 function mapBackendSupplier(s: any): Supplier {
   return {
     id: String(s.supplierId || s.id || s._id || `sup-${Date.now()}`),
-    name: s.name || '',
+    name: s.name || s.supplierName || s.supplier_name || 'Unnamed Supplier',
     contactPerson: s.contactPerson || s.contact_person || '',
     phone: s.phone || '',
     email: s.email || '',
-    gstin: s.gstin || s.gstNumber || '',
-    address: s.address || (s.city ? `${s.city}, ${s.country || 'India'}` : ''),
-    paymentTerms: (s.paymentTerms as any) || 'Net 30',
-    outstandingBalance: Number(s.outstandingBalance || 0),
+    gstin: s.gstin || s.taxNumber || s.tax_number || s.gstNumber || '',
+    address: s.address || (s.city ? `${s.city}${s.state ? `, ${s.state}` : ''}` : ''),
+    paymentTerms: (s.paymentTerms as any) || s.payment_terms || 'Net 30',
+    outstandingBalance: Number(s.outstandingBalance || s.outstanding_balance || 0),
     lastOrderDate: s.lastOrderDate || 'Recently',
     status: s.status === 'inactive' ? 'inactive' : 'active',
     notes: s.notes || '',
+  };
+}
+
+function mapSupplierToBackend(s: Partial<Supplier>) {
+  return {
+    supplierName: s.name,
+    contactPerson: s.contactPerson,
+    phone: s.phone,
+    email: s.email,
+    taxNumber: s.gstin,
+    address: s.address,
+    paymentTerms: s.paymentTerms,
+    notes: s.notes,
+    status: s.status || 'active',
   };
 }
 
@@ -139,38 +184,83 @@ function mapBackendPurchaseOrder(po: any): PurchaseOrder {
 }
 
 function mapBackendSalesOrder(so: any): Bill {
+  const rawDate = so.createdAt || so.created_at || so.date;
+  const parsed = rawDate ? new Date(rawDate) : new Date();
+  const isValidDate = !isNaN(parsed.getTime());
+  const dateStr = isValidDate
+    ? parsed.toLocaleString('en-GB', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : (so.date || 'Today');
+
+  const total = Number(
+    so.totalAmount ??
+    so.total_amount ??
+    so.grandTotal ??
+    so.grand_total ??
+    so.total ??
+    0
+  );
+
+  const subtotal = Number(so.subtotal ?? 0);
+  const discount = Number(so.discount ?? 0);
+  const tax = Number(so.tax ?? so.taxTotal ?? so.tax_total ?? 0);
+
+  const status: BillStatus =
+    so.status === 'Cancelled'
+      ? 'Cancelled'
+      : (so.paymentStatus === 'Credit' || so.payment_status === 'Credit' ? 'Credit' : 'Paid');
+
+  const paymentMethod: PaymentMethod =
+    (so.paymentMethod ||
+      so.payment_method ||
+      so.paymentSummary?.[0]?.method ||
+      so.payment_summary?.[0]?.method ||
+      'Cash') as PaymentMethod;
+
   return {
     id: String(so.salesOrderId || so.id || so._id || `bill-${Date.now()}`),
-    billNumber: so.orderNumber || so.billNumber || `INV-${String(so.salesOrderId || so.id || '').slice(-6)}`,
-    date: so.date || (so.createdAt ? new Date(so.createdAt).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '26 Oct 2026, 12:00 PM'),
-    customerId: so.customerId || 'cust-01',
-    customerName: so.customerName || 'Walk-in Customer',
-    customerPhone: so.customerPhone,
+    billNumber:
+      so.orderNumber ||
+      so.order_number ||
+      so.billNumber ||
+      so.invoiceNumber ||
+      so.invoice_number ||
+      `INV-${String(so.salesOrderId || so.id || '').slice(-6)}`,
+    date: dateStr,
+    createdAt: isValidDate ? parsed.toISOString() : (typeof rawDate === 'string' ? rawDate : undefined),
+    customerId: so.customerId || so.customer_id || 'cust-01',
+    customerName: so.customerName || so.customer_name || so.customerSnapshot?.name || 'Walk-in Customer',
+    customerPhone: so.customerPhone || so.customer_phone || so.customerSnapshot?.phone,
     items: (so.items || []).map((item: any) => ({
-      productId: item.productId,
-      productName: item.productName || item.name || 'Item',
-      sku: item.sku || '',
+      productId: item.productId || item.product_id,
+      productName: item.productName || item.product_name || item.name || 'Item',
+      sku: item.sku || item.variantSku || '',
       quantity: Number(item.quantity || 1),
-      unitPrice: Number(item.unitPrice || item.sellingPrice || item.price || 0),
-      discountAmount: Number(item.discountAmount || 0),
-      taxRate: Number(item.taxRate || 18),
+      unitPrice: Number(item.unitPrice || item.sellingPrice || item.price || item.selling_price || 0),
+      discountAmount: Number(item.discountAmount || item.discount || 0),
+      taxRate: Number(item.taxRate || item.gstRate || item.tax_rate || 18),
       total: Number(item.total || 0),
     })),
-    subtotal: Number(so.subtotal || 0),
-    discount: Number(so.discount || 0),
-    tax: Number(so.tax || so.taxTotal || 0),
-    total: Number(so.total || so.grandTotal || 0),
-    paymentMethod: (so.paymentMethod as any) || 'Cash',
-    status: (so.status as any) || (so.paymentStatus === 'Credit' ? 'Credit' : 'Paid'),
-    createdBy: so.createdBy || 'Shivam Sharma',
-    salespersonId: so.salespersonId || 'user-01',
-    cashTendered: so.cashTendered,
-    changeDue: so.changeDue,
-    notes: so.notes,
+    subtotal,
+    discount,
+    tax,
+    total,
+    paymentMethod,
+    status,
+    createdBy: so.createdBy || so.created_by || 'Shivam Sharma',
+    salespersonId: so.salespersonId || so.cashierId || so.cashier_id || 'user-01',
+    cashTendered: so.cashTendered || so.cash_tendered,
+    changeDue: so.changeDue || so.change_due,
+    notes: so.notes || '',
   };
 }
 
-function mapBackendMovement(m: any): StockMovement {
+function mapBackendMovement(m: any, productsList: Product[] = []): StockMovement {
   const typeMap: Record<string, MovementType> = {
     stock_in: 'Stock In',
     stock_out: 'Stock Out',
@@ -184,14 +274,17 @@ function mapBackendMovement(m: any): StockMovement {
   };
   const resolvedType: MovementType = typeMap[m.type] || 'Stock In';
   const qty = Number(m.quantity || m.qtyDelta || 0);
+  const matchedProd = productsList.find((p) => p.id === m.productId || p.sku === m.sku);
+  const productName = m.productName || m.product || matchedProd?.name || 'Inventory Item';
+  const sku = m.sku || matchedProd?.sku || '';
 
   return {
     id: String(m.transactionId || m.id || m._id || `tx-${Date.now()}`),
     date: m.date || (m.createdAt ? new Date(m.createdAt).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Just now'),
     type: resolvedType,
-    productId: m.productId || '',
-    productName: m.productName || m.product || 'Product',
-    sku: m.sku || '',
+    productId: m.productId || matchedProd?.id || '',
+    productName,
+    sku,
     qtyDelta: resolvedType === 'Stock Out' || resolvedType === 'Sale' ? -Math.abs(qty) : Math.abs(qty),
     balanceAfter: Number(m.balanceAfter || m.balance || 0),
     reference: m.reference || m.reason || 'Movement',
@@ -221,6 +314,7 @@ interface AppContextType {
   users: User[];
   addUser: (user: Omit<User, 'id' | 'lastLogin'>) => void;
   updateUserStatus: (id: string, status: 'active' | 'suspended') => void;
+  deleteUser: (id: string) => void;
 
   // Business settings
   businessProfile: BusinessProfile;
@@ -240,12 +334,13 @@ interface AppContextType {
 
   // Suppliers
   suppliers: Supplier[];
-  addSupplier: (supplier: Omit<Supplier, 'id'>) => Supplier;
+  addSupplier: (supplier: Omit<Supplier, 'id'>) => Promise<Supplier> | Supplier;
   updateSupplier: (id: string, supplier: Partial<Supplier>) => void;
+  deleteSupplier: (id: string) => void;
 
   // Purchase Orders
   purchaseOrders: PurchaseOrder[];
-  createPurchaseOrder: (po: Omit<PurchaseOrder, 'id' | 'poNumber'>) => PurchaseOrder;
+  createPurchaseOrder: (po: Omit<PurchaseOrder, 'id' | 'poNumber'>) => Promise<PurchaseOrder> | PurchaseOrder;
   updatePOStatus: (id: string, status: POStatus) => void;
   receivePOItems: (poId: string, receivedQuantities: Record<string, number>, notes?: string) => void;
 
@@ -260,6 +355,7 @@ interface AppContextType {
   customers: Customer[];
   addCustomer: (customer: Omit<Customer, 'id' | 'totalSpent' | 'lastPurchase' | 'outstanding'>) => Customer;
   updateCustomer: (id: string, customer: Partial<Customer>) => void;
+  deleteCustomer: (id: string) => void;
   recordCustomerPayment: (customerId: string, amount: number, method: string, notes?: string) => void;
   customersActiveTab: 'all' | 'credit';
   setCustomersActiveTab: (tab: 'all' | 'credit') => void;
@@ -303,16 +399,16 @@ export const AppProvider: React.FC<AppProviderProps> = ({
   onLogout,
   onNavigate,
 }) => {
-  const [currentUser, setCurrentUser] = useState<User>(initialUsers[0]);
-  const [users, setUsers] = useState<User[]>(initialUsers);
-  const [businessProfile, setBusinessProfile] = useState<BusinessProfile>(initialBusinessProfile);
-  const [products, setProducts] = useState<Product[]>(initialProducts);
-  const [suppliers, setSuppliers] = useState<Supplier[]>(initialSuppliers);
-  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>(initialPurchaseOrders);
-  const [bills, setBills] = useState<Bill[]>(initialBills);
-  const [customers, setCustomers] = useState<Customer[]>(initialCustomers);
-  const [stockMovements, setStockMovements] = useState<StockMovement[]>(initialRecentTransactions);
-  const [notifications, setNotifications] = useState<AppNotification[]>(initialNotifications);
+  const [currentUser, setCurrentUser] = useState<User>(defaultUser);
+  const [users, setUsers] = useState<User[]>([defaultUser]);
+  const [businessProfile, setBusinessProfile] = useState<BusinessProfile>(defaultBusinessProfile);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
+  const [bills, setBills] = useState<Bill[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [stockMovements, setStockMovements] = useState<StockMovement[]>([]);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
 
   // Backend live state
   const [isBackendConnected, setIsBackendConnected] = useState(false);
@@ -375,7 +471,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({
 
   const [posActiveTab, setPosActiveTab] = useState<'new_bill' | 'bills'>('new_bill');
   const [customersActiveTab, setCustomersActiveTab] = useState<'all' | 'credit'>('all');
-  const [selectedDateRange, setSelectedDateRange] = useState<string>('Today, 26 Oct 2026');
+  const [selectedDateRange, setSelectedDateRange] = useState<string>(() => {
+    const todayStr = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    return `Today, ${todayStr}`;
+  });
 
   // Overlays
   const [isCommandPaletteOpen, setCommandPaletteOpen] = useState(false);
@@ -390,24 +489,26 @@ export const AppProvider: React.FC<AppProviderProps> = ({
       try {
         session = await authApi.me();
       } catch {
-        try {
-          session = await authApi.login({
-            email: 'shivam12@gmail.com',
-            password: 'admin12345',
-          });
-        } catch (loginErr) {
-          console.warn('Backend session fallback note:', loginErr);
+        if (!initialUser) {
+          try {
+            session = await authApi.login({
+              email: 'shivam12@gmail.com',
+              password: 'admin12345',
+            });
+          } catch (loginErr) {
+            console.warn('Backend session fallback note:', loginErr);
+          }
         }
       }
 
       if (session?.user) {
         setIsBackendConnected(true);
         setCurrentUser({
-          id: session.user.id || session.user.accountId || 'user-01',
-          name: session.user.name || 'Shivam Sharma',
-          email: session.user.email || 'shivam12@gmail.com',
+          id: session.user.id || session.user.accountId || initialUser?.id || 'user-01',
+          name: session.user.name || initialUser?.name || 'User',
+          email: session.user.email || initialUser?.email || '',
           role: session.user.role === 'owner' || session.user.role === 'admin' ? 'admin' : 'salesperson',
-          avatarInitials: (session.user.name || 'SS')
+          avatarInitials: (session.user.name || initialUser?.name || 'US')
             .split(' ')
             .map((n: string) => n[0])
             .join('')
@@ -451,6 +552,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({
         sosRes,
         historyRes,
         bizRes,
+        usersRes,
       ] = await Promise.allSettled([
         productsApi.list(),
         suppliersApi.list(),
@@ -459,6 +561,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({
         salesOrdersApi.list(),
         inventoryApi.history(),
         businessApi.get(),
+        usersApi.listMembers(),
       ]);
 
       if (bizRes.status === 'fulfilled' && bizRes.value) {
@@ -475,46 +578,67 @@ export const AppProvider: React.FC<AppProviderProps> = ({
         }));
       }
 
+      let loadedProducts: Product[] = [];
       if (prodsRes.status === 'fulfilled') {
         const prods = extractArray(prodsRes.value);
         if (prods.length > 0) {
-          setProducts(prods.map(mapBackendProduct));
+          loadedProducts = prods.map(mapBackendProduct);
+          setProducts(loadedProducts);
+          setIsBackendConnected(true);
+        } else if (session?.user || initialUser) {
+          setProducts([]);
           setIsBackendConnected(true);
         }
       }
 
       if (supsRes.status === 'fulfilled') {
         const sups = extractArray(supsRes.value);
-        if (sups.length > 0) {
-          setSuppliers(sups.map(mapBackendSupplier));
-        }
+        setSuppliers(sups.map(mapBackendSupplier));
       }
 
       if (custsRes.status === 'fulfilled') {
         const custs = extractArray(custsRes.value);
-        if (custs.length > 0) {
-          setCustomers(custs.map(mapBackendCustomer));
-        }
+        setCustomers(custs.map(mapBackendCustomer));
       }
 
       if (posRes.status === 'fulfilled') {
         const pos = extractArray(posRes.value);
-        if (pos.length > 0) {
-          setPurchaseOrders(pos.map(mapBackendPurchaseOrder));
-        }
+        setPurchaseOrders(pos.map(mapBackendPurchaseOrder));
       }
 
       if (sosRes.status === 'fulfilled') {
         const sos = extractArray(sosRes.value);
-        if (sos.length > 0) {
-          setBills(sos.map(mapBackendSalesOrder));
-        }
+        setBills(sos.map(mapBackendSalesOrder));
       }
 
       if (historyRes.status === 'fulfilled') {
         const txs = extractArray(historyRes.value);
         if (txs.length > 0) {
-          setStockMovements(txs.map(mapBackendMovement));
+          setStockMovements(txs.map((tx: any) => mapBackendMovement(tx, loadedProducts)));
+        }
+      }
+
+      if (usersRes.status === 'fulfilled') {
+        const uList = extractArray(usersRes.value);
+        if (uList.length > 0) {
+          const mappedUsers: User[] = uList.map((m: any) => {
+            const initials = (m.name || m.email || 'US')
+              .split(' ')
+              .map((n: string) => n[0])
+              .join('')
+              .slice(0, 2)
+              .toUpperCase();
+            return {
+              id: String(m.id || m._id || m.userId || m.accountId || `user-${Date.now()}`),
+              name: m.name || m.email,
+              email: m.email,
+              role: (m.roleId === 'ROLE-ADMIN' || m.role === 'admin' || m.role === 'owner') ? 'admin' : 'salesperson',
+              avatarInitials: initials,
+              status: m.status === 'inactive' || m.status === 'suspended' ? 'suspended' : 'active',
+              lastLogin: m.lastLogin || (m.createdAt ? new Date(m.createdAt).toLocaleDateString('en-IN') : 'Recently'),
+            };
+          });
+          setUsers(mappedUsers);
         }
       }
     } catch (err) {
@@ -550,7 +674,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({
     const targetUser = users.find((u) => u.role === role) || {
       id: role === 'admin' ? 'user-01' : 'user-02',
       name: role === 'admin' ? 'Shivam Sharma' : 'Rohan Mehra',
-      email: role === 'admin' ? 'shivam12@gmail.com' : 'rohan.pos@inventry.app',
+      email: role === 'admin' ? 'shivam12@gmail.com' : 'rohan.pos@Inventory.app',
       role,
       avatarInitials: role === 'admin' ? 'SS' : 'RM',
       status: 'active' as const,
@@ -656,9 +780,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({
         if (created?.productId || created?.id) {
           const mapped = mapBackendProduct(created);
           setProducts((prev) => prev.map((item) => (item.id === tempId ? mapped : item)));
+          refreshBackendData();
         }
       })
-      .catch((err) => console.warn('Failed to sync product to backend:', err));
+      .catch((err) => console.error('Failed to sync product to backend:', err));
 
     if (newProduct.stock > 0) {
       const movement: StockMovement = {
@@ -798,7 +923,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({
   };
 
   // Suppliers
-  const addSupplier = (s: Omit<Supplier, 'id'>) => {
+  const addSupplier = async (s: Omit<Supplier, 'id'>) => {
     const tempId = `sup-${Date.now()}`;
     const newSup: Supplier = {
       ...s,
@@ -806,26 +931,33 @@ export const AppProvider: React.FC<AppProviderProps> = ({
     };
     setSuppliers((prev) => [newSup, ...prev]);
 
-    suppliersApi
-      .create(s)
-      .then((created) => {
-        if (created?.supplierId || created?.id) {
-          const mapped = mapBackendSupplier(created);
-          setSuppliers((prev) => prev.map((item) => (item.id === tempId ? mapped : item)));
-        }
-      })
-      .catch((err) => console.warn('Failed to sync supplier to backend:', err));
+    try {
+      const created = await suppliersApi.create(mapSupplierToBackend(s));
+      if (created?.supplierId || created?.id) {
+        const mapped = mapBackendSupplier(created);
+        setSuppliers((prev) => prev.map((item) => (item.id === tempId ? mapped : item)));
+        refreshBackendData();
+        return mapped;
+      }
+    } catch (err) {
+      console.warn('Failed to sync supplier to backend:', err);
+    }
 
     return newSup;
   };
 
   const updateSupplier = (id: string, s: Partial<Supplier>) => {
     setSuppliers((prev) => prev.map((sup) => (sup.id === id ? { ...sup, ...s } : sup)));
-    suppliersApi.update(id, s).catch((err) => console.warn('Failed to update supplier on backend:', err));
+    suppliersApi.update(id, mapSupplierToBackend(s)).catch((err) => console.warn('Failed to update supplier on backend:', err));
+  };
+
+  const deleteSupplier = (id: string) => {
+    setSuppliers((prev) => prev.filter((sup) => sup.id !== id));
+    suppliersApi.delete(id).catch((err) => console.warn('Failed to delete supplier on backend:', err));
   };
 
   // Purchase orders
-  const createPurchaseOrder = (po: Omit<PurchaseOrder, 'id' | 'poNumber'>) => {
+  const createPurchaseOrder = async (po: Omit<PurchaseOrder, 'id' | 'poNumber'>) => {
     const tempId = `po-${Date.now()}`;
     const poNumber = `PO-2026-09${purchaseOrders.length + 1}`;
     const newPO: PurchaseOrder = {
@@ -835,15 +967,32 @@ export const AppProvider: React.FC<AppProviderProps> = ({
     };
     setPurchaseOrders((prev) => [newPO, ...prev]);
 
-    purchaseOrdersApi
-      .create({ ...po, poNumber })
-      .then((created) => {
-        if (created?.purchaseOrderId || created?.id) {
-          const mapped = mapBackendPurchaseOrder(created);
-          setPurchaseOrders((prev) => prev.map((item) => (item.id === tempId ? mapped : item)));
-        }
-      })
-      .catch((err) => console.warn('Failed to sync PO to backend:', err));
+    try {
+      const backendPayload = {
+        supplierId: po.supplierId,
+        supplierName: po.supplierName,
+        poNumber,
+        expectedDeliveryDate: po.expectedDate,
+        shippingCharges: po.shipping,
+        items: po.items.map((it) => ({
+          productId: it.productId,
+          quantity: it.orderedQty,
+          purchasePrice: it.unitCost,
+          taxRate: it.taxRate,
+          discount: 0,
+        })),
+        notes: po.notes || '',
+      };
+      const created = await purchaseOrdersApi.create(backendPayload);
+      if (created?.purchaseOrderId || created?.id) {
+        const mapped = mapBackendPurchaseOrder(created);
+        setPurchaseOrders((prev) => prev.map((item) => (item.id === tempId ? mapped : item)));
+        refreshBackendData();
+        return mapped;
+      }
+    } catch (err) {
+      console.warn('Failed to sync PO to backend:', err);
+    }
 
     return newPO;
   };
@@ -910,7 +1059,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({
     setPurchaseOrders((prev) =>
       prev.map((p) => (p.id === poId ? { ...p, items: updatedItems, status: newStatus } : p))
     );
-    purchaseOrdersApi.updateStatus(poId, newStatus).catch(() => {});
+    purchaseOrdersApi.updateStatus(poId, newStatus).catch(() => { });
 
     const newNotif: AppNotification = {
       id: `notif-${Date.now()}`,
@@ -932,10 +1081,13 @@ export const AppProvider: React.FC<AppProviderProps> = ({
     const nextInvoiceNum = businessProfile.startingInvoiceNumber + bills.length;
     const billNumber = `${businessProfile.invoicePrefix}${nextInvoiceNum}`;
     const now = new Date();
-    const formattedDate = `26 Oct 2026, ${now.toLocaleTimeString('en-US', {
+    const formattedDate = now.toLocaleString('en-GB', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
-    })}`;
+    });
 
     const tempId = `bill-${Date.now()}`;
     const newBill: Bill = {
@@ -943,6 +1095,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({
       id: tempId,
       billNumber,
       date: formattedDate,
+      createdAt: now.toISOString(),
       createdBy: currentUser.name,
       salespersonId: currentUser.id,
     };
@@ -1002,6 +1155,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({
 
     setBills((prev) => [newBill, ...prev]);
 
+    const validCustomerId =
+      newBill.customerId && !newBill.customerId.startsWith('cust-') && newBill.customerId !== 'cust-01'
+        ? newBill.customerId
+        : undefined;
+
     posApi
       .checkout({
         items: newBill.items.map((it) => ({
@@ -1011,19 +1169,37 @@ export const AppProvider: React.FC<AppProviderProps> = ({
           taxRate: it.taxRate,
           total: it.total,
         })),
-        customerId: newBill.customerId,
-        paymentMethod: newBill.paymentMethod,
+        customerId: validCustomerId,
+        customerName: newBill.customerName,
+        customerPhone: newBill.customerPhone,
+        newCustomer:
+          newBill.customerName && newBill.customerName.toLowerCase() !== 'walk-in customer'
+            ? {
+                name: newBill.customerName,
+                phone: newBill.customerPhone || '',
+              }
+            : undefined,
+        billingType: 'retail',
+        payments: [
+          {
+            method: newBill.paymentMethod || 'Cash',
+            amount: newBill.total,
+            payFull: newBill.paymentMethod !== 'Credit',
+          },
+        ],
         subtotal: newBill.subtotal,
         taxTotal: newBill.tax,
         discount: newBill.discount,
         grandTotal: newBill.total,
       })
-      .then((res) => {
-        if (res?.salesOrderId || res?.id) {
+      .then((res: any) => {
+        const orderId = res?.salesOrderId || res?.id || res?.invoice?.id || res?.invoice?._id;
+        if (orderId) {
           setBills((prev) =>
-            prev.map((b) => (b.id === tempId ? { ...b, id: res.salesOrderId || res.id } : b))
+            prev.map((b) => (b.id === tempId ? { ...b, id: orderId } : b))
           );
         }
+        refreshBackendData();
       })
       .catch((err) => console.warn('Failed to record checkout on backend:', err));
 
@@ -1074,6 +1250,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({
     setBills((prev) =>
       prev.map((b) => (b.id === billId ? { ...b, status: 'Cancelled' as const } : b))
     );
+
+    // Sync bill cancellation to backend
+    salesOrdersApi.cancel(billId, 'Cancelled via POS').catch((err) => {
+      console.warn('Failed to cancel sales order on backend:', err);
+    });
   };
 
   // Customers
@@ -1108,6 +1289,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({
     customersApi.update(id, c).catch((err) => console.warn('Failed to update customer on backend:', err));
   };
 
+  const deleteCustomer = (id: string) => {
+    setCustomers((prev) => prev.filter((c) => c.id !== id));
+    customersApi.delete(id).catch((err) => console.warn('Failed to delete customer on backend:', err));
+  };
+
   const recordCustomerPayment = (
     customerId: string,
     amount: number,
@@ -1121,12 +1307,27 @@ export const AppProvider: React.FC<AppProviderProps> = ({
     );
     const target = customers.find((c) => c.id === customerId);
 
+    // Sync to backend
+    customersApi
+      .update(customerId, {
+        outstanding: Math.max(0, (target?.outstanding || 0) - amount),
+      })
+      .catch((err) => console.warn('Failed to update customer balance on backend:', err));
+
+    paymentsApi
+      .create({
+        customerId,
+        amount,
+        paymentMethod: method,
+        notes: notes || 'Customer balance settlement',
+      })
+      .catch((err) => console.warn('Failed to record payment on backend:', err));
+
     const newNotif: AppNotification = {
       id: `notif-${Date.now()}`,
       title: 'Customer Payment',
-      message: `Received ₹ ${amount.toLocaleString('en-IN')} from ${
-        target?.name || 'Customer'
-      } via ${method}.`,
+      message: `Received ₹ ${amount.toLocaleString('en-IN')} from ${target?.name || 'Customer'
+        } via ${method}.`,
       type: 'payment',
       time: 'Just now',
       dateGroup: 'Today',
@@ -1144,17 +1345,54 @@ export const AppProvider: React.FC<AppProviderProps> = ({
       .join('')
       .toUpperCase()
       .slice(0, 2);
+    const tempId = `user-${Date.now()}`;
     const newUser: User = {
       ...userData,
-      id: `user-${Date.now()}`,
+      id: tempId,
       avatarInitials: initials,
       lastLogin: 'Never',
     };
     setUsers((prev) => [...prev, newUser]);
+
+    // Persist to database via API
+    usersApi
+      .invite({
+        name: userData.name,
+        email: userData.email,
+        role: userData.role === 'admin' ? 'ROLE-ADMIN' : 'ROLE-SALESPERSON',
+        password: userData.tempPassword || 'Pass@1234',
+        tempPassword: userData.tempPassword || 'Pass@1234',
+        status: 'active',
+      })
+      .then((res: any) => {
+        const saved = res?.data || res;
+        if (saved) {
+          setUsers((prev) =>
+            prev.map((u) =>
+              u.id === tempId
+                ? {
+                    ...u,
+                    id: String(saved.id || saved.userId || saved._id || saved.accountId || u.id),
+                    status: 'active',
+                  }
+                : u
+            )
+          );
+        }
+      })
+      .catch((err) => console.warn('Failed to add user to database:', err));
   };
 
   const updateUserStatus = (id: string, status: 'active' | 'suspended') => {
     setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, status } : u)));
+    usersApi
+      .update(id, { status: status === 'suspended' ? 'inactive' : 'active' })
+      .catch((err) => console.warn('Failed to update user status on backend:', err));
+  };
+
+  const deleteUser = (id: string) => {
+    setUsers((prev) => prev.filter((u) => u.id !== id));
+    usersApi.delete(id).catch((err) => console.warn('Failed to delete user on backend:', err));
   };
 
   // Notifications
@@ -1166,11 +1404,46 @@ export const AppProvider: React.FC<AppProviderProps> = ({
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, unread: false } : n)));
   };
 
+  // Helper to determine if a bill was created on today's date
+  const isBillFromToday = (b: Bill): boolean => {
+    const today = new Date();
+    const todayYear = today.getFullYear();
+    const todayMonth = today.getMonth();
+    const todayDate = today.getDate();
+
+    if (b.createdAt) {
+      const d = new Date(b.createdAt);
+      if (!isNaN(d.getTime())) {
+        return (
+          d.getFullYear() === todayYear &&
+          d.getMonth() === todayMonth &&
+          d.getDate() === todayDate
+        );
+      }
+    }
+
+    if (typeof b.date === 'string') {
+      const lower = b.date.toLowerCase();
+      if (lower.startsWith('today')) return true;
+
+      const d = new Date(b.date);
+      if (!isNaN(d.getTime())) {
+        return (
+          d.getFullYear() === todayYear &&
+          d.getMonth() === todayMonth &&
+          d.getDate() === todayDate
+        );
+      }
+    }
+
+    return false;
+  };
+
   // Computed metrics
   const totalStockValue = products.reduce((acc, p) => acc + p.purchasePrice * p.stock, 0);
   const todaySales = bills
-    .filter((b) => b.status !== 'Cancelled')
-    .reduce((acc, b) => acc + b.total, 0);
+    .filter((b) => b.status !== 'Cancelled' && isBillFromToday(b))
+    .reduce((acc, b) => acc + (Number(b.total) || 0), 0);
   const lowStockCount = products.filter((p) => p.stock <= p.reorderLevel).length;
   const openPOCount = purchaseOrders.filter(
     (p) => p.status === 'Ordered' || p.status === 'Partially received'
@@ -1194,6 +1467,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({
         users,
         addUser,
         updateUserStatus,
+        deleteUser,
         businessProfile,
         updateBusinessProfile,
         products,
@@ -1207,6 +1481,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({
         suppliers,
         addSupplier,
         updateSupplier,
+        deleteSupplier,
         purchaseOrders,
         createPurchaseOrder,
         updatePOStatus,
@@ -1219,6 +1494,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({
         customers,
         addCustomer,
         updateCustomer,
+        deleteCustomer,
         recordCustomerPayment,
         customersActiveTab,
         setCustomersActiveTab,
@@ -1232,10 +1508,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({
         selectedDateRange,
         setSelectedDateRange,
         metrics: {
-          totalStockValue: totalStockValue > 0 ? totalStockValue : 1248500,
-          todaySales: todaySales > 0 ? todaySales : 28400,
-          lowStockCount: lowStockCount > 0 ? lowStockCount : 12,
-          openPOCount: openPOCount > 0 ? openPOCount : 5,
+          totalStockValue,
+          todaySales,
+          lowStockCount,
+          openPOCount,
         },
       }}
     >

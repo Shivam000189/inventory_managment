@@ -47,7 +47,15 @@ function MainApp() {
 
   const handleAuthenticated = (userSession) => {
     updateSession(userSession);
-    navigate("/", { replace: true });
+    const isSalesperson =
+      userSession?.user?.role === 'team' ||
+      userSession?.user?.roleId === 'ROLE-SALESPERSON' ||
+      userSession?.account?.roleId === 'ROLE-SALESPERSON';
+    if (isSalesperson) {
+      navigate('/app/pos', { replace: true });
+    } else {
+      navigate('/', { replace: true });
+    }
   };
 
   const [initialReset] = useState(() => {

@@ -45,7 +45,7 @@ export const Navbar = ({
           <CubeLogo />
         </div>
         <span className="text-xl font-extrabold tracking-tight text-[#1a1715]">
-          Inventry
+          Inventory
         </span>
       </motion.a>
 

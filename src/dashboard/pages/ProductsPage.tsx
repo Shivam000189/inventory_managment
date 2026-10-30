@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { ProductIcon } from '../components/common/ProductIcon';
 import { Badge } from '../components/common/Badge';
+import { BulkImportModal } from '../components/modals/BulkImportModal';
 import { useApp } from '../context/AppContext';
 import { Product } from '../types';
 import { formatINR, downloadCSV } from '../lib/formatters';
@@ -36,6 +37,7 @@ export const ProductsPage: React.FC = () => {
 
   // Drawer & Modals
   const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [viewingProduct, setViewingProduct] = useState<Product | null>(null);
   const [adjustingProduct, setAdjustingProduct] = useState<Product | null>(null);
@@ -154,7 +156,7 @@ export const ProductsPage: React.FC = () => {
       p.taxRate,
       p.stock === 0 ? 'Out of stock' : p.stock <= p.reorderLevel ? 'Low stock' : 'In stock',
     ]);
-    downloadCSV('inventry-products', headers, rows);
+    downloadCSV('Inventory-products', headers, rows);
   };
 
   const toggleSelectAll = () => {
@@ -203,11 +205,11 @@ export const ProductsPage: React.FC = () => {
 
           <button
             type="button"
-            onClick={() => alert('CSV template: SKU, Name, Category, Stock, Unit, PurchasePrice, SellingPrice')}
+            onClick={() => setIsImportModalOpen(true)}
             className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-[#EEE6DA] bg-white text-xs font-semibold text-[#1C1B18] hover:bg-[#FAF6EF] transition-colors cursor-pointer shadow-2xs"
           >
             <Upload size={15} />
-            <span>Import CSV</span>
+            <span>Bulk Import</span>
           </button>
 
           <button
@@ -257,11 +259,10 @@ export const ProductsPage: React.FC = () => {
               key={status}
               type="button"
               onClick={() => setStatusFilter(status)}
-              className={`px-3 py-1 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
-                statusFilter === status
+              className={`px-3 py-1 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${statusFilter === status
                   ? 'bg-white text-[#1C1B18] shadow-2xs'
                   : 'text-[#6B665E] hover:text-[#1C1B18]'
-              }`}
+                }`}
             >
               {status}
             </button>
@@ -285,9 +286,8 @@ export const ProductsPage: React.FC = () => {
             <button
               type="button"
               onClick={() => setViewMode('table')}
-              className={`p-1.5 rounded-lg cursor-pointer ${
-                viewMode === 'table' ? 'bg-white text-[#1C1B18] shadow-2xs' : 'text-[#6B665E]'
-              }`}
+              className={`p-1.5 rounded-lg cursor-pointer ${viewMode === 'table' ? 'bg-white text-[#1C1B18] shadow-2xs' : 'text-[#6B665E]'
+                }`}
               title="Table view"
             >
               <List size={16} />
@@ -295,9 +295,8 @@ export const ProductsPage: React.FC = () => {
             <button
               type="button"
               onClick={() => setViewMode('grid')}
-              className={`p-1.5 rounded-lg cursor-pointer ${
-                viewMode === 'grid' ? 'bg-white text-[#1C1B18] shadow-2xs' : 'text-[#6B665E]'
-              }`}
+              className={`p-1.5 rounded-lg cursor-pointer ${viewMode === 'grid' ? 'bg-white text-[#1C1B18] shadow-2xs' : 'text-[#6B665E]'
+                }`}
               title="Grid view"
             >
               <LayoutGrid size={16} />
@@ -400,7 +399,7 @@ export const ProductsPage: React.FC = () => {
                         <input
                           type="checkbox"
                           checked={selectedProductIds.includes(p.id)}
-                          onChange={() => {}}
+                          onChange={() => { }}
                           className="rounded border-[#DDD3C4] text-[#7FAE82] cursor-pointer"
                         />
                       </td>
@@ -444,13 +443,12 @@ export const ProductsPage: React.FC = () => {
                         </div>
                         <div className="w-full bg-[#EEE6DA] h-1.5 rounded-full overflow-hidden">
                           <div
-                            className={`h-full rounded-full transition-all duration-300 ${
-                              isOut
+                            className={`h-full rounded-full transition-all duration-300 ${isOut
                                 ? 'bg-[#D64545]'
                                 : isLow
-                                ? 'bg-[#E8772E]'
-                                : 'bg-[#7FAE82]'
-                            }`}
+                                  ? 'bg-[#E8772E]'
+                                  : 'bg-[#7FAE82]'
+                              }`}
                             style={{ width: `${Math.max(5, stockPercent)}%` }}
                           />
                         </div>
@@ -816,11 +814,10 @@ export const ProductsPage: React.FC = () => {
                 <div className="text-[11px] mt-1 text-[#6B665E]">
                   Variance:{' '}
                   <span
-                    className={`font-semibold ${
-                      adjustStockValue - adjustingProduct.stock >= 0
+                    className={`font-semibold ${adjustStockValue - adjustingProduct.stock >= 0
                         ? 'text-[#2E8B57]'
                         : 'text-[#D64545]'
-                    }`}
+                      }`}
                   >
                     {adjustStockValue - adjustingProduct.stock >= 0 ? '+' : ''}
                     {adjustStockValue - adjustingProduct.stock} {adjustingProduct.unit}
@@ -966,6 +963,11 @@ export const ProductsPage: React.FC = () => {
           </div>
         </div>
       )}
+      {/* Bulk Import Modal (CSV & PDF) */}
+      <BulkImportModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+      />
     </div>
   );
 };

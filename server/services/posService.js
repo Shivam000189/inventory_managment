@@ -18,14 +18,41 @@ export async function listCustomers(businessId, query = {}) {
 async function resolveCustomer(businessId, payload, session) {
   if (payload.customerId) {
     const customer = await Customer.findOne(scoped(businessId, { _id: toObjectId(payload.customerId, 'customer id'), status: 'active' })).session(session)
-    if (!customer) throw ApiError.badRequest('Selected customer was not found.')
+    if (customer) return customer
+  }
+
+  const phone = String(payload.newCustomer?.phone || payload.customerPhone || '').trim()
+  const name = String(payload.newCustomer?.name || payload.customerName || '').trim()
+
+  if (phone && phone !== '—') {
+    const existing = await Customer.findOne(scoped(businessId, { phone })).session(session)
+    if (existing) {
+      if (name && name.toLowerCase() !== 'walk-in customer' && existing.name !== name) {
+        existing.name = name
+        await existing.save({ session })
+      }
+      return existing
+    }
+  }
+
+  if (name && name.toLowerCase() !== 'walk-in customer') {
+    const email = String(payload.newCustomer?.email || '').trim().toLowerCase()
+    assert(!email || isEmail(email), 'Enter a valid customer email.')
+    const [customer] = await Customer.create([
+      {
+        business: toObjectId(businessId, 'business'),
+        name,
+        phone,
+        email: email || '',
+        state: String(payload.newCustomer?.state || '').trim(),
+        gstin: String(payload.newCustomer?.gstin || '').trim().toUpperCase(),
+        customerType: payload.billingType === 'wholesale' ? 'wholesale' : 'retail',
+        status: 'active',
+      },
+    ], { session })
     return customer
   }
-  if (payload.newCustomer?.name) {
-    assert(!payload.newCustomer.email || isEmail(payload.newCustomer.email), 'Enter a valid customer email.')
-    const [customer] = await Customer.create([{ business: toObjectId(businessId, 'business'), name: payload.newCustomer.name.trim(), phone: (payload.newCustomer.phone || '').trim(), email: (payload.newCustomer.email || '').trim().toLowerCase(), state: (payload.newCustomer.state || '').trim(), gstin: (payload.newCustomer.gstin || '').trim().toUpperCase(), customerType: payload.billingType === 'wholesale' ? 'wholesale' : 'retail', status: 'active' }], { session })
-    return customer
-  }
+
   return null
 }
 
@@ -62,7 +89,8 @@ export async function checkout(businessId, payload, actor, permissions = []) {
       assert(round2(requestedPrice) === round2(standardPrice) || mayOverride, `Price override is not allowed for ${product.name}.`)
       const gross = round2(requestedPrice * quantity)
       const discount = Math.min(gross, round2(toNumber(raw.discount || 0, 'Line discount', { min: 0 })))
-      const gstRate = business.settings?.taxEnabled === false ? 0 : (product.gstRate || business.settings?.defaultGstRate || 0)
+      const rawGst = raw.taxRate !== undefined && raw.taxRate !== '' ? raw.taxRate : product.gstRate
+      const gstRate = business.settings?.taxEnabled === false ? 0 : (rawGst !== undefined && rawGst !== null && rawGst !== '' ? Number(rawGst) : (business.settings?.defaultGstRate || 0))
       return { productId: product._id, productName: product.name, variantId: variant?._id || null, variantSku: variant?.sku || '', variantSize: variant?.size || product.size || '', variantColor: variant?.color || product.color || '', barcode: variant?.barcode || product.barcode || '', quantity, sellingPrice: requestedPrice, discount, gstRate, hsnCode: product.hsnCode || '', gross, taxableAmount: round2(gross - discount) }
     })
 
@@ -73,7 +101,8 @@ export async function checkout(businessId, payload, actor, permissions = []) {
     const requestedGlobal = global.type === 'percent' ? afterLines * Math.min(100, Math.max(0, Number(global.value) || 0)) / 100 : Math.max(0, Number(global.value) || 0)
     let discount = round2(Math.min(afterLines, requestedGlobal))
     const now = new Date()
-    const activePromotions = await Promotion.find(scoped(businessId, { active: true, $and: [{ $or: [{ startDate: null }, { startDate: { $lte: now } }] }, { $or: [{ endDate: null }, { endDate: { $gte: now } }] }] })).session(session)
+    const allPromotions = await Promotion.find(scoped(businessId, { active: true })).session(session)
+    const activePromotions = allPromotions.filter((p) => (!p.startDate || new Date(p.startDate) <= now) && (!p.endDate || new Date(p.endDate) >= now))
     const applicablePromotions = activePromotions.filter((promotion) => items.some((item) => (!promotion.productIds.length || promotion.productIds.some((id) => String(id) === String(item.productId))) && (!promotion.categoryNames.length || promotion.categoryNames.includes(byId.get(String(item.productId)).category)) && (!promotion.variantIds.length || promotion.variantIds.some((id) => String(id) === String(item.variantId))) && item.quantity >= promotion.minimumQuantity))
     const promotionValues = applicablePromotions.map((promotion) => {
       const eligible = items.filter((item) => (!promotion.productIds.length || promotion.productIds.some((id) => String(id) === String(item.productId))) && (!promotion.categoryNames.length || promotion.categoryNames.includes(byId.get(String(item.productId)).category)) && (!promotion.variantIds.length || promotion.variantIds.some((id) => String(id) === String(item.variantId))) && item.quantity >= promotion.minimumQuantity)
@@ -130,8 +159,25 @@ export async function checkout(businessId, payload, actor, permissions = []) {
     const totalAmount = Math.round(unrounded)
     const roundOff = round2(totalAmount - unrounded)
 
-    const payments = paymentPayload.map((payment) => ({ method: payment.method, amount: round2(Math.max(0, Number(payment.amount) || 0)), reference: String(payment.reference || '').trim() }))
-    const amountPaid = round2(payments.filter((payment) => !['Credit', 'Pay Later'].includes(payment.method)).reduce((sum, payment) => sum + payment.amount, 0))
+    const payments = paymentPayload.map((payment) => ({
+      method: payment.method,
+      amount: round2(Math.max(0, Number(payment.amount) || 0)),
+      reference: String(payment.reference || '').trim(),
+      payFull: Boolean(payment.payFull),
+    }))
+
+    // If a single non-credit payment was made, ensure it pays the full bill if walk-in or intended full payment
+    if (payments.length === 1 && !['Credit', 'Pay Later'].includes(payments[0].method)) {
+      if (payments[0].payFull || !customer || payments[0].amount === 0 || Math.abs(payments[0].amount - totalAmount) <= Math.max(50, totalAmount * 0.35)) {
+        payments[0].amount = totalAmount;
+      }
+    }
+
+    let amountPaid = round2(payments.filter((payment) => !['Credit', 'Pay Later'].includes(payment.method)).reduce((sum, payment) => sum + payment.amount, 0))
+    if (amountPaid > totalAmount && amountPaid - totalAmount <= 5) {
+      if (payments.length > 0) payments[0].amount = round2(payments[0].amount - (amountPaid - totalAmount));
+      amountPaid = totalAmount;
+    }
     assert(amountPaid <= totalAmount + 0.001, 'Payment amount cannot exceed the bill total.')
     const balanceDue = round2(totalAmount - amountPaid)
     assert(balanceDue <= 0 || customer, 'Select a customer before creating credit or a partial payment.')
@@ -139,7 +185,11 @@ export async function checkout(businessId, payload, actor, permissions = []) {
     const number = invoiceNumber(business)
     const [order] = await SalesOrder.create([{
       business: business._id, orderNumber: number, invoiceNumber: number, channel: 'POS', billingType,
-      customerId: customer?._id || null, customerName: customer?.name || 'Walk-in Customer', customerSnapshot: customer ? { name: customer.name, phone: customer.phone, email: customer.email, address: customer.address, city: customer.city, state: customer.state, gstin: customer.gstin, customerType: customer.customerType } : { name: 'Walk-in Customer' },
+      customerId: customer?._id || null,
+      customerName: customer?.name || payload.customerName || payload.newCustomer?.name || 'Walk-in Customer',
+      customerSnapshot: customer
+        ? { name: customer.name, phone: customer.phone, email: customer.email, address: customer.address, city: customer.city, state: customer.state, gstin: customer.gstin, customerType: customer.customerType }
+        : { name: payload.customerName || payload.newCustomer?.name || 'Walk-in Customer', phone: payload.customerPhone || payload.newCustomer?.phone || '' },
       items, subtotal, discount: round2(lineDiscount + discount), offerDiscount, promotionId: appliedPromotion?.promotion._id || null, promotionName: appliedPromotion?.promotion.name || '', couponCode: coupon?.code || '', tax, cgst, sgst, igst, roundOff, totalAmount,
       status: 'Completed', paymentStatus, notes: String(payload.notes || '').trim(), createdBy: actor.name, cashierId: actor.id,
       cashierName: actor.name, amountPaid, balanceDue, paymentSummary: payments,

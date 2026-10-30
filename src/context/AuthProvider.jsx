@@ -1,11 +1,11 @@
 import { useEffect, useState, useCallback } from "react";
 import { authApi } from "../api/authApi.js";
-import { getCsrfToken } from "../api/client.js";
+import { getCsrfToken, getAuthToken } from "../api/client.js";
 import { AuthContext } from "./AuthContext.js";
 
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
-  const [loading, setLoading] = useState(Boolean(getCsrfToken()));
+  const [loading, setLoading] = useState(Boolean(getCsrfToken() || getAuthToken()));
 
   const loadSession = useCallback(async (isMounted = () => true) => {
     try {
@@ -29,10 +29,8 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     let active = true;
 
-    // Only probe /api/auth/me if a CSRF cookie exists, indicating an active session.
-    // Unauthenticated visitors browsing the landing or login pages will skip this,
-    // avoiding an unnecessary 401 Unauthorized error in the console.
-    if (!getCsrfToken()) {
+    // Only probe /api/auth/me if a CSRF cookie or auth token exists, indicating an active session.
+    if (!getCsrfToken() && !getAuthToken()) {
       setLoading(false);
       return;
     }
@@ -56,7 +54,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   const login = async (identifier, password) => {
-    const result = await authApi.login({ identifier, password });
+    const result = await authApi.login({ email: identifier, identifier, password });
     setSession({ user: result.user, business: result.business });
     return result;
   };
