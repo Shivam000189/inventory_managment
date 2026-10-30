@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { resolveBusinessCapabilities } from '../../../shared/industryConfig.js'
+import { resolveBusinessCapabilities } from '../../shared/industryConfig.js'
 import {
   PageHeader,
   Button,

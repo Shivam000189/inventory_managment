@@ -12,7 +12,7 @@ dist
 dist-ssr
 *.local
 .codex-runtime/
-/artifacts/
+/docs/artifacts/
 
 # Environment
 .env

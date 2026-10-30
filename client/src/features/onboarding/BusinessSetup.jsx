@@ -4,7 +4,7 @@ import { businessApi } from '../../api/businessApi.js'
 import { productApi } from '../../api/productApi.js'
 import { supplierApi } from '../../api/supplierApi.js'
 import { userApi } from '../../api/userApi.js'
-import { resolveBusinessCapabilities } from '../../../shared/industryConfig.js'
+import { resolveBusinessCapabilities } from '../../shared/industryConfig.js'
 import './BusinessSetup.css'
 
 const industries = ['Clothing', 'Grocery', 'Pharmacy', 'Electronics', 'Hardware', 'Restaurant', 'Automobile', 'Manufacturing', 'Wholesale', 'Retail', 'Other']

@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react'
 import { productApi } from '../../../api/productApi.js'
 import { useResource } from '../../../hooks/useResource.js'
-import { resolveBusinessCapabilities } from '../../../../shared/industryConfig.js'
+import { resolveBusinessCapabilities } from '../../../shared/industryConfig.js'
 import AsyncBoundary from '../../../components/feedback/AsyncBoundary.jsx'
 import { PageHeader } from '../../../components/ui/PageHeader.jsx'
 import { Button } from '../../../components/ui/Button.jsx'

@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite --host",
+    "dev": "vite client --host",
     "server": "node server/server.js",
     "server:dev": "nodemon server/server.js",
     "dev:all": "concurrently -k -n api,web -c blue,green \"npm:server:dev\" \"npm:dev\"",
@@ -18,10 +18,10 @@
     "db:migrate:supabase": "node server/scripts/migrate-mongo-to-supabase.js",
     "seed:supabase": "node server/scripts/seed-supabase.js",
     "seed:demo-all": "node server/scripts/seed-demo-all.js",
-    "build": "vite build",
-    "lint": "oxlint",
-    "ui:check": "node scripts/ui-check.mjs",
-    "preview": "vite preview --host"
+    "build": "vite build client",
+    "lint": "oxlint client",
+    "ui:check": "node client/scripts/ui-check.mjs",
+    "preview": "vite preview client --host"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",

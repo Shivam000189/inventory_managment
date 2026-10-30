@@ -6,7 +6,7 @@ import { signToken } from '../utils/token.js'
 import { env, isProduction } from '../config/env.js'
 import { assert, requireFields, isEmail } from '../validators/assert.js'
 import { assertStrongPassword } from '../validators/password.js'
-import { resolveBusinessCapabilities } from '../../shared/industryConfig.js'
+import { resolveBusinessCapabilities } from '../shared/industryConfig.js'
 
 const RESET_TOKEN_TTL_MS = 30 * 60 * 1000
 const hashToken = (token) => crypto.createHash('sha256').update(token).digest('hex')

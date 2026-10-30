@@ -4,7 +4,7 @@ import { ApiError } from '../utils/ApiError.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
 import { signToken, verifyToken, tokenTimeToLiveMs } from '../utils/token.js'
 import { refreshSessionCookie } from '../utils/cookies.js'
-import { hasModule, resolveBusinessCapabilities } from '../../shared/industryConfig.js'
+import { hasModule, resolveBusinessCapabilities } from '../shared/industryConfig.js'
 
 export { signToken }
 

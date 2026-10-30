@@ -1,7 +1,7 @@
 import { Product, Business, StockTransaction } from '../models/index.js'
 import { createCrudService } from './crudService.js'
 import { requireFields, toNumber, assert, toObjectId } from '../validators/assert.js'
-import { resolveBusinessCapabilities } from '../../shared/industryConfig.js'
+import { resolveBusinessCapabilities } from '../shared/industryConfig.js'
 
 const base = createCrudService(Product, {
   searchFields: ['name', 'sku', 'category', 'brand'],

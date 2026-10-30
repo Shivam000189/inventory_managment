@@ -4,7 +4,7 @@ import { signToken } from '../utils/token.js'
 import { getSupabaseAdmin } from '../config/supabase.js'
 import { objectIdToUuid } from '../utils/mongoSupabaseMapper.js'
 import { requireFields, assert, isEmail } from '../validators/assert.js'
-import { normalizeConfigValue, resolveBusinessCapabilities } from '../../shared/industryConfig.js'
+import { normalizeConfigValue, resolveBusinessCapabilities } from '../shared/industryConfig.js'
 
 function presentBusiness(business) {
   const data = business.toJSON()

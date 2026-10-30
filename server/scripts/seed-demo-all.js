@@ -17,7 +17,7 @@ import crypto from 'node:crypto'
 import bcrypt from 'bcryptjs'
 import { getSupabaseAdmin, isSupabaseConfigured } from '../config/supabase.js'
 import { env } from '../config/env.js'
-import { industryConfig, businessTypeConfig } from '../../shared/industryConfig.js'
+import { industryConfig, businessTypeConfig } from '../shared/industryConfig.js'
 
 const DEMO_PASSWORD_PLAIN = 'Demo@12345'
 const BCRYPT_ROUNDS = 10
