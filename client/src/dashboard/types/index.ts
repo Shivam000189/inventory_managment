@@ -14,20 +14,33 @@ export interface User {
 export interface BusinessProfile {
   id: string;
   name: string;
+  legalName?: string;
   businessType: string;
   phone: string;
   email: string;
   address: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
   currency: string;
-  taxNumber: string; // GSTIN
+  currencySymbol?: string;
+  financialYearStart?: string;
+  taxNumber?: string; // GSTIN
+  gstin?: string;
+  pan?: string;
   invoicePrefix: string;
   startingInvoiceNumber: number;
+  defaultPaymentTerms?: string;
   defaultTaxRate: number; // e.g. 18
-  isTaxInclusive: boolean;
+  defaultGstRate?: number;
+  taxEnabled?: boolean;
+  isTaxInclusive?: boolean;
   allowNegativeStock: boolean;
-  receiptFooterText: string;
-  receiptPaperSize: '58mm' | '80mm' | 'A4';
-  upiId: string;
+  enableBatchTracking?: boolean;
+  enableSerialTracking?: boolean;
+  receiptFooterText?: string;
+  receiptPaperSize?: '58mm' | '80mm' | 'A4';
+  upiId?: string;
   lowStockThreshold: number;
 }
 
@@ -79,6 +92,7 @@ export interface Supplier {
   lastOrderDate: string;
   status: 'active' | 'inactive';
   notes?: string;
+  category?: string;
 }
 
 export interface POItem {

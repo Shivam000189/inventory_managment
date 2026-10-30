@@ -206,7 +206,7 @@ export const salesOrdersApi = {
   create: (order: any) => request<any>('/sales-orders', { method: 'POST', body: JSON.stringify(order) }),
   get: (id: string) => request<any>(`/sales-orders/${id}`),
   update: (id: string, order: any) => request<any>(`/sales-orders/${id}`, { method: 'PUT', body: JSON.stringify(order) }),
-  cancel: (id: string) => request<any>(`/sales-orders/${id}/cancel`, { method: 'PATCH' }),
+  cancel: (id: string, reason?: string) => request<any>(`/sales-orders/${id}/cancel`, { method: 'PATCH' }),
   complete: (id: string) => request<any>(`/sales-orders/${id}/complete`, { method: 'PATCH' }),
 };
 

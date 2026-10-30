@@ -12,6 +12,8 @@ import {
   StockMovement,
   MovementType,
   POStatus,
+  BillStatus,
+  PaymentMethod,
 } from '../types';
 import {
   authApi,
