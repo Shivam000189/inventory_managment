@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
   AlertTriangle,
@@ -9,6 +9,7 @@ import {
   Boxes,
   ChevronDown,
   ChevronRight,
+  Cpu,
   FileText,
   Mouse,
   Package,
@@ -18,6 +19,9 @@ import {
   ShoppingCart,
   Users
 } from 'lucide-react';
+import { useAuth } from '../../../../hooks/useAuth.js';
+import { salesOrderApi } from '../../../../api/salesOrderApi.js';
+import { productApi } from '../../../../api/productApi.js';
 
 // Cube logo icon
 const CubeLogo = () => (
@@ -143,21 +147,178 @@ const RECENT_TRANSACTIONS = [
   }
 ];
 
-const TOP_SELLING = [
-  { id: '1', name: "Men's T-Shirt", sold: '124 sold', icon: Shirt },
-  { id: '2', name: 'Running Shoes', sold: '96 sold', isShoe: true },
-  { id: '3', name: 'Paracetamol 500mg', sold: '76 sold', icon: Pill },
-  { id: '4', name: 'Wireless Mouse', sold: '61 sold', icon: Mouse }
+const DEFAULT_TOP_SELLING = [
+  { id: '1', name: 'Classic Oxford Button-Down Shirt', sold: '118 sold', icon: Shirt },
+  { id: '2', name: 'Heavyweight Cotton Graphic Tee', sold: '142 sold', icon: Shirt },
+  { id: '3', name: 'Slim Fit Denim Jeans', sold: '84 sold', icon: Package },
+  { id: '4', name: 'Stretch Chino Trousers', sold: '62 sold', icon: Package }
 ];
+
+const getProductIconComponent = (name = '') => {
+  const lower = name.toLowerCase();
+  if (lower.includes('shoe') || lower.includes('sneaker') || lower.includes('footwear')) {
+    return { isShoe: true };
+  }
+  if (
+    lower.includes('shirt') ||
+    lower.includes('tee') ||
+    lower.includes('kurta') ||
+    lower.includes('jacket') ||
+    lower.includes('hoodie') ||
+    lower.includes('jean') ||
+    lower.includes('trouser') ||
+    lower.includes('polo')
+  ) {
+    return { icon: Shirt };
+  }
+  if (
+    lower.includes('paracetamol') ||
+    lower.includes('tablet') ||
+    lower.includes('syrup') ||
+    lower.includes('capsule') ||
+    lower.includes('med')
+  ) {
+    return { icon: Pill };
+  }
+  if (
+    lower.includes('mouse') ||
+    lower.includes('keyboard') ||
+    lower.includes('headset') ||
+    lower.includes('router') ||
+    lower.includes('scanner')
+  ) {
+    return { icon: Cpu };
+  }
+  return { icon: Package };
+};
 
 export const DashboardMockup = ({
   searchQuery = '',
   onSearchChange,
-  onQuickAction
+  onQuickAction,
+  topSelling: propTopSelling
 }) => {
+  const { session, account } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [activeMonthIdx, setActiveMonthIdx] = useState(6); // Default July (index 6)
   const [localSearch, setLocalSearch] = useState(searchQuery);
+
+  const [userTopSelling, setUserTopSelling] = useState([]);
+  const [userRecentTransactions, setUserRecentTransactions] = useState([]);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadUserData() {
+      if (session?.user) {
+        try {
+          const [salesRes, prodRes] = await Promise.allSettled([
+            salesOrderApi.list({ limit: 50 }),
+            productApi.list({ limit: 50 })
+          ]);
+
+          const salesOrders =
+            salesRes.status === 'fulfilled' && Array.isArray(salesRes.value?.data || salesRes.value)
+              ? (salesRes.value?.data || salesRes.value)
+              : [];
+          const products =
+            prodRes.status === 'fulfilled' && Array.isArray(prodRes.value?.data || prodRes.value)
+              ? (prodRes.value?.data || prodRes.value)
+              : [];
+
+          // Aggregate sales count per product from user's actual orders
+          const productSalesMap = new Map();
+          salesOrders.forEach((order) => {
+            if (order.status !== 'Cancelled') {
+              (order.items || []).forEach((item) => {
+                const name = item.productName || item.name;
+                const qty = Number(item.quantity) || 0;
+                if (name) {
+                  productSalesMap.set(name, (productSalesMap.get(name) || 0) + qty);
+                }
+              });
+            }
+          });
+
+          let calculatedTop = [];
+          if (productSalesMap.size > 0) {
+            calculatedTop = Array.from(productSalesMap.entries())
+              .map(([name, soldQty], idx) => {
+                const iconInfo = getProductIconComponent(name);
+                return {
+                  id: `user-top-${idx}`,
+                  name,
+                  sold: `${soldQty} sold`,
+                  count: soldQty,
+                  ...iconInfo
+                };
+              })
+              .sort((a, b) => b.count - a.count)
+              .slice(0, 4);
+          }
+
+          // If fewer than 4 sales, backfill with user's actual product catalog
+          if (calculatedTop.length < 4 && products.length > 0) {
+            const seen = new Set(calculatedTop.map((item) => item.name));
+            for (const prod of products) {
+              if (calculatedTop.length >= 4) break;
+              if (!seen.has(prod.name)) {
+                const iconInfo = getProductIconComponent(prod.name);
+                calculatedTop.push({
+                  id: prod.id || prod.productId || `prod-${calculatedTop.length}`,
+                  name: prod.name,
+                  sold: `${prod.currentStock || 0} in stock`,
+                  ...iconInfo
+                });
+                seen.add(prod.name);
+              }
+            }
+          }
+
+          if (active && calculatedTop.length > 0) {
+            setUserTopSelling(calculatedTop);
+          }
+
+          // Live transactions from actual orders
+          if (salesOrders.length > 0) {
+            const recent = salesOrders.slice(0, 4).map((order) => ({
+              date: new Date(order.createdAt).toLocaleDateString('en-IN', {
+                day: 'numeric',
+                month: 'short',
+                hour: '2-digit',
+                minute: '2-digit'
+              }),
+              type: order.channel === 'POS' ? 'Sale (POS)' : 'Sale',
+              item: order.items?.[0]?.productName || 'Order Items',
+              qty: order.items?.reduce((s, it) => s + (Number(it.quantity) || 0), 0) || 1,
+              amount: `₹ ${Number(order.totalAmount || 0).toLocaleString('en-IN')}`
+            }));
+            if (active && recent.length > 0) {
+              setUserRecentTransactions(recent);
+            }
+          }
+        } catch (err) {
+          console.warn('Could not load user data for mockup:', err);
+        }
+      }
+    }
+
+    loadUserData();
+    return () => {
+      active = false;
+    };
+  }, [session]);
+
+  const displayTopSelling = useMemo(() => {
+    if (propTopSelling && propTopSelling.length > 0) return propTopSelling;
+    if (userTopSelling.length > 0) return userTopSelling;
+    return DEFAULT_TOP_SELLING;
+  }, [propTopSelling, userTopSelling]);
+
+  const displayTransactions = useMemo(() => {
+    if (userRecentTransactions.length > 0) return userRecentTransactions;
+    return RECENT_TRANSACTIONS;
+  }, [userRecentTransactions]);
 
   const handleNavClick = (navId, label) => {
     setActiveTab(navId);
@@ -330,14 +491,16 @@ export const DashboardMockup = ({
                   className="flex items-center gap-2 pl-2 border-l border-[#ede7df] cursor-pointer hover:opacity-90 transition-opacity"
                 >
                   <div className="w-6 h-6 rounded-full bg-[#302922] text-[#f7f2ea] font-bold text-[10px] flex items-center justify-center shrink-0 shadow-2xs">
-                    SS
+                    {account?.name
+                      ? account.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
+                      : 'SS'}
                   </div>
                   <div className="hidden sm:block text-left">
                     <span className="text-[11px] font-bold text-[#1a1715] leading-tight block">
-                      Shivam
+                      {account?.name || 'Shivam'}
                     </span>
                     <span className="text-[9px] text-[#78726b] font-medium leading-tight block">
-                      Owner
+                      {account?.role ? (account.role.charAt(0).toUpperCase() + account.role.slice(1)) : 'Owner'}
                     </span>
                   </div>
                   <ChevronDown className="w-3 h-3 text-[#78726b] hidden sm:block shrink-0" />
@@ -621,9 +784,9 @@ export const DashboardMockup = ({
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-[#f7f2ea]">
-                        {RECENT_TRANSACTIONS.map((tx) => (
+                        {displayTransactions.map((tx, idx) => (
                           <tr
-                            key={`${tx.date}-${tx.item}`}
+                            key={`${tx.date}-${tx.item}-${idx}`}
                             className="hover:bg-[#faf8f5]/60 transition-colors"
                           >
                             <td className="py-1.5 text-[#78726b] whitespace-nowrap">
@@ -632,7 +795,7 @@ export const DashboardMockup = ({
                             <td className="py-1.5 font-medium text-[#2d2824] whitespace-nowrap">
                               {tx.type}
                             </td>
-                            <td className="py-1.5 font-semibold text-[#1a1715] whitespace-nowrap">
+                            <td className="py-1.5 font-semibold text-[#1a1715] whitespace-nowrap max-w-[140px] truncate">
                               {tx.item}
                             </td>
                             <td className="py-1.5 font-medium text-[#2d2824] text-center whitespace-nowrap">
@@ -664,16 +827,16 @@ export const DashboardMockup = ({
                     </button>
                   </div>
 
-                  {/* 4 Products List */}
+                  {/* Top Selling Products List */}
                   <div className="space-y-2">
-                    {TOP_SELLING.map((prod) => {
-                      const Icon = prod.icon;
+                    {displayTopSelling.map((prod) => {
+                      const Icon = prod.icon || Package;
                       return (
                         <div
-                          key={prod.id}
+                          key={prod.id || prod.name}
                           className="flex items-center justify-between p-1 rounded-lg hover:bg-[#faf8f5] transition-colors"
                         >
-                          <div className="flex items-center gap-2.5">
+                          <div className="flex items-center gap-2.5 min-w-0">
                             <div className="w-7 h-7 rounded-lg bg-[#f5ede4] flex items-center justify-center shrink-0 border border-[#eee7dd]">
                               {prod.isShoe ? (
                                 <ShoeThumbnail />
@@ -681,11 +844,11 @@ export const DashboardMockup = ({
                                 <Icon className="w-3.5 h-3.5 text-[#1a1715]" />
                               )}
                             </div>
-                            <span className="text-[11px] font-bold text-[#1a1715]">
+                            <span className="text-[11px] font-bold text-[#1a1715] truncate">
                               {prod.name}
                             </span>
                           </div>
-                          <span className="text-[11px] font-semibold text-[#78726b]">
+                          <span className="text-[11px] font-semibold text-[#78726b] shrink-0 ml-2">
                             {prod.sold}
                           </span>
                         </div>
