@@ -21,7 +21,8 @@
     "build": "vite build client",
     "lint": "oxlint client",
     "ui:check": "node client/scripts/ui-check.mjs",
-    "preview": "vite preview client --host"
+    "preview": "vite preview client --host",
+    "typecheck": "tsc --noEmit -p client"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",
@@ -48,11 +49,15 @@
     "tailwindcss": "^4.3.3"
   },
   "devDependencies": {
+    "@types/node": "^26.6.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.0",
     "concurrently": "^10.0.5",
     "nodemon": "^3.1.14",
     "oxlint": "^1.79.0",
     "playwright": "^1.64.1",
+    "typescript": "^7.0.2",
     "vite": "^8.2.2"
   },
   "overrides": {
