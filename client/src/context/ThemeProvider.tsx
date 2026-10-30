@@ -1,8 +1,12 @@
-import { useEffect, useState } from "react";
-import { ThemeContext } from "./ThemeContext.js";
+import React, { useEffect, useState, type ReactNode } from "react";
+import { ThemeContext, type ThemeMode } from "./ThemeContext";
 
-export function ThemeProvider({ children }) {
-  const [theme, setTheme] = useState(() => {
+export interface ThemeProviderProps {
+  children: ReactNode;
+}
+
+export function ThemeProvider({ children }: ThemeProviderProps) {
+  const [theme, setTheme] = useState<ThemeMode | string>(() => {
     return (
       document.documentElement.dataset.theme ||
       localStorage.getItem("stockroom-theme") ||

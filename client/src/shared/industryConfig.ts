@@ -8,7 +8,15 @@ const coreModules = [
   'customers', 'payments', 'reports', 'team', 'settings',
 ]
 
-export const industryConfig = {
+export interface IndustrySetting {
+  modules: string[];
+  features: string[];
+  dashboardWidgets: string[];
+  productFields: string[];
+  productLabel?: string;
+}
+
+export const industryConfig: Record<string, IndustrySetting> = {
   other: {
     modules: [...coreModules],
     features: ['lowStock'],
@@ -78,7 +86,13 @@ export const industryConfig = {
   },
 }
 
-export const businessTypeConfig = {
+export interface BusinessTypeSetting {
+  modules: string[];
+  features: string[];
+  productFields?: string[];
+}
+
+export const businessTypeConfig: Record<string, BusinessTypeSetting> = {
   retail: { modules: ['pos'], features: ['retailPricing'] },
   wholesale: { modules: ['bulkOrders', 'bulkPricing', 'creditSales', 'payments'], features: ['wholesalePricing', 'creditSales'], productFields: ['wholesalePrice', 'wholesaleMinQuantity', 'dealerPrice'] },
   retailwholesale: { modules: ['pos', 'bulkOrders', 'bulkPricing', 'creditSales', 'payments'], features: ['retailPricing', 'wholesalePricing', 'creditSales'], productFields: ['wholesalePrice', 'wholesaleMinQuantity', 'dealerPrice'] },
@@ -87,7 +101,15 @@ export const businessTypeConfig = {
   other: { modules: [], features: [] },
 }
 
-const moduleDefinitions = {
+export interface ModuleDefinition {
+  section: string;
+  page?: string;
+  pages?: string[];
+  label?: string;
+  permission: string;
+}
+
+const moduleDefinitions: Record<string, ModuleDefinition> = {
   products: { section: 'Inventory', page: 'Products', label: 'Products', permission: 'view_inventory' },
   categories: { section: 'Inventory', page: 'Categories', label: 'Categories', permission: 'view_inventory' },
   inventory: { section: 'Inventory', pages: ['Stock', 'Stock In', 'Stock Out', 'Adjustments', 'Stock History'], permission: 'view_inventory' },
@@ -127,28 +149,49 @@ const moduleDefinitions = {
   productionTracking: { section: 'Manufacturing', page: 'Production Tracking', permission: 'view_inventory' },
 }
 
-const pagePermissions = {
+const pagePermissions: Record<string, string> = {
   'Stock In': 'stock_in', 'Stock Out': 'stock_out',
   Adjustments: 'edit_product', Receiving: 'stock_in', 'POS / Billing': 'process_pos_sale',
   'Bulk Pricing': 'edit_product', Production: 'stock_out',
 }
 
-export function normalizeConfigValue(value, fallback = 'other') {
+export function normalizeConfigValue(value: unknown, fallback = 'other'): string {
   const normalized = String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '')
   return normalized || fallback
 }
 
-const unique = (items) => [...new Set(items)]
+const unique = <T>(items: T[]): T[] => [...new Set(items)]
 
-function getIndustryConfig(industry) {
+function getIndustryConfig(industry: string): IndustrySetting {
   return industryConfig[normalizeConfigValue(industry)] || industryConfig.other
 }
 
-function getBusinessTypeConfig(businessType) {
+function getBusinessTypeConfig(businessType: string): BusinessTypeSetting {
   return businessTypeConfig[normalizeConfigValue(businessType)] || businessTypeConfig.other
 }
 
-export function resolveBusinessCapabilities(business = {}) {
+export interface BusinessLike {
+  industry?: string;
+  businessType?: string;
+  enabledModules?: string[];
+  settings?: {
+    disabledModules?: string[];
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+}
+
+export interface BusinessCapabilities {
+  industry: string;
+  businessType: string;
+  modules: string[];
+  features: string[];
+  dashboardWidgets: string[];
+  productFields: string[];
+  productLabel: string;
+}
+
+export function resolveBusinessCapabilities(business: BusinessLike = {}): BusinessCapabilities {
   const industry = normalizeConfigValue(business.industry)
   const businessType = normalizeConfigValue(business.businessType)
   const industrySettings = getIndustryConfig(industry)
@@ -164,16 +207,16 @@ export function resolveBusinessCapabilities(business = {}) {
   }
 }
 
-const getAvailableModules = (business) => resolveBusinessCapabilities(business).modules
-export const hasModule = (business, module) => getAvailableModules(business).includes(module)
+const getAvailableModules = (business: BusinessLike): string[] => resolveBusinessCapabilities(business).modules
+export const hasModule = (business: BusinessLike, module: string): boolean => getAvailableModules(business).includes(module)
 
-export function getNavigation(business, can = () => true) {
+export function getNavigation(business: BusinessLike, can: (perm?: string) => boolean = () => true): [string, string[]][] {
   const config = resolveBusinessCapabilities(business)
-  const sections = new Map()
+  const sections = new Map<string, string[]>()
   for (const module of config.modules) {
     const definition = moduleDefinitions[module]
     if (!definition || !can(definition.permission)) continue
-    const pages = definition.pages || [definition.page]
+    const pages = definition.pages || [definition.page!]
     const permittedPages = pages.filter((page) => {
       const required = pagePermissions[page] || definition.permission
       return Array.isArray(required) ? required.every(can) : can(required)

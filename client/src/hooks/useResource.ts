@@ -1,14 +1,26 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+export interface ResourceResult<T> {
+  data: T | null;
+  loading: boolean;
+  error: string | null;
+  refetch: () => Promise<T | null>;
+  setData: React.Dispatch<React.SetStateAction<T | null>>;
+}
+
 /**
  * Loads data from the backend and tracks loading/error state.
  * Ignores stale responses and guards against unmounted state updates.
  * Returns { data, loading, error, refetch, setData }.
  */
-export function useResource(loader, deps = [], initial = null) {
-  const [data, setData] = useState(initial)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+export function useResource<T = any>(
+  loader: () => Promise<T>,
+  deps: readonly unknown[] = [],
+  initial: T | null = null
+): ResourceResult<T> {
+  const [data, setData] = useState<T | null>(initial)
+  const [loading, setLoading] = useState<boolean>(true)
+  const [error, setError] = useState<string | null>(null)
 
   const requestIdRef = useRef(0)
   const isMountedRef = useRef(true)
@@ -18,7 +30,7 @@ export function useResource(loader, deps = [], initial = null) {
     loaderRef.current = loader
   })
 
-  const run = useCallback(async () => {
+  const run = useCallback(async (): Promise<T | null> => {
     const currentId = ++requestIdRef.current
     setLoading(true)
     setError(null)
@@ -29,7 +41,7 @@ export function useResource(loader, deps = [], initial = null) {
         setError(null)
       }
       return result
-    } catch (caught) {
+    } catch (caught: any) {
       if (isMountedRef.current && currentId === requestIdRef.current) {
         setError(caught?.message || 'Something went wrong while loading data.')
       }
@@ -69,7 +81,7 @@ export function useResource(loader, deps = [], initial = null) {
           setData(result)
           setError(null)
         }
-      } catch (caught) {
+      } catch (caught: any) {
         if (isMountedRef.current && currentId === requestIdRef.current) {
           setError(caught?.message || 'Something went wrong while loading data.')
         }

@@ -1,13 +1,18 @@
-import { useEffect, useState, useCallback } from "react";
-import { authApi } from "../api/authApi.js";
-import { getCsrfToken, getAuthToken } from "../api/client.js";
-import { AuthContext } from "./AuthContext.js";
+import React, { useEffect, useState, useCallback, type ReactNode } from "react";
+import { authApi } from "../api/authApi";
+import { getCsrfToken, getAuthToken } from "../api/client";
+import { AuthContext } from "./AuthContext";
+import type { UserSession } from "../types";
 
-export function AuthProvider({ children }) {
-  const [session, setSession] = useState(null);
-  const [loading, setLoading] = useState(Boolean(getCsrfToken() || getAuthToken()));
+export interface AuthProviderProps {
+  children: ReactNode;
+}
 
-  const loadSession = useCallback(async (isMounted = () => true) => {
+export function AuthProvider({ children }: AuthProviderProps) {
+  const [session, setSession] = useState<UserSession | null>(null);
+  const [loading, setLoading] = useState<boolean>(Boolean(getCsrfToken() || getAuthToken()));
+
+  const loadSession = useCallback(async (isMounted: () => boolean = () => true) => {
     try {
       const result = await authApi.me();
       if (isMounted()) {
@@ -53,13 +58,13 @@ export function AuthProvider({ children }) {
     return () => window.removeEventListener("stockroom:unauthorized", handleUnauthorized);
   }, []);
 
-  const login = async (identifier, password) => {
+  const login = async (identifier: string, password?: string) => {
     const result = await authApi.login({ email: identifier, identifier, password });
     setSession({ user: result.user, business: result.business });
     return result;
   };
 
-  const register = async (payload) => {
+  const register = async (payload: any) => {
     const result = await authApi.register(payload);
     setSession({ user: result.user, business: result.business });
     return result;
@@ -75,11 +80,11 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const updateBusiness = (updatedBusiness) => {
+  const updateBusiness = (updatedBusiness: any) => {
     setSession((curr) => (curr ? { ...curr, business: updatedBusiness } : curr));
   };
 
-  const updateSession = (newSession) => {
+  const updateSession = (newSession: any) => {
     setSession((curr) => {
       if (!curr) return newSession;
       return {
