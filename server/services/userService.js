@@ -41,10 +41,10 @@ export async function updateMember(businessId, id, payload) {
 }
 
 async function resolveRoleId(businessId, roleOrId) {
-  if (!roleOrId) return 'ROLE-STAFF'
+  if (!roleOrId) return 'ROLE-SALESPERSON'
   const roles = await Role.find(scoped(businessId))
   const match = roles.find((role) => role.roleId === roleOrId || role.name === roleOrId)
-  return match ? match.roleId : DEFAULT_ROLES.find((role) => role.name === roleOrId)?.roleId || 'ROLE-STAFF'
+  return match ? match.roleId : DEFAULT_ROLES.find((role) => role.name === roleOrId)?.roleId || 'ROLE-SALESPERSON'
 }
 
 /* ---------- Roles ---------- */

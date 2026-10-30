@@ -216,7 +216,7 @@ export const ProductsPage: React.FC = () => {
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#7FAE82] hover:bg-[#6C9C70] text-white text-xs font-semibold transition-colors cursor-pointer shadow-2xs"
           >
             <Plus size={16} />
-            <span>+ Add product</span>
+            <span> Add product</span>
           </button>
         </div>
       </div>

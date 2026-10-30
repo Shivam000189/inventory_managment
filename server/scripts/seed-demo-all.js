@@ -3,7 +3,7 @@ import { DEFAULT_ROLES } from '../models/index.js'
  * Comprehensive Multi-Industry Demo Seed Script for Stockroom / IMB
  *
  * Seeds 11 businesses (one per supported industry and covering all 6 business types),
- * each with an owner, manager, and staff account (33 total logins), plus realistic
+ * each with an admin and salesperson account (22 total logins), plus realistic
  * products, suppliers, customers, purchase orders, receivings, sales orders,
  * payments, returns, stock transactions, and notifications.
  *
@@ -2788,7 +2788,6 @@ async function runSeed() {
   const allTargetEmails = []
   for (const spec of BUSINESS_SPECS) {
     allTargetEmails.push(`owner@${spec.industry}.stockroom.test`)
-    allTargetEmails.push(`manager@${spec.industry}.stockroom.test`)
     allTargetEmails.push(`staff@${spec.industry}.stockroom.test`)
   }
 
@@ -2856,15 +2855,13 @@ async function runSeed() {
     console.log(`======================================================`)
 
     const ownerEmail = `owner@${industry}.stockroom.test`
-    const managerEmail = `manager@${industry}.stockroom.test`
-    const staffEmail = `staff@${industry}.stockroom.test`
+        const staffEmail = `staff@${industry}.stockroom.test`
 
     // Derive enabled modules dynamically from industryConfig & businessTypeConfig
     const indModules = industryConfig[industry]?.modules || []
     const typeModules = businessTypeConfig[businessType]?.modules || []
     const enabled_modules = [...new Set([...indModules, ...typeModules])]
-    const hasPos = enabled_modules.includes('pos')
-    const staffRoleId = hasPos ? 'ROLE-SALESPERSON' : 'ROLE-STAFF'
+    const staffRoleId = 'ROLE-SALESPERSON'
 
     // 1. Create or Find Owner User
     let ownerId
@@ -2966,39 +2963,7 @@ async function runSeed() {
     // Link owner to business
     await supabase.from('users').update({ business_id: businessId }).eq('id', ownerId)
 
-    // 3. Create or Find Manager User
-    let managerId
-    const { data: existingMgr } = await supabase
-      .from('users')
-      .select('id')
-      .eq('email', managerEmail)
-      .maybeSingle()
-
-    if (existingMgr) {
-      managerId = existingMgr.id
-      await supabase
-        .from('users')
-        .update({
-          name: `${name} Manager`,
-          password: passwordHash,
-          role: 'team',
-          business_id: businessId,
-        })
-        .eq('id', managerId)
-    } else {
-      managerId = crypto.randomUUID()
-      const { error: mgrErr } = await supabase.from('users').insert({
-        id: managerId,
-        name: `${name} Manager`,
-        email: managerEmail,
-        password: passwordHash,
-        role: 'team',
-        business_id: businessId,
-      })
-      if (mgrErr) throw new Error(`Failed to create manager user: ${mgrErr.message}`)
-    }
-
-    // 4. Create or Find Staff User
+    // 3. Create or Find Salesperson User
     let staffId
     const { data: existingStaff } = await supabase
       .from('users')
@@ -3011,7 +2976,7 @@ async function runSeed() {
       await supabase
         .from('users')
         .update({
-          name: `${name} Staff`,
+          name: `${name} Salesperson`,
           password: passwordHash,
           role: 'team',
           business_id: businessId,
@@ -3021,7 +2986,7 @@ async function runSeed() {
       staffId = crypto.randomUUID()
       const { error: stfErr } = await supabase.from('users').insert({
         id: staffId,
-        name: `${name} Staff`,
+        name: `${name} Salesperson`,
         email: staffEmail,
         password: passwordHash,
         role: 'team',
@@ -3052,18 +3017,10 @@ async function runSeed() {
       },
       {
         business_id: businessId,
-        account_id: managerId,
-        name: `${name} Manager`,
-        email: managerEmail,
-        role_id: 'ROLE-MANAGER',
-        status: 'active',
-      },
-      {
-        business_id: businessId,
         account_id: staffId,
-        name: `${name} Staff`,
+        name: `${name} Salesperson`,
         email: staffEmail,
-        role_id: staffRoleId,
+        role_id: 'ROLE-SALESPERSON',
         status: 'active',
       },
     ]
@@ -3456,7 +3413,7 @@ async function runSeed() {
         payment_status: po.paymentStatus,
         expected_delivery_date: po.expectedDeliveryDate,
         notes: po.notes,
-        created_by: 'Demo Manager',
+        created_by: 'Demo Admin',
         created_at: po.createdAt,
       }
 
@@ -3734,7 +3691,7 @@ async function runSeed() {
         refund_status: 'Refunded',
         inventory_action: 'sellable',
         status: 'Completed',
-        processed_by: 'Demo Manager',
+        processed_by: 'Demo Admin',
         created_at: daysAgo(10),
       })
 
@@ -3750,7 +3707,7 @@ async function runSeed() {
         method: 'Original Payment Method',
         status: 'Refunded',
         notes: 'Full customer refund approved',
-        processed_by: 'Demo Manager',
+        processed_by: 'Demo Admin',
         created_at: daysAgo(10),
       })
 
@@ -3819,7 +3776,7 @@ async function runSeed() {
         stock_bucket: 'sellable',
         reason: `Customer return restocked: ${returnTargetOrder.order_number}`,
         reference_id: String(returnId),
-        created_by: 'Demo Manager',
+        created_by: 'Demo Admin',
         created_at: daysAgo(10),
       },
       {
@@ -3832,7 +3789,7 @@ async function runSeed() {
         stock_bucket: 'sellable',
         reason: 'Quarterly physical inventory count reconciliation',
         reference_id: 'AUDIT-CYCLE-Q1',
-        created_by: 'Demo Manager',
+        created_by: 'Demo Admin',
         created_at: daysAgo(8),
       },
     ]
@@ -3906,7 +3863,6 @@ async function runSeed() {
       businessType,
       city,
       ownerEmail,
-      managerEmail,
       staffEmail,
       staffRoleId,
       productCount: seededProducts.length,
@@ -3931,18 +3887,17 @@ async function runSeed() {
   for (const item of summaryReport) {
     const pad = (str, len) => String(str).padEnd(len, ' ')
     console.log(`| ${pad(item.industry, 13)} | ${pad(item.name, 24)} | ${pad(item.businessType, 15)} | Owner      | ${pad(item.ownerEmail, 37)} | Demo@12345 | Shop owner |`)
-    console.log(`| ${pad(item.industry, 13)} | ${pad(item.name, 24)} | ${pad(item.businessType, 15)} | Manager    | ${pad(item.managerEmail, 37)} | Demo@12345 | Team       |`)
-    console.log(`| ${pad(item.industry, 13)} | ${pad(item.name, 24)} | ${pad(item.businessType, 15)} | Staff      | ${pad(item.staffEmail, 37)} | Demo@12345 | Team       |`)
+    console.log(`| ${pad(item.industry, 13)} | ${pad(item.name, 24)} | ${pad(item.businessType, 15)} | Salesperson| ${pad(item.staffEmail, 37)} | Demo@12345 | Team       |`)
   }
   console.log('==================================================================================================================================\n')
   console.log('NOTE: When logging in on the web login screen:')
   console.log('  - For "Owner" accounts, select account type: "Shop owner"')
-  console.log('  - For "Manager" & "Staff" accounts, select account type: "Team member"\n')
+  console.log('  - For "Salesperson" accounts, select account type: "Team member"\n')
 }
 
 runSeed()
   .then(() => {
-    console.log('All 11 industry demo businesses and 33 accounts seeded successfully!\n')
+    console.log('All 11 industry demo businesses and 22 accounts seeded successfully!\n')
     process.exit(0)
   })
   .catch((err) => {

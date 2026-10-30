@@ -34,62 +34,51 @@ const DEMO_INDUSTRIES = [
 
 const DEMO_ACCOUNTS = [
   // Pharmacy
-  { roleName: "Pharmacy Owner", industry: "pharmacy", email: "owner@pharmacy.stockroom.test", password: "Demo@12345", role: "owner", badge: "Shop Owner" },
-  { roleName: "Pharmacy Manager", industry: "pharmacy", email: "manager@pharmacy.stockroom.test", password: "Demo@12345", role: "team", badge: "Manager" },
-  { roleName: "Pharmacy Staff", industry: "pharmacy", email: "staff@pharmacy.stockroom.test", password: "Demo@12345", role: "team", badge: "Staff" },
+  { roleName: "Pharmacy Admin", industry: "pharmacy", email: "owner@pharmacy.stockroom.test", password: "Demo@12345", role: "owner", badge: "Admin" },
+  { roleName: "Pharmacy Salesperson", industry: "pharmacy", email: "staff@pharmacy.stockroom.test", password: "Demo@12345", role: "team", badge: "Salesperson" },
 
   // Clothing
-  { roleName: "Clothing Owner", industry: "clothing", email: "owner@clothing.stockroom.test", password: "Demo@12345", role: "owner", badge: "Shop Owner" },
-  { roleName: "Clothing Manager", industry: "clothing", email: "manager@clothing.stockroom.test", password: "Demo@12345", role: "team", badge: "Manager" },
-  { roleName: "Clothing Sales Staff", industry: "clothing", email: "staff@clothing.stockroom.test", password: "Demo@12345", role: "team", badge: "Staff" },
+  { roleName: "Clothing Admin", industry: "clothing", email: "owner@clothing.stockroom.test", password: "Demo@12345", role: "owner", badge: "Admin" },
+  { roleName: "Clothing Salesperson", industry: "clothing", email: "staff@clothing.stockroom.test", password: "Demo@12345", role: "team", badge: "Salesperson" },
 
   // Electronics
-  { roleName: "Electronics Owner", industry: "electronics", email: "owner@electronics.stockroom.test", password: "Demo@12345", role: "owner", badge: "Shop Owner" },
-  { roleName: "Electronics Manager", industry: "electronics", email: "manager@electronics.stockroom.test", password: "Demo@12345", role: "team", badge: "Manager" },
-  { roleName: "Electronics Staff", industry: "electronics", email: "staff@electronics.stockroom.test", password: "Demo@12345", role: "team", badge: "Staff" },
+  { roleName: "Electronics Admin", industry: "electronics", email: "owner@electronics.stockroom.test", password: "Demo@12345", role: "owner", badge: "Admin" },
+  { roleName: "Electronics Salesperson", industry: "electronics", email: "staff@electronics.stockroom.test", password: "Demo@12345", role: "team", badge: "Salesperson" },
 
   // Grocery
-  { roleName: "Grocery Owner", industry: "grocery", email: "owner@grocery.stockroom.test", password: "Demo@12345", role: "owner", badge: "Shop Owner" },
-  { roleName: "Grocery Manager", industry: "grocery", email: "manager@grocery.stockroom.test", password: "Demo@12345", role: "team", badge: "Manager" },
-  { roleName: "Grocery Cashier", industry: "grocery", email: "staff@grocery.stockroom.test", password: "Demo@12345", role: "team", badge: "Staff" },
+  { roleName: "Grocery Admin", industry: "grocery", email: "owner@grocery.stockroom.test", password: "Demo@12345", role: "owner", badge: "Admin" },
+  { roleName: "Grocery Salesperson", industry: "grocery", email: "staff@grocery.stockroom.test", password: "Demo@12345", role: "team", badge: "Salesperson" },
 
   // Hardware
-  { roleName: "Hardware Owner", industry: "hardware", email: "owner@hardware.stockroom.test", password: "Demo@12345", role: "owner", badge: "Shop Owner" },
-  { roleName: "Hardware Manager", industry: "hardware", email: "manager@hardware.stockroom.test", password: "Demo@12345", role: "team", badge: "Manager" },
-  { roleName: "Hardware Sales Staff", industry: "hardware", email: "staff@hardware.stockroom.test", password: "Demo@12345", role: "team", badge: "Staff" },
+  { roleName: "Hardware Admin", industry: "hardware", email: "owner@hardware.stockroom.test", password: "Demo@12345", role: "owner", badge: "Admin" },
+  { roleName: "Hardware Salesperson", industry: "hardware", email: "staff@hardware.stockroom.test", password: "Demo@12345", role: "team", badge: "Salesperson" },
 
   // Automobile
-  { roleName: "AutoParts Owner", industry: "automobile", email: "owner@automobile.stockroom.test", password: "Demo@12345", role: "owner", badge: "Shop Owner" },
-  { roleName: "AutoParts Manager", industry: "automobile", email: "manager@automobile.stockroom.test", password: "Demo@12345", role: "team", badge: "Manager" },
-  { roleName: "AutoParts Staff", industry: "automobile", email: "staff@automobile.stockroom.test", password: "Demo@12345", role: "team", badge: "Staff" },
+  { roleName: "AutoParts Admin", industry: "automobile", email: "owner@automobile.stockroom.test", password: "Demo@12345", role: "owner", badge: "Admin" },
+  { roleName: "AutoParts Salesperson", industry: "automobile", email: "staff@automobile.stockroom.test", password: "Demo@12345", role: "team", badge: "Salesperson" },
 
   // Wholesale
-  { roleName: "Wholesale Owner", industry: "wholesale", email: "owner@wholesale.stockroom.test", password: "Demo@12345", role: "owner", badge: "Shop Owner" },
-  { roleName: "Wholesale Manager", industry: "wholesale", email: "manager@wholesale.stockroom.test", password: "Demo@12345", role: "team", badge: "Manager" },
-  { roleName: "Wholesale Dispatch Staff", industry: "wholesale", email: "staff@wholesale.stockroom.test", password: "Demo@12345", role: "team", badge: "Staff" },
+  { roleName: "Wholesale Admin", industry: "wholesale", email: "owner@wholesale.stockroom.test", password: "Demo@12345", role: "owner", badge: "Admin" },
+  { roleName: "Wholesale Salesperson", industry: "wholesale", email: "staff@wholesale.stockroom.test", password: "Demo@12345", role: "team", badge: "Salesperson" },
 
   // Retail
-  { roleName: "Retail Store Owner", industry: "retail", email: "owner@retail.stockroom.test", password: "Demo@12345", role: "owner", badge: "Shop Owner" },
-  { roleName: "Retail Store Manager", industry: "retail", email: "manager@retail.stockroom.test", password: "Demo@12345", role: "team", badge: "Manager" },
-  { roleName: "Retail Counter Staff", industry: "retail", email: "staff@retail.stockroom.test", password: "Demo@12345", role: "team", badge: "Staff" },
+  { roleName: "Retail Store Admin", industry: "retail", email: "owner@retail.stockroom.test", password: "Demo@12345", role: "owner", badge: "Admin" },
+  { roleName: "Retail Salesperson", industry: "retail", email: "staff@retail.stockroom.test", password: "Demo@12345", role: "team", badge: "Salesperson" },
 
   // Restaurant
-  { roleName: "Restaurant Owner", industry: "restaurant", email: "owner@restaurant.stockroom.test", password: "Demo@12345", role: "owner", badge: "Shop Owner" },
-  { roleName: "Restaurant Manager", industry: "restaurant", email: "manager@restaurant.stockroom.test", password: "Demo@12345", role: "team", badge: "Manager" },
-  { roleName: "Restaurant Staff", industry: "restaurant", email: "staff@restaurant.stockroom.test", password: "Demo@12345", role: "team", badge: "Staff" },
+  { roleName: "Restaurant Admin", industry: "restaurant", email: "owner@restaurant.stockroom.test", password: "Demo@12345", role: "owner", badge: "Admin" },
+  { roleName: "Restaurant Salesperson", industry: "restaurant", email: "staff@restaurant.stockroom.test", password: "Demo@12345", role: "team", badge: "Salesperson" },
 
   // Manufacturing
-  { roleName: "Manufacturing Owner", industry: "manufacturing", email: "owner@manufacturing.stockroom.test", password: "Demo@12345", role: "owner", badge: "Shop Owner" },
-  { roleName: "Plant Manager", industry: "manufacturing", email: "manager@manufacturing.stockroom.test", password: "Demo@12345", role: "team", badge: "Manager" },
-  { roleName: "Factory Floor Staff", industry: "manufacturing", email: "staff@manufacturing.stockroom.test", password: "Demo@12345", role: "team", badge: "Staff" },
+  { roleName: "Manufacturing Admin", industry: "manufacturing", email: "owner@manufacturing.stockroom.test", password: "Demo@12345", role: "owner", badge: "Admin" },
+  { roleName: "Manufacturing Salesperson", industry: "manufacturing", email: "staff@manufacturing.stockroom.test", password: "Demo@12345", role: "team", badge: "Salesperson" },
 
   // Other
-  { roleName: "General Goods Owner", industry: "other", email: "owner@other.stockroom.test", password: "Demo@12345", role: "owner", badge: "Shop Owner" },
-  { roleName: "Operations Manager", industry: "other", email: "manager@other.stockroom.test", password: "Demo@12345", role: "team", badge: "Manager" },
-  { roleName: "Warehouse Staff", industry: "other", email: "staff@other.stockroom.test", password: "Demo@12345", role: "team", badge: "Staff" },
+  { roleName: "General Goods Admin", industry: "other", email: "owner@other.stockroom.test", password: "Demo@12345", role: "owner", badge: "Admin" },
+  { roleName: "General Goods Salesperson", industry: "other", email: "staff@other.stockroom.test", password: "Demo@12345", role: "team", badge: "Salesperson" },
 
   // Base Demo
-  { roleName: "Aflix Default Admin", industry: "all", email: "demo@stockroom.test", password: "demo12345", role: "owner", badge: "Base Demo" },
+  { roleName: "Aflix Default Admin", industry: "all", email: "demo@stockroom.test", password: "demo12345", role: "owner", badge: "Admin" },
 ];
 
 export default function AuthPage({

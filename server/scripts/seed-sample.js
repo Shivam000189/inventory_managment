@@ -76,9 +76,6 @@ const LAST = ['Sharma', 'Patel', 'Reddy', 'Iyer', 'Nair', 'Gupta', 'Menon', 'Rao
 const CITY = ['New Delhi', 'Mumbai', 'Bengaluru', 'Chennai', 'Pune', 'Hyderabad', 'Kolkata', 'Ahmedabad', 'Jaipur', 'Lucknow']
 
 const MEMBERS = [
-  { name: 'Neha Verma', email: 'neha.verma@demosupply.co', role: 'Manager' },
-  { name: 'Rohit Deshpande', email: 'rohit.deshpande@demosupply.co', role: 'Staff' },
-  { name: 'Anjali Menon', email: 'anjali.menon@demosupply.co', role: 'Accountant' },
   { name: 'Vikram Rao', email: 'vikram.rao@demosupply.co', role: 'Salesperson' },
 ]
 

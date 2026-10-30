@@ -28,8 +28,7 @@ async function runApiVerification() {
       console.log(`======================================================`)
 
       const ownerEmail = `owner@${ind}.stockroom.test`
-      const managerEmail = `manager@${ind}.stockroom.test`
-      const staffEmail = `staff@${ind}.stockroom.test`
+            const staffEmail = `staff@${ind}.stockroom.test`
 
       // 1. Owner Login (Correct account type: owner)
       const ownerRes = await fetch(`${baseUrl}/auth/login`, {
@@ -53,17 +52,6 @@ async function runApiVerification() {
         body: JSON.stringify({ email: ownerEmail, password, role: 'team' }),
       })
       console.log(`✓ Owner login with wrong account type correctly rejected: HTTP ${wrongRoleRes.status}`)
-
-      // 2. Manager Login (role: team)
-      const mgrRes = await fetch(`${baseUrl}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: managerEmail, password, role: 'team' }),
-      })
-      const mgrData = await mgrRes.json()
-      if (!mgrRes.ok) throw new Error(`Manager login failed for ${managerEmail}: ${JSON.stringify(mgrData)}`)
-      results.logins.push({ email: managerEmail, role: 'team (manager)', status: 'SUCCESS', httpStatus: mgrRes.status })
-      console.log(`✓ Manager login succeeded: ${managerEmail} (HTTP ${mgrRes.status})`)
 
       // 3. Staff Login (role: team)
       const staffRes = await fetch(`${baseUrl}/auth/login`, {

@@ -360,7 +360,7 @@ export default function CategoriesView({
               onClick={() => onNavigate?.('Products')}
               title="Add product to catalog"
             >
-              + Add Product
+              Add Product
             </button>
           </div>
         </div>

@@ -257,17 +257,20 @@ export const DashboardMockup = ({
               .slice(0, 4);
           }
 
-          // If fewer than 4 sales, backfill with user's actual product catalog
+          // If fewer than 4 sales, backfill with user's actual product catalog sorted by top stock
           if (calculatedTop.length < 4 && products.length > 0) {
             const seen = new Set(calculatedTop.map((item) => item.name));
-            for (const prod of products) {
+            const sortedByStock = [...products].sort(
+              (a, b) => Number(b.currentStock || b.stock || 0) - Number(a.currentStock || a.stock || 0)
+            );
+            for (const prod of sortedByStock) {
               if (calculatedTop.length >= 4) break;
               if (!seen.has(prod.name)) {
                 const iconInfo = getProductIconComponent(prod.name);
                 calculatedTop.push({
                   id: prod.id || prod.productId || `prod-${calculatedTop.length}`,
                   name: prod.name,
-                  sold: `${prod.currentStock || 0} in stock`,
+                  sold: `${prod.currentStock || prod.stock || 0} in stock`,
                   ...iconInfo
                 });
                 seen.add(prod.name);

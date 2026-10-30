@@ -644,9 +644,6 @@ const PHARMACY_CUSTOMERS = [
 ]
 
 const PHARMACY_TEAM = [
-  { name: 'Rahul Verma', email: 'rahul.verma@aflixmed.in', role: 'Manager' },
-  { name: 'Amit Chauhan', email: 'amit.c@aflixmed.in', role: 'Staff' },
-  { name: 'Pooja Srivastava', email: 'pooja.s@aflixmed.in', role: 'Accountant' },
   { name: 'Karan Mehra', email: 'karan.m@aflixmed.in', role: 'Salesperson' },
 ]
 
