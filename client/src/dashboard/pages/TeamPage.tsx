@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, Plus, Shield, UserCheck, X, CheckCircle2, Lock } from 'lucide-react';
+import { Users, Plus, Shield, UserCheck, X, CheckCircle2, Lock, Mail, Clock } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { useApp } from '../context/AppContext';
 import { UserRole } from '../types';
@@ -79,64 +79,76 @@ export const TeamPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Team Table */}
-      <div className="bg-white rounded-2xl border border-[#EEE6DA] overflow-hidden shadow-2xs">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs min-w-[680px]">
-            <thead className="sticky top-0 z-10 bg-[#FAF6EF] border-b border-[#EEE6DA] text-[#8C867A] text-[11px] font-semibold uppercase tracking-wider">
-            <tr>
-              <th className="py-3 px-4">Team Member</th>
-              <th className="py-3 px-3">Role</th>
-              <th className="py-3 px-3">Email Address</th>
-              <th className="py-3 px-3 text-center">Status</th>
-              <th className="py-3 px-3">Last Active</th>
-              <th className="py-3 px-4 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[#EEE6DA]/80">
-            {users.map((u) => (
-              <tr key={u.id} className="hover:bg-[#FAF6EF]/50 transition-colors">
-                <td className="py-3 px-4 whitespace-nowrap">
-                  <div className="flex items-center gap-3 min-w-[150px]">
-                    <div className="w-8 h-8 rounded-full bg-[#1C1B18] text-white flex items-center justify-center font-bold text-xs uppercase shrink-0 aspect-square shadow-2xs">
-                      {u.avatarInitials}
-                    </div>
-                    <span className="font-bold text-[#1C1B18] text-[13px]">{u.name}</span>
-                  </div>
-                </td>
-                <td className="py-3 px-3">
+      {/* Team Grid View (Grid View only for both mobile & desktop) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {users.map((u) => (
+          <div
+            key={u.id}
+            className="bg-white rounded-2xl p-5 border border-[#EEE6DA] hover:border-[#DDD3C4] transition-all shadow-2xs flex flex-col justify-between"
+          >
+            <div>
+              {/* Header: Avatar + Status */}
+              <div className="flex items-start justify-between gap-3">
+                <div className="w-12 h-12 rounded-full bg-[#1C1B18] text-white flex items-center justify-center font-bold text-sm uppercase shrink-0 aspect-square shadow-2xs">
+                  {u.avatarInitials}
+                </div>
+                <Badge variant={u.status === 'active' ? 'success' : 'danger'}>
+                  {u.status === 'active' ? 'Active' : 'Suspended'}
+                </Badge>
+              </div>
+
+              {/* Name & Role */}
+              <div className="mt-3">
+                <h4 className="font-bold text-[15px] text-[#1C1B18] tracking-tight">
+                  {u.name}
+                </h4>
+                <div className="mt-1">
                   <Badge variant={u.role === 'admin' ? 'primary' : 'warning'}>
                     {u.role === 'admin' ? 'Owner / Admin' : 'Salesperson'}
                   </Badge>
-                </td>
-                <td className="py-3 px-3 text-[#6B665E]">{u.email}</td>
-                <td className="py-3 px-3 text-center">
-                  <Badge variant={u.status === 'active' ? 'success' : 'danger'}>
-                    {u.status === 'active' ? 'Active' : 'Suspended'}
-                  </Badge>
-                </td>
-                <td className="py-3 px-3 text-[#6B665E]">{u.lastLogin}</td>
-                <td className="py-3 px-4 text-right">
-                  {u.role !== 'admin' && (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        updateUserStatus(
-                          u.id,
-                          u.status === 'active' ? 'suspended' : 'active'
-                        )
-                      }
-                      className="px-2.5 py-1 text-xs rounded-lg border border-[#EEE6DA] text-[#6B665E] hover:text-[#1C1B18] hover:bg-[#FAF6EF]"
-                    >
-                      {u.status === 'active' ? 'Suspend' : 'Activate'}
-                    </button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-          </table>
-        </div>
+                </div>
+              </div>
+
+              {/* Details: Email & Last Active */}
+              <div className="mt-4 pt-3 border-t border-[#EEE6DA]/80 space-y-2 text-xs">
+                <div className="flex items-center gap-2 text-[#6B665E]">
+                  <Mail size={13} className="text-[#9A948A] shrink-0" />
+                  <span className="truncate">{u.email}</span>
+                </div>
+                <div className="flex items-center gap-2 text-[#9A948A] text-[11px]">
+                  <Clock size={13} className="shrink-0" />
+                  <span>Last active: {u.lastLogin}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="mt-4 pt-3 border-t border-[#EEE6DA]">
+              {u.role !== 'admin' ? (
+                <button
+                  type="button"
+                  onClick={() =>
+                    updateUserStatus(
+                      u.id,
+                      u.status === 'active' ? 'suspended' : 'active'
+                    )
+                  }
+                  className={`w-full py-1.5 px-3 text-xs font-semibold rounded-xl border transition-all cursor-pointer ${
+                    u.status === 'active'
+                      ? 'border-[#FDECEC] bg-[#FDECEC]/60 text-[#D64545] hover:bg-[#FDECEC]'
+                      : 'border-[#EEE6DA] bg-[#FAF6EF] text-[#6B665E] hover:text-[#1C1B18] hover:bg-[#FAF6EF]/80'
+                  }`}
+                >
+                  {u.status === 'active' ? 'Suspend Account' : 'Activate Account'}
+                </button>
+              ) : (
+                <div className="w-full py-1.5 px-3 text-center text-xs text-[#9A948A] bg-[#FAF6EF]/70 rounded-xl border border-[#EEE6DA]/70 font-medium">
+                  Primary Owner
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Add Member Drawer */}
