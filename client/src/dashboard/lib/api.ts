@@ -243,7 +243,8 @@ export const usersApi = {
 // 12. Notifications API
 export const notificationsApi = {
   list: () => request<any[]>('/notifications'),
-  markRead: (id: string) => request<any>(`/notifications/${id}/read`, { method: 'POST' }),
+  markRead: (id: string) => request<any>(`/notifications/${id}/read`, { method: 'PATCH' }),
+  markAllRead: () => request<any>('/notifications/read-all', { method: 'PATCH' }),
 };
 
 // 13. Product Imports (CSV & PDF)

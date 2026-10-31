@@ -1,6 +1,7 @@
 import { Business, Product, Customer, SalesOrder, Payment, Promotion, Coupon, GiftCard, LoyaltyTransaction, StoreCreditTransaction, StockTransaction } from '../models/index.js'
 import { withTransaction } from '../config/db.js'
 import { applyStockChange } from './inventoryService.js'
+import { notifyLowStockDecrease } from './notificationService.js'
 import { ApiError } from '../utils/ApiError.js'
 import { toObjectId, toNumber, assert, isEmail } from '../validators/assert.js'
 
@@ -197,7 +198,24 @@ export async function checkout(businessId, payload, actor, permissions = []) {
 
     for (const item of items) {
       if (!item.variantId) await applyStockChange({ businessId, productId: item.productId, type: 'stock_out', quantity: item.quantity, reason: 'POS Sale', referenceId: String(order._id), createdBy: actor.name }, session)
-      else { const product = byId.get(String(item.productId)); const variant = product.variants.id(item.variantId); const previousStock = variant.currentStock; variant.currentStock -= item.quantity; product.currentStock = product.variants.reduce((n, v) => n + v.currentStock, 0); await product.save({ session }); await StockTransaction.create([{ business: business._id, productId: product._id, variantId: variant._id, variantSku: variant.sku, variantSize: variant.size, variantColor: variant.color, type: 'stock_out', quantity: item.quantity, previousStock, newStock: variant.currentStock, reason: 'POS Sale', referenceId: String(order._id), createdBy: actor.name }], { session }) }
+      else {
+        const product = byId.get(String(item.productId));
+        const variant = product.variants.id(item.variantId);
+        const previousStock = variant.currentStock;
+        variant.currentStock -= item.quantity;
+        const prevProductStock = product.currentStock;
+        product.currentStock = product.variants.reduce((n, v) => n + v.currentStock, 0);
+        await product.save({ session });
+        await StockTransaction.create([{ business: business._id, productId: product._id, variantId: variant._id, variantSku: variant.sku, variantSize: variant.size, variantColor: variant.color, type: 'stock_out', quantity: item.quantity, previousStock, newStock: variant.currentStock, reason: 'POS Sale', referenceId: String(order._id), createdBy: actor.name }], { session });
+        const threshold = product.minimumStock || product.reorderPoint || product.reorderLevel || 10;
+        if (product.currentStock < prevProductStock && product.currentStock <= threshold) {
+          try {
+            await notifyLowStockDecrease(businessId, product, prevProductStock, product.currentStock, threshold);
+          } catch (err) {
+            console.warn('Failed to dispatch variant low stock notification:', err);
+          }
+        }
+      }
     }
     const actualPayments = payments.filter((payment) => payment.amount > 0 && !['Credit', 'Pay Later'].includes(payment.method))
     if (actualPayments.length) await Payment.create(actualPayments.map((payment) => ({ business: business._id, type: 'sale', referenceId: order._id, referenceModel: 'SalesOrder', amount: payment.amount, paymentMethod: payment.method, paymentDate: new Date().toISOString().slice(0, 10), notes: `POS ${number}`, recordedBy: actor.name, transactionReference: payment.reference, offerCode: offer?.code || '' })), { session, ordered: true })

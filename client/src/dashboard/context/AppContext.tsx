@@ -27,8 +27,10 @@ import {
   posApi,
   usersApi,
   paymentsApi,
+  notificationsApi,
   clearAuthSession,
 } from '../lib/api';
+import { initialNotifications } from '../lib/mockData';
 
 const defaultBusinessProfile: BusinessProfile = {
   id: '00000000-6ade-f06e-2068-a3fe86739d2c',
@@ -262,6 +264,37 @@ function mapBackendSalesOrder(so: any): Bill {
   };
 }
 
+
+function mapBackendNotification(item: any): AppNotification {
+  const typeMap: Record<string, AppNotification['type']> = {
+    LOW_STOCK: 'low_stock',
+    OUT_OF_STOCK: 'low_stock',
+    low_stock: 'low_stock',
+    PURCHASE_DELIVERY_OVERDUE: 'po_due',
+    PURCHASE_ORDER_CREATED: 'po_due',
+    po_due: 'po_due',
+    PAYMENT_RECORDED: 'payment',
+    payment: 'payment',
+    SALES_ORDER_CREATED: 'sale',
+    sale: 'sale',
+  };
+
+  const type = typeMap[item.type] || (item.category === 'inventory' ? 'low_stock' : 'sale');
+  const d = item.createdAt ? new Date(item.createdAt) : new Date();
+  const isToday = !isNaN(d.getTime()) && new Date().toDateString() === d.toDateString();
+
+  return {
+    id: String(item.id || item.notificationId || item._id || `notif-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`),
+    title: item.title || (type === 'low_stock' ? 'Low Stock Alert' : 'Notification'),
+    message: item.message || item.secondary || '',
+    type,
+    time: isToday ? 'Today' : (d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) || 'Earlier'),
+    dateGroup: isToday ? 'Today' : 'Earlier',
+    unread: item.readAt ? false : true,
+    link: type === 'low_stock' ? '/app/inventory' : item.navigationTarget === 'Orders' ? '/app/pos' : '/app/inventory',
+  };
+}
+
 function mapBackendMovement(m: any, productsList: Product[] = []): StockMovement {
   const typeMap: Record<string, MovementType> = {
     stock_in: 'Stock In',
@@ -410,7 +443,30 @@ export const AppProvider: React.FC<AppProviderProps> = ({
   const [bills, setBills] = useState<Bill[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [stockMovements, setStockMovements] = useState<StockMovement[]>([]);
-  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [notifications, setNotifications] = useState<AppNotification[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('stockroom_notifications');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+    return initialNotifications;
+  });
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && notifications.length > 0) {
+      try {
+        localStorage.setItem('stockroom_notifications', JSON.stringify(notifications));
+      } catch {
+        /* ignore */
+      }
+    }
+  }, [notifications]);
 
   // Backend live state
   const [isBackendConnected, setIsBackendConnected] = useState(false);
@@ -555,6 +611,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({
         historyRes,
         bizRes,
         usersRes,
+        notifsRes,
       ] = await Promise.allSettled([
         productsApi.list(),
         suppliersApi.list(),
@@ -564,6 +621,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({
         inventoryApi.history(),
         businessApi.get(),
         usersApi.listMembers(),
+        notificationsApi.list(),
       ]);
 
       if (bizRes.status === 'fulfilled' && bizRes.value) {
@@ -642,6 +700,22 @@ export const AppProvider: React.FC<AppProviderProps> = ({
           });
           setUsers(mappedUsers);
         }
+      }
+
+      if (notifsRes.status === 'fulfilled' && notifsRes.value) {
+        const notifList = extractArray(notifsRes.value);
+        if (notifList.length > 0) {
+          const mapped = notifList.map(mapBackendNotification);
+          setNotifications((prev) => {
+            const existingKeys = new Set(prev.map((n) => n.id));
+            const fresh = mapped.filter((n) => !existingKeys.has(n.id));
+            return [...fresh, ...prev];
+          });
+        }
+      }
+
+      if (loadedProducts.length > 0) {
+        syncExistingLowStockNotifications(loadedProducts);
       }
     } catch (err) {
       console.warn('Backend live sync notice:', err);
@@ -807,6 +881,13 @@ export const AppProvider: React.FC<AppProviderProps> = ({
   };
 
   const updateProduct = (id: string, updated: Partial<Product>) => {
+    const target = products.find((p) => p.id === id);
+    if (target && updated.stock !== undefined && updated.stock < target.stock) {
+      const threshold = updated.reorderLevel !== undefined ? updated.reorderLevel : (target.reorderLevel || 10);
+      if (updated.stock <= threshold) {
+        triggerLowStockNotification(target, target.stock, updated.stock, threshold);
+      }
+    }
     setProducts((prev) => prev.map((p) => (p.id === id ? { ...p, ...updated } : p)));
     productsApi.update(id, mapProductToBackend(updated)).catch((err) =>
       console.warn('Failed to update product on backend:', err)
@@ -818,16 +899,81 @@ export const AppProvider: React.FC<AppProviderProps> = ({
     productsApi.delete(id).catch((err) => console.warn('Failed to delete product on backend:', err));
   };
 
+  
+  const triggerLowStockNotification = (
+    product: Product,
+    previousStock: number,
+    newStock: number,
+    threshold: number
+  ) => {
+    if (newStock < previousStock && newStock <= threshold) {
+      const isOut = newStock <= 0;
+      const title = isOut ? 'Out of Stock Alert' : 'Low Stock Alert';
+      const message = isOut
+        ? `${product.name} (${product.sku}) is out of stock (0 units remaining).`
+        : `${product.name} (${product.sku}) stock decreased from ${previousStock} to ${newStock} units (low stock threshold: ${threshold}).`;
+
+      const newNotif: AppNotification = {
+        id: `notif-lowstock-${Date.now()}-${product.id}-${newStock}`,
+        title,
+        message,
+        type: 'low_stock',
+        time: 'Just now',
+        dateGroup: 'Today',
+        unread: true,
+        link: '/app/inventory',
+      };
+
+      setNotifications((prev) => [newNotif, ...prev]);
+    }
+  };
+
+  const syncExistingLowStockNotifications = (productList: Product[]) => {
+    setNotifications((prev) => {
+      const newAlerts: AppNotification[] = [];
+      for (const prod of productList) {
+        const threshold = prod.reorderLevel || 10;
+        if (prod.stock <= threshold) {
+          const alreadyNotified = prev.some(
+            (n) => n.type === 'low_stock' && (n.message.includes(prod.sku) || n.message.includes(prod.name))
+          );
+          if (!alreadyNotified) {
+            const isOut = prod.stock <= 0;
+            newAlerts.push({
+              id: `notif-init-${prod.id}-${prod.stock}`,
+              title: isOut ? 'Out of Stock Alert' : 'Low Stock Alert',
+              message: isOut
+                ? `${prod.name} (${prod.sku}) is out of stock (0 units remaining).`
+                : `${prod.name} (${prod.sku}) is below low stock level: only ${prod.stock} left (reorder level: ${threshold}).`,
+              type: 'low_stock',
+              time: 'Today',
+              dateGroup: 'Today',
+              unread: true,
+              link: '/app/inventory',
+            });
+          }
+        }
+      }
+      return newAlerts.length > 0 ? [...newAlerts, ...prev] : prev;
+    });
+  };
+
   // Stock operations
   const adjustStock = (productId: string, newStock: number, reason: string, note?: string) => {
     const target = products.find((p) => p.id === productId);
     if (!target) return;
+    const prevStock = target.stock;
     const diff = newStock - target.stock;
     if (diff === 0) return;
+    const threshold = target.reorderLevel || 10;
 
     setProducts((prev) =>
       prev.map((p) => (p.id === productId ? { ...p, stock: newStock } : p))
     );
+
+    if (newStock < prevStock && newStock <= threshold) {
+      triggerLowStockNotification(target, prevStock, newStock, threshold);
+    }
 
     const movement: StockMovement = {
       id: `tx-${Date.now()}`,
@@ -892,11 +1038,17 @@ export const AppProvider: React.FC<AppProviderProps> = ({
   const stockOut = (productId: string, quantity: number, reason: string, note?: string) => {
     const target = products.find((p) => p.id === productId);
     if (!target) return;
+    const prevStock = target.stock;
     const newStock = Math.max(0, target.stock - quantity);
+    const threshold = target.reorderLevel || 10;
 
     setProducts((prev) =>
       prev.map((p) => (p.id === productId ? { ...p, stock: newStock } : p))
     );
+
+    if (newStock < prevStock && newStock <= threshold) {
+      triggerLowStockNotification(target, prevStock, newStock, threshold);
+    }
 
     const movement: StockMovement = {
       id: `tx-${Date.now()}`,
@@ -1102,20 +1254,29 @@ export const AppProvider: React.FC<AppProviderProps> = ({
       salespersonId: currentUser.id,
     };
 
-    newBill.items.forEach((item) => {
+        newBill.items.forEach((item) => {
+      const prod = products.find((p) => p.id === item.productId);
+      const prevStock = prod ? prod.stock : 0;
+      const threshold = prod ? (prod.reorderLevel || 10) : 10;
+      const newStock = businessProfile.allowNegativeStock
+        ? prevStock - item.quantity
+        : Math.max(0, prevStock - item.quantity);
+
       setProducts((prev) =>
-        prev.map((prod) => {
-          if (prod.id === item.productId) {
+        prev.map((p) => {
+          if (p.id === item.productId) {
             return {
-              ...prod,
-              stock: businessProfile.allowNegativeStock
-                ? prod.stock - item.quantity
-                : Math.max(0, prod.stock - item.quantity),
+              ...p,
+              stock: newStock,
             };
           }
-          return prod;
+          return p;
         })
       );
+
+      if (prod && newStock < prevStock && newStock <= threshold) {
+        triggerLowStockNotification(prod, prevStock, newStock, threshold);
+      }
 
       const movement: StockMovement = {
         id: `tx-${Date.now()}-${item.productId}`,
@@ -1400,10 +1561,12 @@ export const AppProvider: React.FC<AppProviderProps> = ({
   // Notifications
   const markAllNotificationsAsRead = () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
+    notificationsApi.markAllRead().catch(() => {});
   };
 
   const markNotificationAsRead = (id: string) => {
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, unread: false } : n)));
+    notificationsApi.markRead(id).catch(() => {});
   };
 
   // Helper to determine if a bill was created on today's date

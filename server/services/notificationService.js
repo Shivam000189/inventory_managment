@@ -15,7 +15,8 @@ async function recipientIds(businessId, category) {
   const roleById = new Map(roles.map((r) => [r.roleId, r]))
   const permission = CATEGORY_PERMISSION[category] || 'view_dashboard'
   return users.filter((user) => {
-    if (user.role === 'owner') return true
+    // Both admin (owner) and salesperson receive inventory and operational alerts
+    if (user.role === 'owner' || user.role === 'admin' || user.role === 'salesperson') return true
     const member = memberByAccount.get(String(user._id)) || memberByEmail.get(user.email)
     return Boolean(member && roleById.get(member.roleId)?.permissions?.includes(permission))
   }).map((user) => user._id)
@@ -28,10 +29,30 @@ export async function notifyEvent(businessId, event) {
     { business, recipient, dedupeKey: event.dedupeKey },
     { $setOnInsert: { business, recipient, dedupeKey: event.dedupeKey }, $set: {
       type: event.type, category: event.category, severity: event.severity || 'info', title: event.title, message: event.message,
-      relatedEntity: event.relatedEntity || '', relatedEntityId: String(event.relatedEntityId || ''), navigationTarget: event.navigationTarget, resolvedAt: null,
+      relatedEntity: event.relatedEntity || '', relatedEntityId: String(event.relatedEntityId || ''), navigationTarget: event.navigationTarget, resolvedAt: null, readAt: null, dismissedAt: null, createdAt: new Date()
     } },
     { upsert: true, returnDocument: 'after' },
   )))
+}
+
+export async function notifyLowStockDecrease(businessId, product, previousStock, newStock, threshold) {
+  const isOut = newStock <= 0
+  const title = isOut ? `${product.name} is out of stock` : `Low Stock Alert: ${product.name}`
+  const message = isOut
+    ? `${product.sku || product.name} has run out of stock (0 units remaining).`
+    : `${product.sku || product.name} stock decreased from ${previousStock} to ${newStock} units (low stock threshold: ${threshold}).`
+  const dedupeKey = `stock:${product._id || product.productId}:dec:${Date.now()}:${newStock}`
+  return notifyEvent(businessId, {
+    dedupeKey,
+    type: isOut ? 'OUT_OF_STOCK' : 'LOW_STOCK',
+    category: 'inventory',
+    severity: isOut ? 'critical' : 'warning',
+    title,
+    message,
+    relatedEntity: 'Product',
+    relatedEntityId: product._id || product.productId,
+    navigationTarget: 'Products',
+  })
 }
 
 async function syncCondition(businessId, condition, active) {
@@ -46,7 +67,7 @@ export async function syncOperationalAlerts(businessId) {
   const business = toObjectId(businessId, 'business')
   const today = new Date().toISOString().slice(0, 10)
   const [products, purchaseOrders, salesOrders, paymentRows, receivings, suppliers] = await Promise.all([
-    Product.find({ business }).select('name sku currentStock minimumStock'),
+    Product.find({ business }).select('name sku currentStock minimumStock reorderPoint reorderLevel'),
     PurchaseOrder.find({ business }).select('orderNumber supplierId supplierName status paymentStatus totalAmount expectedDeliveryDate createdAt'),
     SalesOrder.find({ business, status: 'Completed', paymentStatus: { $ne: 'Paid' } }).select('orderNumber customerName totalAmount createdAt'),
     Payment.aggregate([{ $match: { business } }, { $group: { _id: '$referenceId', paid: { $sum: '$amount' } } }]),
@@ -58,7 +79,7 @@ export async function syncOperationalAlerts(businessId) {
   const addDays = (date, days) => new Date(new Date(date).getTime() + days * 86400000)
 
   for (const product of products) {
-    const threshold = product.minimumStock || 10
+    const threshold = product.reorderLevel || product.reorderPoint || product.minimumStock || 10
     const state = product.currentStock <= 0 ? 'out' : product.currentStock <= threshold ? 'low' : null
     for (const kind of ['out', 'low']) await syncCondition(businessId, {
       dedupeKey: `stock:${product._id}:${kind}`, type: kind === 'out' ? 'OUT_OF_STOCK' : 'LOW_STOCK', category: 'inventory', severity: kind === 'out' ? 'critical' : 'warning',

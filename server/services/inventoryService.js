@@ -1,6 +1,7 @@
 import { Product, StockTransaction } from '../models/index.js'
 import { ApiError } from '../utils/ApiError.js'
 import { toObjectId, toNumber, assert } from '../validators/assert.js'
+import { notifyLowStockDecrease } from './notificationService.js'
 
 /**
  * Records a stock movement and updates the product's currentStock atomically
@@ -50,6 +51,15 @@ export async function applyStockChange(
     ],
     { session },
   )
+
+  const threshold = product.reorderLevel || product.reorderPoint || product.minimumStock || 10
+  if (newStock < previousStock && newStock <= threshold) {
+    try {
+      await notifyLowStockDecrease(businessId, product, previousStock, newStock, threshold)
+    } catch (err) {
+      console.warn('Failed to dispatch low stock notification:', err)
+    }
+  }
 
   return { product, transaction }
 }
