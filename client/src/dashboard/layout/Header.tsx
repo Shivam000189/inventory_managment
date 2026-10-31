@@ -131,7 +131,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
                 </div>
               </div>
 
-              {/* Role Switcher Section (Admin only) */}
+              {/* Role Switcher Section (Owner / Admin only) */}
               {isAdmin && (
                 <>
                   <div className="px-3 py-1.5 text-[10.5px] font-bold uppercase text-[#9A948A] tracking-wider">
@@ -183,33 +183,51 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
                 </>
               )}
 
-              <div className={`${isAdmin ? 'border-t border-[#EEE6DA] pt-1' : ''} space-y-0.5`}>
+              <div className="border-t border-[#EEE6DA] pt-1 space-y-0.5">
+                {/* Owner / Admin Profile Controls */}
                 {isAdmin && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      navigate('/');
-                      setIsUserMenuOpen(false);
-                    }}
-                    className="w-full text-left px-3 py-1.5 text-xs text-[#6B665E] hover:text-[#1C1B18] hover:bg-[#FAF6EF] rounded-xl flex items-center gap-2 cursor-pointer transition-colors"
-                  >
-                    <ExternalLink size={14} />
-                    <span>View Landing Page</span>
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigate('/');
+                        setIsUserMenuOpen(false);
+                      }}
+                      className="w-full text-left px-3 py-1.5 text-xs text-[#6B665E] hover:text-[#1C1B18] hover:bg-[#FAF6EF] rounded-xl flex items-center gap-2 cursor-pointer transition-colors"
+                    >
+                      <ExternalLink size={14} />
+                      <span>View Landing Page</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigate('/app/settings');
+                        setIsUserMenuOpen(false);
+                      }}
+                      className="w-full text-left px-3 py-1.5 text-xs text-[#6B665E] hover:text-[#1C1B18] hover:bg-[#FAF6EF] rounded-xl flex items-center gap-2 cursor-pointer transition-colors"
+                    >
+                      <Store size={14} />
+                      <span>Business Profile</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (confirm('Reset demo data to initial state?')) {
+                          localStorage.clear();
+                          window.location.reload();
+                        }
+                      }}
+                      className="w-full text-left px-3 py-1.5 text-xs text-[#D64545] hover:bg-[#FDECEC] rounded-xl flex items-center gap-2 cursor-pointer transition-colors"
+                    >
+                      <RotateCcw size={14} />
+                      <span>Reset Demo Data</span>
+                    </button>
+                  </>
                 )}
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    navigate('/app/settings');
-                    setIsUserMenuOpen(false);
-                  }}
-                  className="w-full text-left px-3 py-1.5 text-xs text-[#6B665E] hover:text-[#1C1B18] hover:bg-[#FAF6EF] rounded-xl flex items-center gap-2 cursor-pointer transition-colors"
-                >
-                  <Store size={14} />
-                  <span>Business Profile</span>
-                </button>
-
+                {/* Sign Out (Available to all users, salesperson only sees this) */}
                 <button
                   type="button"
                   onClick={() => {
@@ -221,22 +239,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
                   <LogOut size={14} />
                   <span>Sign Out</span>
                 </button>
-
-                {isAdmin && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (confirm('Reset demo data to initial state?')) {
-                        localStorage.clear();
-                        window.location.reload();
-                      }
-                    }}
-                    className="w-full text-left px-3 py-1.5 text-xs text-[#D64545] hover:bg-[#FDECEC] rounded-xl flex items-center gap-2 cursor-pointer transition-colors"
-                  >
-                    <RotateCcw size={14} />
-                    <span>Reset Demo Data</span>
-                  </button>
-                )}
               </div>
             </div>
           )}
