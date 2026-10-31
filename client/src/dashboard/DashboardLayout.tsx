@@ -37,7 +37,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = () => {
 
   // Role Guard: Salesperson can access POS; back-office routes are restricted
   const isSalespersonBlocked =
-    currentUser.role === 'salesperson' &&
+    currentUser?.role === 'salesperson' &&
     !activeRoute.startsWith('/pos') &&
     !activeRoute.startsWith('/app/pos') &&
     !isDefaultOverviewRoute;
@@ -49,7 +49,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = () => {
 
     const path = activeRoute;
     if (isDefaultOverviewRoute) {
-      if (currentUser.role === 'salesperson') {
+      if (currentUser?.role === 'salesperson') {
         return <PosSalesPage />;
       }
       return <OverviewPage />;

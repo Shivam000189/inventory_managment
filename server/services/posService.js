@@ -27,8 +27,12 @@ export async function listCustomers(businessId, query = {}) {
 
 async function resolveCustomer(businessId, payload, session) {
   if (payload.customerId) {
-    const customer = await Customer.findOne(scoped(businessId, { _id: toObjectId(payload.customerId, 'customer id'), status: 'active' })).session(session)
-    if (customer) return customer
+    try {
+      const customer = await Customer.findOne(scoped(businessId, { _id: toObjectId(payload.customerId, 'customer id'), status: 'active' })).session(session)
+      if (customer) return customer
+    } catch {
+      // payload.customerId might not be a valid UUID / ObjectId (e.g. mock ID like 'cust-01')
+    }
   }
 
   const phone = String(payload.newCustomer?.phone || payload.customerPhone || '').trim()
@@ -203,8 +207,13 @@ export async function checkout(businessId, payload, actor, permissions = []) {
     }
 
     let amountPaid = round2(payments.filter((payment) => !['Credit', 'Pay Later'].includes(payment.method)).reduce((sum, payment) => sum + payment.amount, 0))
-    if (amountPaid > totalAmount && amountPaid - totalAmount <= 5) {
-      if (payments.length > 0) payments[0].amount = round2(payments[0].amount - (amountPaid - totalAmount))
+    if (amountPaid > totalAmount) {
+      // Cash payment change handling: e.g. customer handed ₹500 for a ₹480 bill
+      const overpaid = round2(amountPaid - totalAmount)
+      const cashOrFirstPayment = payments.find((p) => p.method === 'Cash') || payments[0]
+      if (cashOrFirstPayment && cashOrFirstPayment.amount >= overpaid) {
+        cashOrFirstPayment.amount = round2(cashOrFirstPayment.amount - overpaid)
+      }
       amountPaid = totalAmount
     }
     assert(amountPaid <= totalAmount + 0.001, 'Payment amount cannot exceed the bill total.')

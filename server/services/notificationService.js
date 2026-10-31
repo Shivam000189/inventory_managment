@@ -8,18 +8,22 @@ const scoped = (businessId, extra = {}) => ({ business: toObjectId(businessId, '
 async function recipientIds(businessId, category) {
   const business = toObjectId(businessId, 'business')
   const users = await User.find({ business }).select('_id email role')
-  const members = await Member.find({ business, status: 'active' }).select('account email roleId')
+  const members = await Member.find({ business, status: 'active' }).select('userId accountId account email roleId')
   const roles = await Role.find({ business }).select('roleId permissions name')
-  const memberByAccount = new Map(members.filter((m) => m.account).map((m) => [String(m.account), m]))
+  const memberByAccount = new Map(
+    members
+      .filter((m) => m.accountId || m.account || m.userId)
+      .map((m) => [String(m.accountId || m.account || m.userId), m])
+  )
   const memberByEmail = new Map(members.map((m) => [String(m.email || '').toLowerCase().trim(), m]))
   const roleById = new Map(roles.map((r) => [r.roleId, r]))
   const permission = CATEGORY_PERMISSION[category] || 'view_dashboard'
 
-  return users.filter((user) => {
+  const matched = users.filter((user) => {
     // Both admin (owner) and salesperson receive inventory and operational alerts
     if (user.role === 'owner' || user.role === 'admin' || user.role === 'salesperson') return true
     const emailKey = String(user.email || '').toLowerCase().trim()
-    const member = memberByAccount.get(String(user._id)) || memberByEmail.get(emailKey)
+    const member = memberByAccount.get(String(user._id || user.id)) || memberByEmail.get(emailKey)
     if (!member) {
       return category === 'inventory' || category === 'sales'
     }
@@ -30,7 +34,9 @@ async function recipientIds(businessId, category) {
       role?.name?.toLowerCase().includes('staff')
     if (category === 'inventory' && isSalesperson) return true
     return Boolean(role?.permissions?.includes(permission))
-  }).map((user) => user._id)
+  }).map((user) => user._id || user.id)
+
+  return Array.from(new Set(matched.filter(Boolean).map(String)))
 }
 
 export async function notifyEvent(businessId, event) {
