@@ -141,8 +141,8 @@ export const ReportsPage: React.FC = () => {
             type="button"
             onClick={() => setActiveTab(tab.id as any)}
             className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${activeTab === tab.id
-                ? 'bg-[#1C1B18] !text-white'
-                : 'text-[#6B665E] hover:text-[#1C1B18] hover:bg-[#FAF6EF]'
+              ? 'bg-[#1C1B18] !text-white'
+              : 'text-[#6B665E] hover:text-[#1C1B18] hover:bg-[#FAF6EF]'
               }`}
             style={{ color: activeTab === tab.id ? '#ffffff' : undefined }}
           >
@@ -198,8 +198,8 @@ export const ReportsPage: React.FC = () => {
                     </span>
                     <div
                       className={`w-full max-w-[42px] rounded-t-lg transition-all ${i === monthlyRevenueData.length - 1
-                          ? 'bg-[#7FAE82]'
-                          : 'bg-[#B9D4BA] hover:bg-[#a3c9a5]'
+                        ? 'bg-[#7FAE82]'
+                        : 'bg-[#B9D4BA] hover:bg-[#a3c9a5]'
                         }`}
                       style={{ height: `${heightPercent}%` }}
                     />
@@ -244,31 +244,31 @@ export const ReportsPage: React.FC = () => {
           <div className="bg-white rounded-2xl border border-[#EEE6DA] overflow-hidden shadow-2xs">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs min-w-[680px]">
-              <thead className="sticky top-0 z-10 bg-[#FAF6EF] border-b border-[#EEE6DA] text-[#8C867A] text-[11px] font-semibold uppercase tracking-wider">
-                <tr>
-                  <th className="py-3 px-4">Product Name</th>
-                  <th className="py-3 px-3">Category</th>
-                  <th className="py-3 px-3 text-center">On Hand</th>
-                  <th className="py-3 px-3 text-right">Unit Cost</th>
-                  <th className="py-3 px-3 text-right">Selling Price</th>
-                  <th className="py-3 px-4 text-right">Total Cost Value</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#EEE6DA]">
-                {products.map((p) => (
-                  <tr key={p.id} className="hover:bg-[#FAF6EF]/50">
-                    <td className="py-3 px-4 font-semibold text-[#1C1B18]">{p.name}</td>
-                    <td className="py-3 px-3 text-[#6B665E]">{p.category}</td>
-                    <td className="py-3 px-3 text-center font-bold tabular-nums">{p.stock}</td>
-                    <td className="py-3 px-3 text-right tabular-nums">{formatINR(p.purchasePrice)}</td>
-                    <td className="py-3 px-3 text-right tabular-nums">{formatINR(p.sellingPrice)}</td>
-                    <td className="py-3 px-4 text-right font-bold text-[#1C1B18] tabular-nums">
-                      {formatINR(p.stock * p.purchasePrice)}
-                    </td>
+                <thead className="sticky top-0 z-10 bg-[#FAF6EF] border-b border-[#EEE6DA] text-[#8C867A] text-[11px] font-semibold uppercase tracking-wider">
+                  <tr>
+                    <th className="py-3 px-4">Product Name</th>
+                    <th className="py-3 px-3">Category</th>
+                    <th className="py-3 px-3 text-center">On Hand</th>
+                    <th className="py-3 px-3 text-right">Unit Cost</th>
+                    <th className="py-3 px-3 text-right">Selling Price</th>
+                    <th className="py-3 px-4 text-right">Total Cost Value</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-[#EEE6DA]">
+                  {products.map((p) => (
+                    <tr key={p.id} className="hover:bg-[#FAF6EF]/50">
+                      <td className="py-3 px-4 font-semibold text-[#1C1B18]">{p.name}</td>
+                      <td className="py-3 px-3 text-[#6B665E]">{p.category}</td>
+                      <td className="py-3 px-3 text-center font-bold tabular-nums">{p.stock}</td>
+                      <td className="py-3 px-3 text-right tabular-nums">{formatINR(p.purchasePrice)}</td>
+                      <td className="py-3 px-3 text-right tabular-nums">{formatINR(p.sellingPrice)}</td>
+                      <td className="py-3 px-4 text-right font-bold text-[#1C1B18] tabular-nums">
+                        {formatINR(p.stock * p.purchasePrice)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -310,41 +310,41 @@ export const ReportsPage: React.FC = () => {
           <div className="bg-white rounded-2xl border border-[#EEE6DA] overflow-hidden shadow-2xs">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs min-w-[680px]">
-              <thead className="sticky top-0 z-10 bg-[#FAF6EF] border-b border-[#EEE6DA] text-[#8C867A] text-[11px] font-semibold uppercase tracking-wider">
-                <tr>
-                  <th className="py-3 px-4">Salesperson</th>
-                  <th className="py-3 px-3">Role</th>
-                  <th className="py-3 px-3 text-center">Bills Count</th>
-                  <th className="py-3 px-3 text-right">Total Revenue Generated</th>
-                  <th className="py-3 px-4 text-right">Avg Ticket Size</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#EEE6DA]">
-                {users.map((u) => {
-                  const userBills = bills.filter(
-                    (b) => b.salespersonId === u.id || b.createdBy.includes(u.name.split(' ')[0])
-                  );
-                  const userRev = userBills.reduce((acc, b) => acc + b.total, 0);
-                  const avg = userBills.length > 0 ? Math.round(userRev / userBills.length) : 0;
+                <thead className="sticky top-0 z-10 bg-[#FAF6EF] border-b border-[#EEE6DA] text-[#8C867A] text-[11px] font-semibold uppercase tracking-wider">
+                  <tr>
+                    <th className="py-3 px-4">Salesperson</th>
+                    <th className="py-3 px-3">Role</th>
+                    <th className="py-3 px-3 text-center">Bills Count</th>
+                    <th className="py-3 px-3 text-right">Total Revenue Generated</th>
+                    <th className="py-3 px-4 text-right">Avg Ticket Size</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#EEE6DA]">
+                  {users.map((u) => {
+                    const userBills = bills.filter(
+                      (b) => b.salespersonId === u.id || b.createdBy.includes(u.name.split(' ')[0])
+                    );
+                    const userRev = userBills.reduce((acc, b) => acc + b.total, 0);
+                    const avg = userBills.length > 0 ? Math.round(userRev / userBills.length) : 0;
 
-                  return (
-                    <tr key={u.id} className="hover:bg-[#FAF6EF]/50">
-                      <td className="py-3 px-4 font-bold text-[#1C1B18]">{u.name}</td>
-                      <td className="py-3 px-3 capitalize text-[#6B665E]">{u.role}</td>
-                      <td className="py-3 px-3 text-center font-bold tabular-nums">
-                        {userBills.length}
-                      </td>
-                      <td className="py-3 px-3 text-right font-bold text-[#2E8B57] tabular-nums">
-                        {formatINR(userRev)}
-                      </td>
-                      <td className="py-3 px-4 text-right tabular-nums text-[#1C1B18] font-semibold">
-                        {formatINR(avg)}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                    return (
+                      <tr key={u.id} className="hover:bg-[#FAF6EF]/50">
+                        <td className="py-3 px-4 font-bold text-[#1C1B18]">{u.name}</td>
+                        <td className="py-3 px-3 capitalize text-[#6B665E]">{u.role}</td>
+                        <td className="py-3 px-3 text-center font-bold tabular-nums">
+                          {userBills.length}
+                        </td>
+                        <td className="py-3 px-3 text-right font-bold text-[#2E8B57] tabular-nums">
+                          {formatINR(userRev)}
+                        </td>
+                        <td className="py-3 px-4 text-right tabular-nums text-[#1C1B18] font-semibold">
+                          {formatINR(avg)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
