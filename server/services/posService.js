@@ -9,6 +9,15 @@ const round2 = (value) => Math.round((Number(value) + Number.EPSILON) * 100) / 1
 const scoped = (businessId, extra = {}) => ({ business: toObjectId(businessId, 'business'), ...extra })
 const PAYMENT_METHODS = ['Cash', 'UPI', 'QR', 'Card', 'Debit Card', 'Credit Card', 'Bank transfer', 'Credit', 'Pay Later', 'Store Credit', 'Gift Card', 'Other']
 
+function getVariant(product, variantId) {
+  if (!variantId || !product?.variants?.length) return null
+  if (typeof product.variants.id === 'function') {
+    return product.variants.id(variantId)
+  }
+  const idStr = String(variantId?._id || variantId?.id || variantId)
+  return product.variants.find((v) => String(v._id || v.id || '') === idStr) || null
+}
+
 export async function listCustomers(businessId, query = {}) {
   const filter = scoped(businessId, { status: 'active' })
   if (query.search) filter.$or = ['name', 'phone', 'email', 'gstin'].map((field) => ({ [field]: { $regex: String(query.search).slice(0, 100), $options: 'i' } }))
@@ -79,9 +88,10 @@ export async function checkout(businessId, payload, actor, permissions = []) {
 
     const items = payload.items.map((raw) => {
       const product = byId.get(String(raw.productId))
+      assert(product, 'Product not found in cart.')
       const quantity = toNumber(raw.quantity, 'Quantity', { min: 1, integer: true })
-      const variant = raw.variantId ? product.variants.id(toObjectId(raw.variantId, 'variant id')) : null
-      assert(!raw.variantId || variant?.active, `Selected ${product.name} variant is unavailable.`)
+      const variant = raw.variantId ? getVariant(product, raw.variantId) : null
+      assert(!raw.variantId || variant?.active !== false, `Selected ${product.name} variant is unavailable.`)
       const available = variant ? variant.currentStock : product.currentStock
       assert(available >= quantity, `${variant?.sku || product.name} has only ${available} unit(s) in stock.`)
       const standardPrice = variant?.sellingPrice ?? (billingType === 'wholesale' && product.wholesalePrice > 0 && quantity >= product.wholesaleMinQuantity ? product.wholesalePrice : product.sellingPrice)
@@ -92,7 +102,22 @@ export async function checkout(businessId, payload, actor, permissions = []) {
       const discount = Math.min(gross, round2(toNumber(raw.discount || 0, 'Line discount', { min: 0 })))
       const rawGst = raw.taxRate !== undefined && raw.taxRate !== '' ? raw.taxRate : product.gstRate
       const gstRate = business.settings?.taxEnabled === false ? 0 : (rawGst !== undefined && rawGst !== null && rawGst !== '' ? Number(rawGst) : (business.settings?.defaultGstRate || 0))
-      return { productId: product._id, productName: product.name, variantId: variant?._id || null, variantSku: variant?.sku || '', variantSize: variant?.size || product.size || '', variantColor: variant?.color || product.color || '', barcode: variant?.barcode || product.barcode || '', quantity, sellingPrice: requestedPrice, discount, gstRate, hsnCode: product.hsnCode || '', gross, taxableAmount: round2(gross - discount) }
+      return {
+        productId: product._id,
+        productName: product.name,
+        variantId: variant?._id || variant?.id || null,
+        variantSku: variant?.sku || '',
+        variantSize: variant?.size || product.size || '',
+        variantColor: variant?.color || product.color || '',
+        barcode: variant?.barcode || product.barcode || '',
+        quantity,
+        sellingPrice: requestedPrice,
+        discount,
+        gstRate,
+        hsnCode: product.hsnCode || '',
+        gross,
+        taxableAmount: round2(gross - discount),
+      }
     })
 
     const subtotal = round2(items.reduce((sum, item) => sum + item.gross, 0))
@@ -126,7 +151,10 @@ export async function checkout(businessId, payload, actor, permissions = []) {
     const loyaltyDiscount = round2(pointsRedeemed * Number(business.settings?.loyaltyPointValue || 0))
     discount = round2(Math.min(afterLines, discount + loyaltyDiscount))
 
-    const paymentPayload = Array.isArray(payload.payments) ? payload.payments : []
+    const paymentPayload = Array.isArray(payload.payments) && payload.payments.length > 0
+      ? payload.payments
+      : [{ method: payload.paymentMethod || 'Cash', amount: payload.grandTotal || payload.totalAmount || 0, payFull: true }]
+
     for (const payment of paymentPayload) assert(PAYMENT_METHODS.includes(payment.method), `Unsupported payment method: ${payment.method}.`)
     const configuredOffers = business.settings?.paymentOffers || []
     // A blank / "Any" offer method applies regardless of how the bill is paid
@@ -161,7 +189,7 @@ export async function checkout(businessId, payload, actor, permissions = []) {
     const roundOff = round2(totalAmount - unrounded)
 
     const payments = paymentPayload.map((payment) => ({
-      method: payment.method,
+      method: payment.method || 'Cash',
       amount: round2(Math.max(0, Number(payment.amount) || 0)),
       reference: String(payment.reference || '').trim(),
       payFull: Boolean(payment.payFull),
@@ -170,14 +198,14 @@ export async function checkout(businessId, payload, actor, permissions = []) {
     // If a single non-credit payment was made, ensure it pays the full bill if walk-in or intended full payment
     if (payments.length === 1 && !['Credit', 'Pay Later'].includes(payments[0].method)) {
       if (payments[0].payFull || !customer || payments[0].amount === 0 || Math.abs(payments[0].amount - totalAmount) <= Math.max(50, totalAmount * 0.35)) {
-        payments[0].amount = totalAmount;
+        payments[0].amount = totalAmount
       }
     }
 
     let amountPaid = round2(payments.filter((payment) => !['Credit', 'Pay Later'].includes(payment.method)).reduce((sum, payment) => sum + payment.amount, 0))
     if (amountPaid > totalAmount && amountPaid - totalAmount <= 5) {
-      if (payments.length > 0) payments[0].amount = round2(payments[0].amount - (amountPaid - totalAmount));
-      amountPaid = totalAmount;
+      if (payments.length > 0) payments[0].amount = round2(payments[0].amount - (amountPaid - totalAmount))
+      amountPaid = totalAmount
     }
     assert(amountPaid <= totalAmount + 0.001, 'Payment amount cannot exceed the bill total.')
     const balanceDue = round2(totalAmount - amountPaid)
@@ -197,22 +225,39 @@ export async function checkout(businessId, payload, actor, permissions = []) {
     }], { session })
 
     for (const item of items) {
-      if (!item.variantId) await applyStockChange({ businessId, productId: item.productId, type: 'stock_out', quantity: item.quantity, reason: 'POS Sale', referenceId: String(order._id), createdBy: actor.name }, session)
-      else {
-        const product = byId.get(String(item.productId));
-        const variant = product.variants.id(item.variantId);
-        const previousStock = variant.currentStock;
-        variant.currentStock -= item.quantity;
-        const prevProductStock = product.currentStock;
-        product.currentStock = product.variants.reduce((n, v) => n + v.currentStock, 0);
-        await product.save({ session });
-        await StockTransaction.create([{ business: business._id, productId: product._id, variantId: variant._id, variantSku: variant.sku, variantSize: variant.size, variantColor: variant.color, type: 'stock_out', quantity: item.quantity, previousStock, newStock: variant.currentStock, reason: 'POS Sale', referenceId: String(order._id), createdBy: actor.name }], { session });
-        const threshold = product.minimumStock || product.reorderPoint || product.reorderLevel || 10;
-        if (product.currentStock < prevProductStock && product.currentStock <= threshold) {
-          try {
-            await notifyLowStockDecrease(businessId, product, prevProductStock, product.currentStock, threshold);
-          } catch (err) {
-            console.warn('Failed to dispatch variant low stock notification:', err);
+      if (!item.variantId) {
+        await applyStockChange({ businessId, productId: item.productId, type: 'stock_out', quantity: item.quantity, reason: 'POS Sale', referenceId: String(order._id), createdBy: actor.name }, session)
+      } else {
+        const product = byId.get(String(item.productId))
+        const variant = getVariant(product, item.variantId)
+        if (variant) {
+          const previousStock = variant.currentStock
+          variant.currentStock = Math.max(0, variant.currentStock - item.quantity)
+          const prevProductStock = product.currentStock
+          product.currentStock = product.variants.reduce((n, v) => n + (Number(v.currentStock) || 0), 0)
+          await product.save({ session })
+          await StockTransaction.create([{
+            business: business._id,
+            productId: product._id,
+            variantId: variant._id || variant.id,
+            variantSku: variant.sku || '',
+            variantSize: variant.size || '',
+            variantColor: variant.color || '',
+            type: 'stock_out',
+            quantity: item.quantity,
+            previousStock,
+            newStock: variant.currentStock,
+            reason: 'POS Sale',
+            referenceId: String(order._id),
+            createdBy: actor.name,
+          }], { session })
+          const threshold = product.minimumStock || product.reorderPoint || product.reorderLevel || 10
+          if (product.currentStock < prevProductStock && product.currentStock <= threshold) {
+            try {
+              await notifyLowStockDecrease(businessId, product, prevProductStock, product.currentStock, threshold)
+            } catch (err) {
+              console.warn('Failed to dispatch variant low stock notification:', err)
+            }
           }
         }
       }
@@ -254,9 +299,20 @@ export async function listCatalog(businessId, query = {}) {
   }
   const docs = await Product.find(filter).sort('name').limit(500)
   return docs.flatMap((doc) => {
-    const product = doc.toJSON()
-    if (!doc.variants.some((variant) => variant.active)) return [product]
-    return doc.variants.filter((variant) => variant.active).map((variant) => ({ ...product, variantId: String(variant._id), sku: variant.sku, barcode: variant.barcode, size: variant.size, color: variant.color, currentStock: variant.currentStock, sellingPrice: variant.sellingPrice ?? product.sellingPrice, purchasePrice: variant.purchasePrice ?? product.purchasePrice }))
+    const product = doc.toJSON ? doc.toJSON() : doc
+    const variants = Array.isArray(product.variants) ? product.variants : []
+    if (!variants.some((variant) => variant.active !== false)) return [product]
+    return variants.filter((variant) => variant.active !== false).map((variant) => ({
+      ...product,
+      variantId: String(variant._id || variant.id),
+      sku: variant.sku,
+      barcode: variant.barcode,
+      size: variant.size,
+      color: variant.color,
+      currentStock: variant.currentStock,
+      sellingPrice: variant.sellingPrice ?? product.sellingPrice,
+      purchasePrice: variant.purchasePrice ?? product.purchasePrice,
+    }))
   })
 }
 
