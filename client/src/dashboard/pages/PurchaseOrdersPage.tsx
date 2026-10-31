@@ -288,14 +288,34 @@ export const PurchaseOrdersPage: React.FC = () => {
       </div>
 
       {/* Tabs and Search Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#EEE6DA] pb-2">
-        <div className="flex items-center gap-1 bg-[#FAF6EF] p-1 rounded-xl border border-[#EEE6DA]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#EEE6DA] pb-2">
+        {/* Mobile Status Bar: 3-column segmented button grid to fit without overflow */}
+        <div className="grid grid-cols-3 gap-1 bg-[#FAF6EF] p-1 rounded-xl border border-[#EEE6DA] w-full sm:hidden">
           {statuses.map((st) => (
             <button
               key={st}
               type="button"
               onClick={() => setActiveTab(st)}
-              className={`px-3 py-1 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
+              className={`py-1.5 px-1 text-center text-[11px] font-semibold rounded-lg transition-all cursor-pointer truncate ${
+                activeTab === st
+                  ? 'bg-white text-[#1C1B18] shadow-2xs'
+                  : 'text-[#6B665E] hover:text-[#1C1B18]'
+              }`}
+              title={st}
+            >
+              {st === 'Partially received' ? 'Partial' : st}
+            </button>
+          ))}
+        </div>
+
+        {/* Desktop Status Bar */}
+        <div className="hidden sm:flex items-center gap-1 bg-[#FAF6EF] p-1 rounded-xl border border-[#EEE6DA]">
+          {statuses.map((st) => (
+            <button
+              key={st}
+              type="button"
+              onClick={() => setActiveTab(st)}
+              className={`px-3 py-1 text-xs font-semibold rounded-lg transition-colors cursor-pointer whitespace-nowrap ${
                 activeTab === st
                   ? 'bg-white text-[#1C1B18] shadow-2xs'
                   : 'text-[#6B665E] hover:text-[#1C1B18]'
@@ -306,14 +326,15 @@ export const PurchaseOrdersPage: React.FC = () => {
           ))}
         </div>
 
-        <div className="relative w-64">
+        {/* Search */}
+        <div className="relative w-full sm:w-64">
           <Search size={14} className="absolute left-3 top-2.5 text-[#9A948A]" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search PO # or supplier..."
-            className="w-full pl-8 pr-3 py-1.5 rounded-xl border border-[#EEE6DA] text-xs bg-white outline-none focus:border-[#7FAE82]"
+            className="w-full pl-8 pr-3 py-2 sm:py-1.5 rounded-xl border border-[#EEE6DA] text-xs bg-white outline-none focus:border-[#7FAE82] transition-colors"
           />
         </div>
       </div>
