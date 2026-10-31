@@ -242,8 +242,9 @@ export const ReportsPage: React.FC = () => {
           </div>
 
           <div className="bg-white rounded-2xl border border-[#EEE6DA] overflow-hidden shadow-2xs">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-[#FAF6EF] border-b border-[#EEE6DA] text-[#9A948A]">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs min-w-[680px]">
+              <thead className="sticky top-0 z-10 bg-[#FAF6EF] border-b border-[#EEE6DA] text-[#8C867A] text-[11px] font-semibold uppercase tracking-wider">
                 <tr>
                   <th className="py-3 px-4">Product Name</th>
                   <th className="py-3 px-3">Category</th>
@@ -268,6 +269,7 @@ export const ReportsPage: React.FC = () => {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         </div>
       )}
@@ -306,8 +308,9 @@ export const ReportsPage: React.FC = () => {
       {activeTab === 'salesperson' && (
         <div className="space-y-6">
           <div className="bg-white rounded-2xl border border-[#EEE6DA] overflow-hidden shadow-2xs">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-[#FAF6EF] border-b border-[#EEE6DA] text-[#9A948A]">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs min-w-[680px]">
+              <thead className="sticky top-0 z-10 bg-[#FAF6EF] border-b border-[#EEE6DA] text-[#8C867A] text-[11px] font-semibold uppercase tracking-wider">
                 <tr>
                   <th className="py-3 px-4">Salesperson</th>
                   <th className="py-3 px-3">Role</th>
@@ -342,6 +345,7 @@ export const ReportsPage: React.FC = () => {
                 })}
               </tbody>
             </table>
+            </div>
           </div>
         </div>
       )}

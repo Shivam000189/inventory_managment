@@ -233,8 +233,8 @@ export const InventoryPage: React.FC = () => {
       {activeTab === 'levels' && (
         <div className="bg-white rounded-2xl border border-[#EEE6DA] overflow-hidden shadow-2xs">
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-[#FAF6EF] border-b border-[#EEE6DA] text-[#9A948A]">
+            <table className="w-full text-left text-xs min-w-[760px]">
+              <thead className="sticky top-0 z-10 bg-[#FAF6EF] border-b border-[#EEE6DA] text-[#8C867A] text-[11px] font-semibold uppercase tracking-wider">
                 <tr>
                   <th className="py-3 px-4 font-medium">Product</th>
                   <th className="py-3 px-3 font-medium">Category</th>
@@ -335,8 +335,8 @@ export const InventoryPage: React.FC = () => {
 
           <div className="bg-white rounded-2xl border border-[#EEE6DA] overflow-hidden shadow-2xs">
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-[#FAF6EF] border-b border-[#EEE6DA] text-[#9A948A]">
+              <table className="w-full text-left text-xs min-w-[760px]">
+                <thead className="sticky top-0 z-10 bg-[#FAF6EF] border-b border-[#EEE6DA] text-[#8C867A] text-[11px] font-semibold uppercase tracking-wider">
                   <tr>
                     <th className="py-3 px-4 font-medium">Date & Time</th>
                     <th className="py-3 px-3 font-medium">Type</th>
