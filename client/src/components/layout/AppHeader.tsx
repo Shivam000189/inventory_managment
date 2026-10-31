@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, type RefObject } from "react";
 import NotificationCenter from "./NotificationCenter";
 
-const NAVIGATION_LABELS = {
+const NAVIGATION_LABELS: Record<string, string> = {
   Overview: "Overview",
   Products: "Products Catalog",
   Stock: "Stock Ledger",
@@ -24,23 +24,23 @@ const NAVIGATION_LABELS = {
   Settings: "Store Settings",
 };
 
-const navigationLabel = (item: any) => NAVIGATION_LABELS[item as keyof typeof NAVIGATION_LABELS] || item;
-const capitalize = (value: any) => (value ? String(value).charAt(0).toUpperCase() + String(value).slice(1) : value);
+const navigationLabel = (item: any) => NAVIGATION_LABELS[item] || item;
+const capitalize = (value: any) => (value ? value.charAt(0).toUpperCase() + value.slice(1) : value);
 
 export interface AppHeaderProps {
   _business?: any;
   account?: any;
   activeNav?: string;
-  navigateTo?: (page: string) => void;
+  navigateTo: (page: string) => void;
   canOpen?: (permission: string) => boolean;
   mobileNavOpen?: boolean;
-  setMobileNavOpen?: (open: boolean) => void;
+  setMobileNavOpen: (open: boolean) => void;
   theme?: string;
   toggleTheme?: () => void;
   openNotification?: (target?: string) => void;
   setNotif?: (notifs: any) => void;
   onLogout?: () => void;
-  menuButtonRef?: any;
+  menuButtonRef?: RefObject<HTMLButtonElement | null> | any;
 }
 
 export default function AppHeader({
@@ -100,7 +100,7 @@ export default function AppHeader({
           aria-label="Open navigation"
           aria-controls="dashboard-navigation"
           aria-expanded={mobileNavOpen}
-          onClick={() => setMobileNavOpen?.(true)}
+          onClick={() => setMobileNavOpen(true)}
         >
           <span />
           <span />
@@ -165,8 +165,8 @@ export default function AppHeader({
               className="modern-search-input"
               placeholder="Search products, suppliers, orders..."
               aria-label="Search products, suppliers, orders"
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && (e.target as HTMLInputElement).value.trim() && navigateTo) {
+              onKeyDown={(e: any) => {
+                if (e.key === "Enter" && e.target.value.trim() && navigateTo) {
                   navigateTo("Products");
                 }
               }}
@@ -270,11 +270,11 @@ export default function AppHeader({
                   title="View Main Profile"
                   onClick={() => {
                     if (canOpen?.("Business Profile")) {
-                      navigateTo?.("Business Profile");
+                      navigateTo("Business Profile");
                     } else if (canOpen?.("Users")) {
-                      navigateTo?.("Users");
+                      navigateTo("Users");
                     } else {
-                      navigateTo?.("Overview");
+                      navigateTo("Overview");
                     }
                     setShowUserMenu(false);
                   }}

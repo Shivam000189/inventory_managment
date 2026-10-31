@@ -13,7 +13,7 @@ export interface PageHeaderAction {
   size?: 'sm' | 'md' | 'lg' | string
 }
 
-export interface PageHeaderProps extends HTMLAttributes<HTMLElement> {
+export interface PageHeaderProps extends Omit<HTMLAttributes<HTMLElement>, 'title'> {
   kicker?: ReactNode
   title: ReactNode
   description?: ReactNode

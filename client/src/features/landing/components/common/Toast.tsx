@@ -1,7 +1,11 @@
 import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 
-export const Toast = ({ message }: { message: string }) => {
+export interface ToastProps {
+  message?: string | null;
+}
+
+export const Toast = ({ message }: ToastProps) => {
   return (
     <AnimatePresence>
       {message && (

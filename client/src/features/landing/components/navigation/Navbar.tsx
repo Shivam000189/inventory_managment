@@ -13,21 +13,21 @@ const CubeLogo = () => (
   </svg>
 );
 
+export interface NavbarProps {
+  activeNav?: string;
+  onNavClick?: (href: string) => void;
+  onLoginClick?: () => void;
+  isLoggedIn?: boolean;
+  onDashboardClick?: () => void;
+}
+
 export const Navbar = ({
   activeNav,
   onNavClick,
   onLoginClick,
-  _onRegisterClick,
-  onDashboardClick,
   isLoggedIn = false,
-}: {
-  activeNav?: string;
-  onNavClick?: (nav: string) => void;
-  onLoginClick?: () => void;
-  _onRegisterClick?: () => void;
-  onDashboardClick?: () => void;
-  isLoggedIn?: boolean;
-}) => {
+  onDashboardClick
+}: NavbarProps) => {
   const navItems = [
     { label: 'Product', href: '#feature' },
     { label: 'Solutions', href: '#feature' },

@@ -4,16 +4,16 @@ import { Button } from './Button'
 import { Input } from './FormControls'
 
 export interface PromptDialogProps {
-  isOpen: boolean;
-  title?: string;
-  message?: ReactNode;
-  defaultValue?: string;
-  placeholder?: string;
-  inputType?: string;
-  confirmText?: string;
-  cancelText?: string;
-  onConfirm?: (value: string) => void;
-  onCancel?: () => void;
+  isOpen: boolean
+  title: ReactNode
+  message?: ReactNode
+  defaultValue?: string
+  placeholder?: string
+  inputType?: string
+  confirmText?: ReactNode
+  cancelText?: ReactNode
+  onConfirm?: (val: string) => void
+  onCancel?: () => void
 }
 
 export function PromptDialog({
@@ -70,9 +70,9 @@ export function PromptDialog({
           ref={inputRef}
           type={inputType}
           value={value}
-          onChange={(e) => setValue(e.target.value)}
+          onChange={(e: any) => setValue(e.target.value)}
           placeholder={placeholder}
-          autoFocus
+          required
         />
       </form>
     </Modal>

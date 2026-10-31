@@ -14,8 +14,8 @@ const API_BASE_URL = getApiBaseUrl();
 const CSRF_COOKIE = "sr_csrf";
 
 export class ApiError extends Error {
-  status: number;
-  payload: unknown;
+  declare status: number;
+  declare payload: unknown;
 
   constructor(message: string, status: number, payload?: unknown) {
     super(message);
@@ -85,7 +85,7 @@ export async function request<T = any>(
   if (params) {
     for (const [key, value] of Object.entries(params)) {
       if (value !== undefined && value !== null && value !== "")
-        url.searchParams.set(key, String(value));
+        url.searchParams.set(key, value as string);
     }
   }
 
@@ -156,16 +156,16 @@ export async function request<T = any>(
 }
 
 export const apiClient = {
-  get: <T = any>(path: string, options?: Omit<RequestOptions, "method">) =>
+  get: <T = any>(path: string, options?: RequestOptions) =>
     request<T>(path, { ...options, method: "GET" }),
-  post: <T = any>(path: string, body?: unknown, options?: Omit<RequestOptions, "method" | "body">) =>
+  post: <T = any>(path: string, body?: unknown, options?: RequestOptions) =>
     request<T>(path, { ...options, method: "POST", body }),
-  put: <T = any>(path: string, body?: unknown, options?: Omit<RequestOptions, "method" | "body">) =>
+  put: <T = any>(path: string, body?: unknown, options?: RequestOptions) =>
     request<T>(path, { ...options, method: "PUT", body }),
-  patch: <T = any>(path: string, body?: unknown, options?: Omit<RequestOptions, "method" | "body">) =>
+  patch: <T = any>(path: string, body?: unknown, options?: RequestOptions) =>
     request<T>(path, { ...options, method: "PATCH", body }),
-  delete: <T = any>(path: string, options?: Omit<RequestOptions, "method">) =>
+  delete: <T = any>(path: string, options?: RequestOptions) =>
     request<T>(path, { ...options, method: "DELETE" }),
-  upload: <T = any>(path: string, formData: FormData, options?: Omit<RequestOptions, "method" | "body">) =>
+  upload: <T = any>(path: string, formData: FormData, options?: RequestOptions) =>
     request<T>(path, { ...options, method: "POST", body: formData }),
 };

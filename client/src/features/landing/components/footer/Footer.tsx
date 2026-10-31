@@ -2,7 +2,11 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Zap, Headphones } from 'lucide-react';
 
-export const Footer = ({ onOpenDemo }: { onOpenDemo?: () => void }) => {
+export interface FooterProps {
+  onOpenDemo?: () => void;
+}
+
+export const Footer = ({ onOpenDemo }: FooterProps) => {
   return (
     <footer id="contact" className="pt-10 pb-16 px-6 max-w-7xl mx-auto">
       {/* High-Contrast Warm CTA Banner */}

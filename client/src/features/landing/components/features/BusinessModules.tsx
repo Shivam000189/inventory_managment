@@ -315,7 +315,12 @@ const MODULE_CARDS = [
   }
 ];
 
-export const BusinessModules = ({ onSelectModule, onViewAll }: { onSelectModule?: (mod: any) => void; onViewAll?: () => void }) => {
+export interface BusinessModulesProps {
+  onSelectModule?: (mod: any) => void;
+  onViewAll?: () => void;
+}
+
+export const BusinessModules = ({ onSelectModule, onViewAll }: BusinessModulesProps) => {
   return (
     <section id="modules" className="py-14 sm:py-20 px-5 sm:px-8 max-w-7xl mx-auto select-none">
       {/* ======================================================== */}

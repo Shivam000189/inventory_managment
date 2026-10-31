@@ -48,6 +48,19 @@ function normalizeCode(rawCode) {
   return code;
 }
 
+function normalizeEmittedCode(code) {
+  // esbuild's tsx loader elides `import React from 'react'` when React is unused,
+  // whereas jsx loader keeps it. If React is not referenced in the code body, normalize it out.
+  const codeWithoutImports = code.replace(/^import\s+[^;]+;\r?\n?/gm, '');
+  const reactUsed = /\bReact\b/.test(codeWithoutImports);
+  if (!reactUsed) {
+    code = code
+      .replace(/^import\s+React\s+from\s+['"]react['"];?\r?\n?/gm, '')
+      .replace(/^import\s+React\s*,\s*\{([^}]+)\}\s*from\s+['"]react['"];?/gm, (_, inner) => `import { ${inner.trim()} } from 'react';`);
+  }
+  return code.trim();
+}
+
 export async function transformAndFormat(code, filePath, isTs) {
   const ext = path.extname(filePath);
   const isJsx = ext === '.jsx' || ext === '.tsx' || (code.includes('<') && (code.includes('/>') || code.includes('</')));
@@ -69,7 +82,7 @@ export async function transformAndFormat(code, filePath, isTs) {
     trailingComma: 'es5',
   });
 
-  return prettified.trim();
+  return normalizeEmittedCode(prettified);
 }
 
 export function getBaseContent(basePath) {

@@ -1,6 +1,6 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { AnimatePresence, motion, MotionConfig } from "motion/react";
-import { authApi } from "../../api/authApi";
+import { authApi } from "../../api/authApi.js";
 import "./AuthPage.css";
 
 const AUTH_COPY = {
@@ -81,20 +81,22 @@ const DEMO_ACCOUNTS = [
   { roleName: "Aflix Default Admin", industry: "all", email: "demo@stockroom.test", password: "demo12345", role: "owner", badge: "Admin" },
 ];
 
+
 export interface AuthPageProps {
   initialReset?: string;
-  initialMode?: "signin" | "signup" | "forgot" | "reset" | string;
-  onAuthenticated?: (payload: { user: any; business: any }) => void;
+  initialMode?: 'signin' | 'signup' | 'forgot' | 'reset' | string;
+  onAuthenticated: (session: any) => void;
   onBackToHome?: () => void;
-  [key: string]: unknown;
 }
 
 export default function AuthPage({
+
   initialReset = "",
   initialMode = "signin",
   onAuthenticated,
   onBackToHome,
 }: AuthPageProps) {
+
   const [mode, setMode] = useState(initialReset ? "reset" : initialMode);
   const [role, setRole] = useState("owner");
   const [identifier, setIdentifier] = useState("");
@@ -102,10 +104,10 @@ export default function AuthPage({
   const [showPassword, setShowPassword] = useState(false);
   const [showDemoAccounts, setShowDemoAccounts] = useState(true);
   const [demoIndustryFilter, setDemoIndustryFilter] = useState("all");
-  const [message, setMessage] = useState<{ type: string; text?: string; message?: string } | null>(null);
+  const [message, setMessage] = useState<{ type: string; text: string } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [resetToken, setResetToken] = useState(initialReset);
-  const copy = (AUTH_COPY as Record<string, any>)[mode] || AUTH_COPY.signin;
+  const copy = (AUTH_COPY as any)[mode];
 
   const filteredDemoAccounts = demoIndustryFilter === "all"
     ? DEMO_ACCOUNTS
@@ -127,7 +129,7 @@ export default function AuthPage({
     }
   };
 
-  const triggerLogin = async (loginEmail: string, loginPassword?: string, loginRole?: string) => {
+  const triggerLogin = async (loginEmail: string, loginPassword: string, loginRole: string) => {
     if (submitting) return;
     setSubmitting(true);
     setMessage(null);
@@ -137,15 +139,15 @@ export default function AuthPage({
         password: loginPassword,
         role: loginRole,
       });
-      onAuthenticated?.({ user: result.user, business: result.business });
-    } catch (error) {
-      setMessage({ type: "error", text: (error as any)?.message || "Authentication failed." });
+      onAuthenticated({ user: result.user, business: result.business });
+    } catch (error: any) {
+      setMessage({ type: "error", text: error.message });
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleSelectDemoAccount = (acc: any, autoLogin = false) => {
+  const handleSelectDemoAccount = (acc: any, autoLogin: boolean = false) => {
     setIdentifier(acc.email);
     setPassword(acc.password || "Demo@12345");
     setRole(acc.role);
@@ -205,7 +207,7 @@ export default function AuthPage({
             : result.message,
         });
       } catch (error: any) {
-      setMessage({ type: "error", text: error?.message || "Operation failed." });
+        setMessage({ type: "error", text: error.message });
       } finally {
         setSubmitting(false);
       }
@@ -233,10 +235,10 @@ export default function AuthPage({
       try {
         const result = await authApi.resetPassword({ token, password: formPassword });
         clearResetUrl();
-        onAuthenticated?.({ user: result.user, business: result.business });
+        onAuthenticated({ user: result.user, business: result.business });
         setMessage(null);
       } catch (error: any) {
-      setMessage({ type: "error", text: error?.message || "Operation failed." });
+        setMessage({ type: "error", text: error.message });
       } finally {
         setSubmitting(false);
       }
@@ -271,7 +273,7 @@ export default function AuthPage({
         setPassword("");
         form.reset();
       } catch (error: any) {
-      setMessage({ type: "error", text: error?.message || "Operation failed." });
+        setMessage({ type: "error", text: error.message });
       } finally {
         setSubmitting(false);
       }

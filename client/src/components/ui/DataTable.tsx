@@ -4,39 +4,42 @@ import { Button } from './Button'
 import './DataTable.css'
 
 export interface DataTableColumn<T = any> {
-  key?: string;
-  id?: string;
-  label?: ReactNode;
-  title?: ReactNode;
-  render?: (row: T, index: number) => ReactNode;
-  sortable?: boolean;
-  align?: 'left' | 'center' | 'right';
-  width?: string | number;
-  className?: string;
-  [key: string]: unknown;
+  key: string
+  header: ReactNode
+  sortable?: boolean
+  align?: 'left' | 'center' | 'right'
+  width?: string | number
+  render?: (row: T, index: number) => ReactNode
+}
+
+export interface DataTablePagination {
+  page: number
+  pages?: number
+  total?: number
+  onPageChange: (newPage: number) => void
 }
 
 export interface DataTableProps<T = any> {
-  columns?: DataTableColumn<T>[];
-  data?: T[];
-  keyField?: string | null;
-  loading?: boolean;
-  error?: any;
-  onRetry?: (() => void) | null;
-  emptyText?: string;
-  emptyAction?: ReactNode;
-  selectable?: boolean;
-  selectedKeys?: any[];
-  onSelectKey?: ((key: any, row?: any) => void) | null;
-  onSelectAll?: ((selectAll: boolean) => void) | null;
-  expandedKeys?: any[];
-  onToggleExpand?: ((key: any, row?: any) => void) | null;
-  renderExpanded?: ((row: T) => ReactNode) | null;
-  sortKey?: string | null;
-  sortDirection?: 'asc' | 'desc' | string;
-  onSort?: ((key: string) => void) | null;
-  pagination?: any;
-  className?: string;
+  columns?: DataTableColumn<T>[]
+  data?: T[]
+  keyField?: string | null
+  loading?: boolean
+  error?: any
+  onRetry?: (() => void) | null
+  emptyText?: ReactNode
+  emptyAction?: ReactNode
+  selectable?: boolean
+  selectedKeys?: string[]
+  onSelectKey?: ((key: string, row: T) => void) | null
+  onSelectAll?: ((checked: boolean) => void) | null
+  expandedKeys?: string[]
+  onToggleExpand?: ((key: string, row: T) => void) | null
+  renderExpanded?: ((row: T) => ReactNode) | null
+  sortKey?: string | null
+  sortDirection?: 'asc' | 'desc'
+  onSort?: ((key: string) => void) | null
+  pagination?: DataTablePagination | null
+  className?: string
 }
 
 export function DataTable<T = any>({
@@ -82,7 +85,7 @@ export function DataTable<T = any>({
 
   const allSelected = useMemo(() => {
     if (!data.length) return false
-    return data.every((row, i) => selectedKeys.includes(getRowKey(row, i)))
+    return data.every((row: any, i: number) => selectedKeys.includes(getRowKey(row, i)))
   }, [data, selectedKeys, getRowKey])
 
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -137,7 +140,7 @@ export function DataTable<T = any>({
             Could not load data
           </h3>
           <p style={{ color: 'var(--text-soft)', marginBottom: '16px' }}>
-            {(error as any)?.message || String(error)}
+            {error.message || String(error)}
           </p>
           {onRetry && (
             <Button variant="primary" size="sm" onClick={onRetry}>
@@ -209,7 +212,7 @@ export function DataTable<T = any>({
                 </th>
               )}
               {renderExpanded && <th style={{ width: '40px' }} />}
-              {columns.map((col) => {
+              {columns.map((col: any) => {
                 const isSortable = Boolean(col.sortable && onSort)
                 const isSorted = sortKey === col.key
                 return (
@@ -229,9 +232,9 @@ export function DataTable<T = any>({
                           : 'descending'
                         : undefined
                     }
-                    onClick={() => isSortable && onSort && onSort(col.key || "")}
+                    onClick={() => isSortable && onSort!(col.key)}
                   >
-                    <span>{col.header || (col as any).title || (col as any).label}</span>
+                    <span>{col.header}</span>
                     {isSortable && isSorted && (
                       <span className="sort-icon" aria-hidden="true">
                         <Icon
@@ -246,7 +249,7 @@ export function DataTable<T = any>({
             </tr>
           </thead>
           <tbody>
-            {data.map((row, index) => {
+            {data.map((row: any, index: number) => {
               const rowKey = getRowKey(row, index)
               const isSelected = selectedKeys.includes(rowKey)
               const isExpanded = expandedKeys.includes(rowKey)
@@ -277,10 +280,10 @@ export function DataTable<T = any>({
                         </button>
                       </td>
                     )}
-                    {columns.map((col) => {
+                    {columns.map((col: any) => {
                       const content = col.render
                         ? col.render(row, index)
-                        : (col.key ? (row as any)[col.key] : null)
+                        : row[col.key]
 
                       return (
                         <td

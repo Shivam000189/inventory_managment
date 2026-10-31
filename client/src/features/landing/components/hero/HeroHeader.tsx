@@ -25,7 +25,15 @@ const itemVariants: any = {
   }
 };
 
-export const HeroHeader = ({ onGetStarted, onBookDemo }: { onGetStarted?: () => void; onBookDemo?: () => void }) => {
+export interface HeroHeaderProps {
+  onGetStarted?: () => void;
+  onBookDemo?: () => void;
+}
+
+export const HeroHeader = ({
+  onGetStarted,
+  onBookDemo
+}: HeroHeaderProps) => {
   return (
     <motion.section
       id="home"

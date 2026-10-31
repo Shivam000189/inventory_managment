@@ -1,6 +1,10 @@
 import React from 'react';
 
-export const ProductSVG = ({ type }: { type: string }) => {
+export interface ProductSVGProps {
+  type: string;
+}
+
+export const ProductSVG = ({ type }: ProductSVGProps) => {
   switch (type) {
     case 'scanner':
       return (

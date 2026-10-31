@@ -19,8 +19,7 @@ import {
 
 export interface LandingPageProps {
   isLoggedIn?: boolean;
-  onNavigateAuth?: (page: string) => void;
-  [key: string]: unknown;
+  onNavigateAuth?: (mode?: string) => void;
 }
 
 export default function LandingPage({
@@ -127,7 +126,7 @@ export default function LandingPage({
         '--primary': '#2f2a25',
         '--secondary': '#0d0d0d',
         '--accent': '#7bbd65'
-      } as any}
+      } as React.CSSProperties}
       className="min-h-screen bg-[#f6ecdf] text-[#2f1f13] font-sans selection:bg-[#2f2a25] selection:text-[#F6EDE1] overflow-x-hidden"
     >
       {/* Toast Notification */}
@@ -144,7 +143,7 @@ export default function LandingPage({
         {/* Navigation Bar Component */}
         <Navbar
           activeNav={activeNav}
-          onNavClick={(label: string) => setActiveNav(label)}
+          onNavClick={(label) => setActiveNav(label)}
           onLoginClick={handleLoginClick}
           isLoggedIn={isLoggedIn}
           onDashboardClick={handleDashboardClick}
@@ -160,16 +159,16 @@ export default function LandingPage({
         <DashboardMockup
           categories={CATEGORIES}
           activeCategory={activeCategory}
-          onSelectCategory={(cat: string) => setActiveCategory(cat)}
+          onSelectCategory={(cat: any) => setActiveCategory(cat)}
           searchQuery={searchQuery}
-          onSearchChange={(query: string) => setSearchQuery(query)}
+          onSearchChange={(query) => setSearchQuery(query)}
           filteredInventory={filteredInventory}
           onSelectProduct={handleSelectProduct}
           orderMode={orderMode}
           onOrderModeChange={(mode: any) => setOrderMode(mode)}
           orderItems={orderItems}
           onClearOrders={handleClearOrders}
-          onQuickAction={(actionName: string) =>
+          onQuickAction={(actionName) =>
             triggerToast(`${actionName} quick-action opened`)
           }
           onToggleMenu={() => triggerToast('Sidebar navigation toggled')}
@@ -181,7 +180,7 @@ export default function LandingPage({
 
       {/* Most Used Business Modules - Interactive Catalog & Capabilities Grid */}
       <BusinessModules
-        onSelectModule={(mod) => triggerToast(`Selected ${mod} workflow`)}
+        onSelectModule={(mod: any) => triggerToast(`Selected ${mod} workflow`)}
         onViewAll={() => setDemoModalOpen(true)}
       />
 
@@ -192,7 +191,7 @@ export default function LandingPage({
       <PricingSection
         billingCycle={billingCycle}
         onBillingCycleChange={setBillingCycle}
-        onSelectPlan={(planName: string) => {
+        onSelectPlan={(planName) => {
           setDemoModalOpen(true);
           triggerToast(`Selected ${planName} plan`);
         }}
@@ -205,7 +204,7 @@ export default function LandingPage({
       <DemoModal
         isOpen={demoModalOpen}
         onClose={() => setDemoModalOpen(false)}
-        onSubmitSuccess={(email: any, company: any) => {
+        onSubmitSuccess={(email, company) => {
           triggerToast(`Workspace invite & demo sent to ${email}!`);
           // Navigate to register with prefilled query params
           navigate(`/register?email=${encodeURIComponent(email)}&company=${encodeURIComponent(company)}`);

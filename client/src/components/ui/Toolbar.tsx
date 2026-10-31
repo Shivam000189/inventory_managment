@@ -1,18 +1,17 @@
-import React, { type ReactNode, type HTMLAttributes } from 'react'
+import React, { type HTMLAttributes, type ReactNode } from 'react'
 import { Icon } from './icons'
 import './Toolbar.css'
 
 export interface ToolbarProps extends HTMLAttributes<HTMLDivElement> {
-  children?: ReactNode;
-  filters?: ReactNode;
-  search?: string | null;
-  searchValue?: string | null;
-  onSearchChange?: ((val: string) => void) | null;
-  searchPlaceholder?: string;
-  searchLabel?: string;
-  actions?: ReactNode;
-  className?: string;
-  [key: string]: unknown;
+  children?: ReactNode
+  filters?: ReactNode
+  search?: string | null
+  searchValue?: string | null
+  onSearchChange?: ((val: string) => void) | null
+  searchPlaceholder?: string
+  searchLabel?: string
+  actions?: ReactNode
+  className?: string
 }
 
 export function Toolbar({
@@ -41,7 +40,7 @@ export function Toolbar({
               type="text"
               className="ui-search-input invoice-search-input"
               value={activeSearch ?? ''}
-              onChange={(e) => onSearchChange?.(e.target.value)}
+              onChange={(e) => onSearchChange(e.target.value)}
               placeholder={searchPlaceholder}
               aria-label={searchLabel}
             />

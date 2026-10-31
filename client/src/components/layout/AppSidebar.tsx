@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 const NAVIGATION_LABELS = {
   Overview: "Overview",
@@ -25,9 +25,9 @@ const NAVIGATION_LABELS = {
   Settings: "Store Settings",
 };
 
-const navigationLabel = (item: any) => NAVIGATION_LABELS[item as keyof typeof NAVIGATION_LABELS] || item;
+const navigationLabel = (item: string) => (NAVIGATION_LABELS as Record<string, string>)[item] || item;
 
-function getSectionIcon(section: any) {
+function getSectionIcon(section: string) {
   const s = String(section).toLowerCase();
   if (s.includes("product") || s.includes("catalog") || s.includes("medicine")) {
     return (
@@ -91,7 +91,7 @@ function getSectionIcon(section: any) {
   );
 }
 
-function getSubgroupIcon(label: any) {
+function getSubgroupIcon(label: string) {
   const l = String(label).toLowerCase();
   if (l.includes("manage")) {
     return (
@@ -131,23 +131,25 @@ const INVENTORY_SUBGROUPS = [
   { label: "Tracking", items: ["Stock History"] },
 ];
 
+
 export interface AppSidebarProps {
   business?: any;
   _account?: any;
-  activeNav?: string;
-  navigateTo?: (page: string) => void;
-  visibleNavigation?: [string, string[]][];
-  expandedNavSections?: Record<string, boolean>;
-  setExpandedNavSections?: any;
-  mobileNavOpen?: boolean;
-  setMobileNavOpen?: (open: boolean) => void;
+  activeNav: string;
+  navigateTo: (page: string) => void;
+  visibleNavigation: [string, string[]][];
+  expandedNavSections: Set<string>;
+  setExpandedNavSections: React.Dispatch<React.SetStateAction<Set<string>>> | ((fn: any) => void);
+  mobileNavOpen: boolean;
+  setMobileNavOpen: (open: boolean) => void;
   _canOpen?: (permission: string) => boolean;
   _onLogout?: () => void;
   sidebarCollapsed?: boolean;
-  setSidebarCollapsed?: any;
+  setSidebarCollapsed?: React.Dispatch<React.SetStateAction<boolean>> | ((fn: any) => void);
 }
 
 export default function AppSidebar({
+
   business,
   _account,
   activeNav,
@@ -162,13 +164,14 @@ export default function AppSidebar({
   sidebarCollapsed,
   setSidebarCollapsed,
 }: AppSidebarProps) {
+
   const sidebarRef = useRef<HTMLElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
-  const [expandedSubgroups, setExpandedSubgroups] = useState(() => {
+  const [expandedSubgroups, setExpandedSubgroups] = useState<Set<string>>(() => {
     const initial = new Set(["Manage"]);
     for (const group of INVENTORY_SUBGROUPS) {
-      if (activeNav && group.items.includes(activeNav)) {
+      if (group.items.includes(activeNav)) {
         initial.add(group.label);
       }
     }
@@ -177,7 +180,7 @@ export default function AppSidebar({
 
   useEffect(() => {
     for (const group of INVENTORY_SUBGROUPS) {
-      if (activeNav && group.items.includes(activeNav)) {
+      if (group.items.includes(activeNav)) {
         setExpandedSubgroups((prev) => {
           if (prev.has(group.label)) return prev;
           const next = new Set(prev);
@@ -193,9 +196,9 @@ export default function AppSidebar({
     if (!mobileNavOpen) return;
     closeButtonRef.current?.focus();
 
-    const handleKeyDown = (e: any) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key !== "Tab") return;
-      const focusable = sidebarRef.current?.querySelectorAll(
+      const focusable = sidebarRef.current?.querySelectorAll<HTMLElement>(
         'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
       );
       if (!focusable || focusable.length === 0) return;
@@ -204,12 +207,12 @@ export default function AppSidebar({
 
       if (e.shiftKey) {
         if (document.activeElement === first) {
-          (last as HTMLElement | undefined)?.focus();
+          last.focus();
           e.preventDefault();
         }
       } else {
         if (document.activeElement === last) {
-          (first as HTMLElement | undefined)?.focus();
+          first.focus();
           e.preventDefault();
         }
       }
@@ -248,7 +251,7 @@ export default function AppSidebar({
               className="modern-sidebar-collapse-btn"
               aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
               title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-              onClick={() => setSidebarCollapsed?.((prev: any) => !prev)}
+              onClick={() => setSidebarCollapsed((prev) => !prev)}
             >
               <svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 {sidebarCollapsed ? <path d="m8 6 4 4-4 4" /> : <path d="m12 6-4 4 4 4" />}
@@ -260,7 +263,7 @@ export default function AppSidebar({
             type="button"
             className="modern-mobile-close-btn"
             aria-label="Close navigation"
-            onClick={() => setMobileNavOpen?.(false)}
+            onClick={() => setMobileNavOpen(false)}
           >
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <line x1="18" y1="6" x2="6" y2="18" />
@@ -275,7 +278,7 @@ export default function AppSidebar({
             className={`modern-nav-item ${activeNav === "Overview" ? "active" : ""}`}
             type="button"
             title="Overview"
-            onClick={() => navigateTo?.("Overview")}
+            onClick={() => navigateTo("Overview")}
           >
             <span className="modern-nav-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -289,10 +292,10 @@ export default function AppSidebar({
           </button>
 
           {/* Dynamic Navigation Sections */}
-          {(visibleNavigation || []).map(([section, items]) => {
+          {visibleNavigation.map(([section, items]) => {
             const hasChildren = items.length > 0;
-            const isGroupOpen = expandedNavSections instanceof Set ? expandedNavSections.has(section) : Boolean((expandedNavSections as any)?.[section]);
-            const containsActive = (activeNav ? items.includes(activeNav) : false) || activeNav === section;
+            const isGroupOpen = expandedNavSections.has(section);
+            const containsActive = items.includes(activeNav) || activeNav === section;
             const hasLiveTag = section.includes("Sales") || section.includes("POS") || items.includes("POS / Billing");
 
             if (!hasChildren) {
@@ -302,7 +305,7 @@ export default function AppSidebar({
                   className={`modern-nav-item ${activeNav === section ? "active" : ""}`}
                   type="button"
                   title={navigationLabel(section)}
-                  onClick={() => navigateTo?.(section)}
+                  onClick={() => navigateTo(section)}
                 >
                   <span className="modern-nav-icon" aria-hidden="true">
                     {getSectionIcon(section)}
@@ -321,7 +324,7 @@ export default function AppSidebar({
                   aria-expanded={isGroupOpen}
                   title={navigationLabel(section)}
                   onClick={() => {
-                    setExpandedNavSections?.((current: any) => {
+                    setExpandedNavSections((current) => {
                       const next = new Set(current);
                       if (next.has(section)) next.delete(section);
                       else next.add(section);
@@ -351,7 +354,7 @@ export default function AppSidebar({
                           );
                           if (matchingItems.length === 0) return null;
                           const isClusterOpen = expandedSubgroups.has(subgroup.label);
-                          const containsActive = Boolean(activeNav && matchingItems.includes(activeNav));
+                          const containsActive = matchingItems.includes(activeNav);
 
                           return (
                             <div key={subgroup.label} className="modern-subnav-cluster">
@@ -394,7 +397,7 @@ export default function AppSidebar({
                                       className={`modern-subnav-item ${activeNav === item ? "active" : ""}`}
                                       type="button"
                                       title={navigationLabel(item)}
-                                      onClick={() => navigateTo?.(item)}
+                                      onClick={() => navigateTo(item)}
                                     >
                                       <span className="modern-nav-label">{navigationLabel(item)}</span>
                                     </button>
@@ -410,7 +413,7 @@ export default function AppSidebar({
                           );
                           if (remainingItems.length === 0) return null;
                           const isClusterOpen = expandedSubgroups.has("Extensions");
-                          const containsActive = Boolean(activeNav && remainingItems.includes(activeNav));
+                          const containsActive = remainingItems.includes(activeNav);
                           return (
                             <div className="modern-subnav-cluster">
                               <button
@@ -449,7 +452,7 @@ export default function AppSidebar({
                                       className={`modern-subnav-item ${activeNav === item ? "active" : ""}`}
                                       type="button"
                                       title={navigationLabel(item)}
-                                      onClick={() => navigateTo?.(item)}
+                                      onClick={() => navigateTo(item)}
                                     >
                                       <span className="modern-nav-label">{navigationLabel(item)}</span>
                                     </button>
@@ -467,7 +470,7 @@ export default function AppSidebar({
                           className={`modern-subnav-item ${activeNav === item ? "active" : ""}`}
                           type="button"
                           title={navigationLabel(item)}
-                          onClick={() => navigateTo?.(item)}
+                          onClick={() => navigateTo(item)}
                         >
                           <span className="modern-nav-label">{navigationLabel(item)}</span>
                           {item === "POS / Billing" && <span className="modern-live-badge">LIVE</span>}
@@ -512,7 +515,7 @@ export default function AppSidebar({
         type="button"
         aria-label="Close navigation"
         tabIndex={mobileNavOpen ? 0 : -1}
-        onClick={() => setMobileNavOpen?.(false)}
+        onClick={() => setMobileNavOpen(false)}
       />
     </>
   );

@@ -3,15 +3,17 @@ import { motion } from 'framer-motion';
 import { Check } from 'lucide-react';
 import { PRICING_PLANS } from '../../data/inventoryData';
 
+export interface PricingSectionProps {
+  billingCycle: string;
+  onBillingCycleChange: (cycle: string) => void;
+  onSelectPlan: (plan: any) => void;
+}
+
 export const PricingSection = ({
   billingCycle,
   onBillingCycleChange,
-  onSelectPlan,
-}: {
-  billingCycle: string;
-  onBillingCycleChange?: (cycle: string) => void;
-  onSelectPlan?: (plan: string) => void;
-}) => {
+  onSelectPlan
+}: PricingSectionProps) => {
   return (
     <section id="pricing" className="py-24 px-6 max-w-7xl mx-auto">
       {/* Section Header */}
@@ -33,7 +35,7 @@ export const PricingSection = ({
         {/* Billing Toggle with layoutId animated background */}
         <div className="inline-flex items-center gap-1.5 p-1.5 rounded-2xl bg-[#F6EDE1] border border-[#e0d0bc] relative">
           <button
-            onClick={() => onBillingCycleChange?.('monthly')}
+            onClick={() => onBillingCycleChange('monthly')}
             className={`relative px-5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-colors cursor-pointer z-10 ${
               billingCycle === 'monthly'
                 ? 'text-[#F6EDE1]'
@@ -50,7 +52,7 @@ export const PricingSection = ({
             Monthly Billing
           </button>
           <button
-            onClick={() => onBillingCycleChange?.('annual')}
+            onClick={() => onBillingCycleChange('annual')}
             className={`relative px-5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-colors flex items-center gap-2 cursor-pointer z-10 ${
               billingCycle === 'annual'
                 ? 'text-[#F6EDE1]'
@@ -156,7 +158,7 @@ export const PricingSection = ({
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={() => onSelectPlan?.(plan.name)}
+                onClick={() => onSelectPlan(plan.name)}
                 style={{ color: plan.highlighted ? '#0d0d0d' : '#ffffff' }}
                 className={`w-full py-3.5 rounded-xl font-semibold text-sm transition-colors cursor-pointer shadow-sm ${
                   plan.highlighted

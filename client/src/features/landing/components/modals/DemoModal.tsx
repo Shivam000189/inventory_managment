@@ -2,13 +2,23 @@ import React, { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Zap } from 'lucide-react';
 
-export const DemoModal = ({ isOpen, onClose, onSubmitSuccess }: { isOpen: boolean; onClose: () => void; onSubmitSuccess?: (email: string, company: string) => void }) => {
+export interface DemoModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmitSuccess: (email: string, company: string) => void;
+}
+
+export const DemoModal = ({
+  isOpen,
+  onClose,
+  onSubmitSuccess
+}: DemoModalProps) => {
   const [email, setEmail] = useState('');
   const [company, setCompany] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmitSuccess?.(email, company);
+    onSubmitSuccess(email, company);
     setEmail('');
     setCompany('');
     onClose();

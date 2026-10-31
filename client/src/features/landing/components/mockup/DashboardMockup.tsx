@@ -301,28 +301,24 @@ const getProductIconComponent = (name = '') => {
 };
 
 export interface DashboardMockupProps {
-  categories?: any[];
-  activeCategory?: string;
-  onSelectCategory?: (cat: string) => void;
   searchQuery?: string;
   onSearchChange?: (q: string) => void;
-  filteredInventory?: any[];
-  topSelling?: any[];
   onQuickAction?: (action: string) => void;
-  onToggleMenu?: () => void;
+  topSelling?: any[];
+  activeCategory?: string;
+  _filteredInventory?: any[];
+  _categories?: any[];
   [key: string]: unknown;
 }
 
 export const DashboardMockup = ({
-  categories: _categories,
-  activeCategory = "Apparel",
-  onSelectCategory,
-  searchQuery = "",
+  searchQuery = '',
   onSearchChange,
   onQuickAction,
   topSelling: propTopSelling,
-  filteredInventory: propFilteredInventory,
-  onToggleMenu,
+  activeCategory = 'All Stock',
+  _filteredInventory = [],
+  _categories = []
 }: DashboardMockupProps) => {
   const { session, account } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
