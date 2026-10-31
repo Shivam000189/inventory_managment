@@ -255,9 +255,7 @@ export const ProductsPage: React.FC = () => {
             className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs text-[#1C1B18] bg-white cursor-pointer outline-none focus:border-[#7FAE82] transition-colors"
           >
             {categories.map((c) => (
-              <option key={c} value={c}>
-                Category: {c}
-              </option>
+              <option key={c} value={c}>Category: {c}</option>
             ))}
           </select>
 
@@ -313,9 +311,7 @@ export const ProductsPage: React.FC = () => {
             className="px-3 py-1.5 rounded-xl border border-[#EEE6DA] text-xs text-[#1C1B18] bg-white cursor-pointer outline-none"
           >
             {categories.map((c) => (
-              <option key={c} value={c}>
-                Category: {c}
-              </option>
+              <option key={c} value={c}>Category: {c}</option>
             ))}
           </select>
         </div>
@@ -453,25 +449,22 @@ export const ProductsPage: React.FC = () => {
                         {formatINR(p.sellingPrice)}
                       </td>
 
-                      <td className="py-3 px-3 w-44">
-                        <div className="flex items-center justify-between text-xs mb-1">
-                          <span className="font-semibold text-[#1C1B18] tabular-nums">
-                            {p.stock} {p.unit}
+                      <td className="py-3 px-3">
+                        <div className="flex items-baseline justify-between gap-3 max-w-[150px]">
+                          <span
+                            className={`font-bold text-sm tabular-nums ${
+                              isOut
+                                ? 'text-[#D64545]'
+                                : isLow
+                                  ? 'text-[#E8772E]'
+                                  : 'text-[#7FAE82]'
+                            }`}
+                          >
+                            {p.stock} <span className="text-xs font-normal opacity-80">{p.unit}</span>
                           </span>
-                          <span className="text-[10.5px] text-[#9A948A]">
+                          <span className="text-[11px] text-[#9A948A] tabular-nums whitespace-nowrap">
                             Min {p.reorderLevel}
                           </span>
-                        </div>
-                        <div className="w-full bg-[#EEE6DA] h-1.5 rounded-full overflow-hidden">
-                          <div
-                            className={`h-full rounded-full transition-all duration-300 ${isOut
-                                ? 'bg-[#D64545]'
-                                : isLow
-                                  ? 'bg-[#E8772E]'
-                                  : 'bg-[#7FAE82]'
-                              }`}
-                            style={{ width: `${Math.max(5, stockPercent)}%` }}
-                          />
                         </div>
                       </td>
 
@@ -664,9 +657,7 @@ export const ProductsPage: React.FC = () => {
                       className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs bg-white outline-none"
                     >
                       {categories.filter((c) => c !== 'All').map((c) => (
-                        <option key={c} value={c}>
-                          {c}
-                        </option>
+                        <option key={c} value={c}>{c}</option>
                       ))}
                     </select>
                   </div>
