@@ -1,4 +1,4 @@
-import React, { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { ThemeContext, type ThemeMode } from "./ThemeContext.js";
 
 export interface ThemeProviderProps {

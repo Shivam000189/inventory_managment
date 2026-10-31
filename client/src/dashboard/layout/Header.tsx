@@ -6,7 +6,6 @@ import {
   Menu,
   Store,
   LogOut,
-  Database,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
@@ -54,28 +53,23 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
           <Menu size={20} />
         </button>
 
-        {/* Global Search Input */}
-        <div
-          onClick={() => setCommandPaletteOpen(true)}
-          className="w-full max-w-md bg-white border border-[#EEE6DA] hover:border-[#DDD3C4] rounded-xl px-3.5 py-2 flex items-center gap-2.5 text-xs text-[#9A948A] cursor-pointer transition-colors shadow-2xs group"
-        >
-          <Search size={16} className="text-[#9A948A] group-hover:text-[#6B665E] transition-colors shrink-0" />
-          <span className="truncate flex-1">Search products, suppliers, orders...</span>
-          <kbd className="hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-medium text-[#9A948A] bg-[#FAF6EF] rounded border border-[#EEE6DA]">
-            ⌘K
-          </kbd>
-        </div>
+        {/* Global Search Input (Owner / Admin only) */}
+        {isAdmin && (
+          <div
+            onClick={() => setCommandPaletteOpen(true)}
+            className="w-full max-w-md bg-white border border-[#EEE6DA] hover:border-[#DDD3C4] rounded-xl px-3.5 py-2 flex items-center gap-2.5 text-xs text-[#9A948A] cursor-pointer transition-colors shadow-2xs group"
+          >
+            <Search size={16} className="text-[#9A948A] group-hover:text-[#6B665E] transition-colors shrink-0" />
+            <span className="truncate flex-1">Search products, suppliers, orders...</span>
+            <kbd className="hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-medium text-[#9A948A] bg-[#FAF6EF] rounded border border-[#EEE6DA]">
+              ⌘K
+            </kbd>
+          </div>
+        )}
       </div>
 
       {/* Right Controls */}
       <div className="flex items-center gap-3 md:gap-4 shrink-0">
-        {/* Backend / Supabase Connection Indicator */}
-        <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-[#EBF7EE] text-[#1E7E34] border border-[#C6EBD0]">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#1E7E34] animate-pulse" />
-          <Database size={12} className="text-[#1E7E34]" />
-          <span>Supabase Connected</span>
-        </div>
-
         {/* Notification Bell */}
         <button
           type="button"
