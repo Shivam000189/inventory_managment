@@ -95,6 +95,28 @@ export const PurchaseOrdersPage: React.FC = () => {
     'Cancelled',
   ];
 
+  const getStatusCount = (st: string) => {
+    if (st === 'All') return purchaseOrders.length;
+    return purchaseOrders.filter((po) => po.status === st).length;
+  };
+
+  const getStatusColor = (st: string) => {
+    switch (st) {
+      case 'Ordered':
+        return 'text-[#2E8B57] bg-[#E8F5EC]';
+      case 'Partially received':
+        return 'text-[#D98E0B] bg-[#FFF4DC]';
+      case 'Received':
+        return 'text-[#2E8B57] bg-[#E8F5EC]';
+      case 'Draft':
+        return 'text-[#6B665E] bg-[#FAF6EF]';
+      case 'Cancelled':
+        return 'text-[#D64545] bg-[#FDECEC]';
+      default:
+        return 'text-[#1C1B18] bg-[#EEE6DA]';
+    }
+  };
+
   const filteredPOs = purchaseOrders.filter((po) => {
     const matchesSearch =
       po.poNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -289,41 +311,56 @@ export const PurchaseOrdersPage: React.FC = () => {
 
       {/* Tabs and Search Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#EEE6DA] pb-2">
-        {/* Mobile Status Bar: 3-column segmented button grid to fit without overflow */}
+        {/* Mobile Status Bar: 3-column segmented button grid with colored count numbers */}
         <div className="grid grid-cols-3 gap-1 bg-[#FAF6EF] p-1 rounded-xl border border-[#EEE6DA] w-full sm:hidden">
-          {statuses.map((st) => (
-            <button
-              key={st}
-              type="button"
-              onClick={() => setActiveTab(st)}
-              className={`py-1.5 px-1 text-center text-[11px] font-semibold rounded-lg transition-all cursor-pointer truncate ${
-                activeTab === st
-                  ? 'bg-white text-[#1C1B18] shadow-2xs'
-                  : 'text-[#6B665E] hover:text-[#1C1B18]'
-              }`}
-              title={st}
-            >
-              {st === 'Partially received' ? 'Partial' : st}
-            </button>
-          ))}
+          {statuses.map((st) => {
+            const count = getStatusCount(st);
+            const colorClass = getStatusColor(st);
+            const label = st === 'Partially received' ? 'Partial' : st;
+            return (
+              <button
+                key={st}
+                type="button"
+                onClick={() => setActiveTab(st)}
+                className={`py-1.5 px-1 text-center text-[11px] font-semibold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1 ${
+                  activeTab === st
+                    ? 'bg-white text-[#1C1B18] shadow-2xs'
+                    : 'text-[#6B665E] hover:text-[#1C1B18]'
+                }`}
+                title={st}
+              >
+                <span className="truncate">{label}</span>
+                <span className={`px-1 rounded-full text-[9.5px] font-bold tabular-nums shrink-0 ${colorClass}`}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
-        {/* Desktop Status Bar */}
+        {/* Desktop Status Bar with colored count numbers */}
         <div className="hidden sm:flex items-center gap-1 bg-[#FAF6EF] p-1 rounded-xl border border-[#EEE6DA]">
-          {statuses.map((st) => (
-            <button
-              key={st}
-              type="button"
-              onClick={() => setActiveTab(st)}
-              className={`px-3 py-1 text-xs font-semibold rounded-lg transition-colors cursor-pointer whitespace-nowrap ${
-                activeTab === st
-                  ? 'bg-white text-[#1C1B18] shadow-2xs'
-                  : 'text-[#6B665E] hover:text-[#1C1B18]'
-              }`}
-            >
-              {st}
-            </button>
-          ))}
+          {statuses.map((st) => {
+            const count = getStatusCount(st);
+            const colorClass = getStatusColor(st);
+            return (
+              <button
+                key={st}
+                type="button"
+                onClick={() => setActiveTab(st)}
+                className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg transition-colors cursor-pointer whitespace-nowrap ${
+                  activeTab === st
+                    ? 'bg-white text-[#1C1B18] shadow-2xs'
+                    : 'text-[#6B665E] hover:text-[#1C1B18]'
+                }`}
+              >
+                <span>{st}</span>
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold tabular-nums ${colorClass}`}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
         {/* Search */}

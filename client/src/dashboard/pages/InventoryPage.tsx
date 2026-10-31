@@ -240,7 +240,7 @@ export const InventoryPage: React.FC = () => {
                   <th className="py-3 px-3 font-medium">Category</th>
                   <th className="py-3 px-3 font-medium text-center">On Hand</th>
                   <th className="py-3 px-3 font-medium text-center">Reorder Level</th>
-                  <th className="py-3 px-3 font-medium">Stock Bar</th>
+                  <th className="py-3 px-3 font-medium text-center">Stock Level</th>
                   <th className="py-3 px-3 font-medium text-right">Stock Value</th>
                   <th className="py-3 px-3 font-medium text-center">Status</th>
                   <th className="py-3 px-4 font-medium text-right">Action</th>
@@ -270,45 +270,18 @@ export const InventoryPage: React.FC = () => {
                       <td className="py-3 px-3 text-center text-[#6B665E] tabular-nums">
                         {p.reorderLevel} {p.unit}
                       </td>
-                      <td className="py-3 px-3 w-44">
-                        <div className="space-y-1">
-                          <div className="flex items-center justify-between text-xs">
-                            <span
-                              className={`font-bold tabular-nums ${
-                                isOut
-                                  ? 'text-[#D64545]'
-                                  : isLow
-                                    ? 'text-[#E8772E]'
-                                    : 'text-[#7FAE82]'
-                              }`}
-                            >
-                              {stockPercent}%
-                            </span>
-                            <span
-                              className={`text-[11px] font-medium tabular-nums ${
-                                isOut
-                                  ? 'text-[#D64545]'
-                                  : isLow
-                                    ? 'text-[#E8772E]'
-                                    : 'text-[#6B665E]'
-                              }`}
-                            >
-                              {p.stock} / {p.reorderLevel} min
-                            </span>
-                          </div>
-                          <div className="w-full bg-[#EEE6DA] h-2 rounded-full overflow-hidden">
-                            <div
-                              className={`h-full rounded-full transition-all duration-300 ${
-                                isOut
-                                  ? 'bg-[#D64545]'
-                                  : isLow
-                                    ? 'bg-[#E8772E]'
-                                    : 'bg-[#7FAE82]'
-                              }`}
-                              style={{ width: `${Math.max(5, stockPercent)}%` }}
-                            />
-                          </div>
-                        </div>
+                      <td className="py-3 px-3 text-center">
+                        <span
+                          className={`font-bold text-sm tabular-nums ${
+                            isOut
+                              ? 'text-[#D64545]'
+                              : isLow
+                                ? 'text-[#E8772E]'
+                                : 'text-[#7FAE82]'
+                          }`}
+                        >
+                          {stockPercent}%
+                        </span>
                       </td>
                       <td className="py-3 px-3 text-right font-bold text-[#1C1B18] tabular-nums">
                         {formatINR(p.stock * p.purchasePrice)}
