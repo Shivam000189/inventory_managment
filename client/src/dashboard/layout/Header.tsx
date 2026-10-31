@@ -4,16 +4,11 @@ import {
   Bell,
   ChevronDown,
   Menu,
-  Shield,
-  UserCheck,
-  RotateCcw,
   Store,
-  ExternalLink,
   LogOut,
   Database,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { authApi, clearAuthSession } from '../lib/api';
 
 interface HeaderProps {
   onOpenMobileMenu: () => void;
@@ -22,7 +17,6 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
   const {
     currentUser,
-    switchRole,
     setCommandPaletteOpen,
     setNotificationDrawerOpen,
     notifications,
@@ -60,7 +54,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
           <Menu size={20} />
         </button>
 
-        {/* Global Search Input (Exact match to screenshot) */}
+        {/* Global Search Input */}
         <div
           onClick={() => setCommandPaletteOpen(true)}
           className="w-full max-w-md bg-white border border-[#EEE6DA] hover:border-[#DDD3C4] rounded-xl px-3.5 py-2 flex items-center gap-2.5 text-xs text-[#9A948A] cursor-pointer transition-colors shadow-2xs group"
@@ -121,7 +115,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
 
           {/* User Menu Dropdown */}
           {isUserMenuOpen && (
-            <div className="absolute right-0 mt-2 w-64 bg-white border border-[#EEE6DA] rounded-2xl shadow-xl p-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+            <div className="absolute right-0 mt-2 w-60 bg-white border border-[#EEE6DA] rounded-2xl shadow-xl p-2 z-50 animate-in fade-in zoom-in-95 duration-150">
               <div className="px-3 py-2 border-b border-[#EEE6DA] mb-1">
                 <div className="font-semibold text-xs text-[#1C1B18]">
                   {currentUser.name}
@@ -131,110 +125,30 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
                 </div>
               </div>
 
-              {/* Role Switcher Section (Owner / Admin only) */}
-              {isAdmin && (
-                <>
-                  <div className="px-3 py-1.5 text-[10.5px] font-bold uppercase text-[#9A948A] tracking-wider">
-                    Switch Perspective
-                  </div>
-                  <div className="space-y-1 mb-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        switchRole('admin');
-                        setIsUserMenuOpen(false);
-                      }}
-                      className={`w-full text-left px-3 py-1.5 text-xs rounded-xl flex items-center justify-between cursor-pointer transition-colors ${
-                        currentUser.role === 'admin'
-                          ? 'bg-[#F4EDE2] text-[#1C1B18] font-semibold'
-                          : 'text-[#6B665E] hover:bg-[#FAF6EF]'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <Shield size={14} className="text-[#7FAE82]" />
-                        <span>Admin (Owner - Full Access)</span>
-                      </div>
-                      {currentUser.role === 'admin' && (
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#7FAE82]" />
-                      )}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        switchRole('salesperson');
-                        setIsUserMenuOpen(false);
-                      }}
-                      className={`w-full text-left px-3 py-1.5 text-xs rounded-xl flex items-center justify-between cursor-pointer transition-colors ${
-                        currentUser.role === 'salesperson'
-                          ? 'bg-[#F4EDE2] text-[#1C1B18] font-semibold'
-                          : 'text-[#6B665E] hover:bg-[#FAF6EF]'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <UserCheck size={14} className="text-[#E8772E]" />
-                        <span>Salesperson (POS & Bills Only)</span>
-                      </div>
-                      {currentUser.role === 'salesperson' && (
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#E8772E]" />
-                      )}
-                    </button>
-                  </div>
-                </>
-              )}
-
-              <div className="border-t border-[#EEE6DA] pt-1 space-y-0.5">
-                {/* Owner / Admin Profile Controls */}
+              <div className="space-y-0.5 pt-0.5">
+                {/* Business Profile (Owner / Admin only) */}
                 {isAdmin && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        navigate('/');
-                        setIsUserMenuOpen(false);
-                      }}
-                      className="w-full text-left px-3 py-1.5 text-xs text-[#6B665E] hover:text-[#1C1B18] hover:bg-[#FAF6EF] rounded-xl flex items-center gap-2 cursor-pointer transition-colors"
-                    >
-                      <ExternalLink size={14} />
-                      <span>View Landing Page</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        navigate('/app/settings');
-                        setIsUserMenuOpen(false);
-                      }}
-                      className="w-full text-left px-3 py-1.5 text-xs text-[#6B665E] hover:text-[#1C1B18] hover:bg-[#FAF6EF] rounded-xl flex items-center gap-2 cursor-pointer transition-colors"
-                    >
-                      <Store size={14} />
-                      <span>Business Profile</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (confirm('Reset demo data to initial state?')) {
-                          localStorage.clear();
-                          window.location.reload();
-                        }
-                      }}
-                      className="w-full text-left px-3 py-1.5 text-xs text-[#D64545] hover:bg-[#FDECEC] rounded-xl flex items-center gap-2 cursor-pointer transition-colors"
-                    >
-                      <RotateCcw size={14} />
-                      <span>Reset Demo Data</span>
-                    </button>
-                  </>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigate('/app/settings');
+                      setIsUserMenuOpen(false);
+                    }}
+                    className="w-full text-left px-3 py-2 text-xs text-[#6B665E] hover:text-[#1C1B18] hover:bg-[#FAF6EF] rounded-xl flex items-center gap-2 cursor-pointer transition-colors"
+                  >
+                    <Store size={14} />
+                    <span>Business Profile</span>
+                  </button>
                 )}
 
-                {/* Sign Out (Available to all users, salesperson only sees this) */}
+                {/* Sign Out */}
                 <button
                   type="button"
                   onClick={() => {
                     setIsUserMenuOpen(false);
                     logout();
                   }}
-                  className="w-full text-left px-3 py-1.5 text-xs text-[#6B665E] hover:text-[#D64545] hover:bg-[#FDECEC] rounded-xl flex items-center gap-2 cursor-pointer transition-colors"
+                  className="w-full text-left px-3 py-2 text-xs text-[#6B665E] hover:text-[#D64545] hover:bg-[#FDECEC] rounded-xl flex items-center gap-2 cursor-pointer transition-colors"
                 >
                   <LogOut size={14} />
                   <span>Sign Out</span>
