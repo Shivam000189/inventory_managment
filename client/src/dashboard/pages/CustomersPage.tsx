@@ -102,7 +102,7 @@ export const CustomersPage: React.FC = () => {
         <button
           type="button"
           onClick={() => setIsAddDrawerOpen(true)}
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#7FAE82] hover:bg-[#6C9C70] text-white text-xs font-semibold transition-colors cursor-pointer shadow-2xs self-start"
+          className="inline-flex items-center gap-1 sm:gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl bg-[#7FAE82] hover:bg-[#6C9C70] text-white text-[11px] sm:text-xs font-semibold transition-all cursor-pointer shadow-2xs whitespace-nowrap active:scale-95 self-start"
         >
           <Plus size={16} />
           <span>+ Add customer</span>
