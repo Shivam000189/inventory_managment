@@ -1,28 +1,27 @@
-import React, { type ReactNode, type HTMLAttributes } from 'react'
+import React, { type HTMLAttributes, type ReactNode } from 'react'
 import { Button } from './Button'
 import './PageHeader.css'
 
 export interface PageHeaderAction {
-  key?: string;
-  label?: ReactNode;
-  variant?: any;
-  onClick?: () => void;
-  disabled?: boolean;
-  icon?: ReactNode;
-  loading?: boolean;
-  size?: any;
+  key?: string | number
+  label?: ReactNode
+  variant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'outline' | string
+  onClick?: () => void
+  disabled?: boolean
+  icon?: string | ReactNode
+  loading?: boolean
+  size?: 'sm' | 'md' | 'lg' | string
 }
 
-export interface PageHeaderProps extends Omit<HTMLAttributes<HTMLElement>, "title"> {
-  kicker?: ReactNode;
-  title: ReactNode;
-  description?: ReactNode;
-  subtitle?: ReactNode;
-  badge?: ReactNode;
-  scope?: ReactNode;
-  actions?: ReactNode | (ReactNode | PageHeaderAction)[];
-  className?: string;
-  [key: string]: unknown;
+export interface PageHeaderProps extends HTMLAttributes<HTMLElement> {
+  kicker?: ReactNode
+  title: ReactNode
+  description?: ReactNode
+  subtitle?: ReactNode
+  badge?: ReactNode
+  scope?: ReactNode
+  actions?: ReactNode | (ReactNode | PageHeaderAction)[]
+  className?: string
 }
 
 export function PageHeader({
@@ -41,7 +40,7 @@ export function PageHeader({
   const renderActions = () => {
     if (!actions) return null
     if (Array.isArray(actions)) {
-      return actions.map((action: any, idx: number) => {
+      return actions.map((action: any, idx) => {
         if (React.isValidElement(action)) return action
         if (typeof action === 'object' && action !== null) {
           return (
@@ -73,14 +72,13 @@ export function PageHeader({
         </div>
         <div className="ui-page-header-title-row">
           <h1 className="ui-page-header-title">{title}</h1>
-          {badge && <span className="ui-page-header-badge">{badge}</span>}
+          {badge}
         </div>
         {desc && <p className="ui-page-header-desc">{desc}</p>}
       </div>
-      {actions && (
-        <div className="ui-page-header-actions">{renderActions()}</div>
-      )}
+      {actions && <div className="ui-page-header-actions">{renderActions()}</div>}
     </header>
   )
 }
+
 export default PageHeader

@@ -4,17 +4,17 @@ import { Icon } from './icons'
 import './Modal.css'
 
 export interface ModalProps {
-  isOpen: boolean;
-  onClose?: () => void;
-  title?: ReactNode;
-  kicker?: ReactNode;
-  size?: 'sm' | 'md' | 'lg' | 'xl' | string;
-  children: ReactNode;
-  footer?: ReactNode;
-  className?: string;
-  closeOnBackdropClick?: boolean;
-  closeOnEscape?: boolean;
-  'aria-describedby'?: string;
+  isOpen: boolean
+  onClose?: () => void
+  title?: ReactNode
+  kicker?: ReactNode
+  size?: 'sm' | 'md' | 'lg' | 'xl' | string
+  children: ReactNode
+  footer?: ReactNode
+  className?: string
+  closeOnBackdropClick?: boolean
+  closeOnEscape?: boolean
+  'aria-describedby'?: string
 }
 
 export function Modal({
@@ -36,9 +36,11 @@ export function Modal({
   useEffect(() => {
     if (!isOpen) return undefined
 
+    // Scroll lock on body
     const originalOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
 
+    // Focus inside modal
     const prevFocusedElement = document.activeElement as HTMLElement | null
     const focusable = dialogRef.current?.querySelectorAll<HTMLElement>(
       'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
@@ -52,6 +54,7 @@ export function Modal({
         event.stopPropagation()
         onClose?.()
       }
+      // Focus trap
       if (event.key === 'Tab' && focusable && focusable.length > 0) {
         const first = focusable[0]
         const last = focusable[focusable.length - 1]
@@ -79,55 +82,57 @@ export function Modal({
   if (!isOpen) return null
 
   const handleBackdropClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget && closeOnBackdropClick) {
+    if (closeOnBackdropClick && e.target === e.currentTarget) {
       onClose?.()
     }
   }
 
-  const content = (
+  const dialogContent = (
     <div
-      className="ui-modal-overlay"
+      className="ui-modal-backdrop supplier-modal-backdrop"
       role="presentation"
-      onClick={handleBackdropClick}
+      onMouseDown={handleBackdropClick}
     >
       <div
         ref={dialogRef}
-        className={`ui-modal ui-modal-${size} ${className}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby={title ? titleId : undefined}
         aria-describedby={ariaDescribedBy}
         tabIndex={-1}
+        className={`ui-modal-dialog supplier-modal ui-modal-dialog-${size} ${className}`}
       >
-        <div className="ui-modal-header">
-          <div>
-            {kicker && <div className="ui-modal-kicker">{kicker}</div>}
-            {title && (
+        {title && (
+          <div className="ui-modal-header product-form-heading">
+            <div>
+              {kicker && <p className="dashboard-kicker">{kicker}</p>}
               <h2 id={titleId} className="ui-modal-title">
                 {title}
               </h2>
+            </div>
+            {onClose && (
+              <button
+                type="button"
+                className="ui-modal-close-btn close-button"
+                onClick={onClose}
+                aria-label="Close dialog"
+              >
+                <Icon name="close" size={18} />
+              </button>
             )}
           </div>
-          <button
-            type="button"
-            className="ui-modal-close"
-            onClick={onClose}
-            aria-label="Close dialog"
-          >
-            <Icon name="close" size={16} />
-          </button>
-        </div>
-
+        )}
         <div className="ui-modal-body">{children}</div>
-
-        {footer && <div className="ui-modal-footer">{footer}</div>}
+        {footer && (
+          <div className="ui-modal-footer product-form-actions">{footer}</div>
+        )}
       </div>
     </div>
   )
 
   return typeof document !== 'undefined'
-    ? createPortal(content, document.body)
-    : content
+    ? createPortal(dialogContent, document.body)
+    : dialogContent
 }
 
 export default Modal
