@@ -424,13 +424,8 @@ export const ProductsPage: React.FC = () => {
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-3">
                           <ProductIcon name={p.name} type={p.iconType} />
-                          <div>
-                            <div className="font-semibold text-[#1C1B18] text-[13px] group-hover:text-[#6C9C70] transition-colors">
-                              {p.name}
-                            </div>
-                            <div className="text-[11px] text-[#9A948A]">
-                              SKU: {p.sku} · Barcode: {p.barcode}
-                            </div>
+                          <div className="font-semibold text-[#1C1B18] text-[13px] group-hover:text-[#6C9C70] transition-colors">
+                            {p.name}
                           </div>
                         </div>
                       </td>
