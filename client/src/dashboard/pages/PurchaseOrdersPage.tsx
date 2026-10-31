@@ -259,14 +259,14 @@ export const PurchaseOrdersPage: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-1.5 sm:gap-2.5 overflow-x-auto no-scrollbar py-0.5">
+        <div className="grid grid-cols-2 gap-2 w-full sm:w-auto sm:flex sm:items-center sm:gap-2.5 py-0.5">
           <button
             type="button"
             onClick={() => {
               setVendorError('');
               setIsAddVendorOpen(true);
             }}
-            className="inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-lg sm:rounded-xl border border-[#EEE6DA] bg-white hover:bg-[#FAF6EF] text-[#1C1B18] text-[11px] sm:text-xs font-semibold transition-all cursor-pointer shadow-2xs whitespace-nowrap shrink-0 active:scale-95"
+            className="inline-flex items-center justify-center gap-1 sm:gap-1.5 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl border border-[#EEE6DA] bg-white hover:bg-[#FAF6EF] text-[#1C1B18] text-[11px] sm:text-xs font-semibold transition-all cursor-pointer shadow-2xs whitespace-nowrap active:scale-95"
           >
             <Building2 size={15} className="text-[#6B665E]" />
             <span>Add Vendor</span>
@@ -278,7 +278,7 @@ export const PurchaseOrdersPage: React.FC = () => {
               setPoError('');
               setIsCreateOpen(true);
             }}
-            className="inline-flex items-center gap-1 sm:gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl bg-[#7FAE82] hover:bg-[#6C9C70] !text-white text-[11px] sm:text-xs font-semibold transition-all cursor-pointer shadow-2xs whitespace-nowrap shrink-0 active:scale-95"
+            className="inline-flex items-center justify-center gap-1 sm:gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-[#7FAE82] hover:bg-[#6C9C70] !text-white text-[11px] sm:text-xs font-semibold transition-all cursor-pointer shadow-2xs whitespace-nowrap active:scale-95"
             style={{ color: '#ffffff' }}
           >
             <Plus size={16} />
@@ -831,7 +831,7 @@ export const PurchaseOrdersPage: React.FC = () => {
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
           <div className="bg-white rounded-3xl max-w-lg w-full border border-[#EEE6DA] shadow-2xl p-6 animate-in zoom-in-95 duration-150 max-h-[92vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-[#EEE6DA] pb-3 mb-4">
-              <div className="flex items-center gap-1.5 sm:gap-2.5 overflow-x-auto no-scrollbar py-0.5">
+              <div className="grid grid-cols-2 gap-2 w-full sm:w-auto sm:flex sm:items-center sm:gap-2.5 py-0.5">
                 <div className="w-9 h-9 rounded-xl bg-[#FAF6EF] border border-[#EEE6DA] flex items-center justify-center text-[#7FAE82]">
                   <Building2 size={18} />
                 </div>

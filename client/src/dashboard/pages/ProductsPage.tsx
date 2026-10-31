@@ -193,11 +193,11 @@ export const ProductsPage: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-1.5 sm:gap-2.5 overflow-x-auto no-scrollbar py-0.5">
+        <div className="grid grid-cols-3 gap-1.5 w-full sm:w-auto sm:flex sm:items-center sm:gap-2.5 py-0.5">
           <button
             type="button"
             onClick={handleExportCSV}
-            className="inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-lg sm:rounded-xl border border-[#EEE6DA] bg-white text-[11px] sm:text-xs font-semibold text-[#1C1B18] hover:bg-[#FAF6EF] transition-all cursor-pointer shadow-2xs whitespace-nowrap shrink-0 active:scale-95"
+            className="inline-flex items-center justify-center gap-1 sm:gap-1.5 px-1.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl border border-[#EEE6DA] bg-white text-[11px] sm:text-xs font-semibold text-[#1C1B18] hover:bg-[#FAF6EF] transition-all cursor-pointer shadow-2xs whitespace-nowrap active:scale-95"
           >
             <Download size={15} />
             <span>Export</span>
@@ -206,7 +206,7 @@ export const ProductsPage: React.FC = () => {
           <button
             type="button"
             onClick={() => setIsImportModalOpen(true)}
-            className="inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-lg sm:rounded-xl border border-[#EEE6DA] bg-white text-[11px] sm:text-xs font-semibold text-[#1C1B18] hover:bg-[#FAF6EF] transition-all cursor-pointer shadow-2xs whitespace-nowrap shrink-0 active:scale-95"
+            className="inline-flex items-center justify-center gap-1 sm:gap-1.5 px-1.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl border border-[#EEE6DA] bg-white text-[11px] sm:text-xs font-semibold text-[#1C1B18] hover:bg-[#FAF6EF] transition-all cursor-pointer shadow-2xs whitespace-nowrap active:scale-95"
           >
             <Upload size={15} />
             <span>Bulk Import</span>
@@ -215,7 +215,7 @@ export const ProductsPage: React.FC = () => {
           <button
             type="button"
             onClick={handleOpenAdd}
-            className="inline-flex items-center gap-1 sm:gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl bg-[#7FAE82] hover:bg-[#6C9C70] text-white text-[11px] sm:text-xs font-semibold transition-all cursor-pointer shadow-2xs whitespace-nowrap shrink-0 active:scale-95"
+            className="inline-flex items-center justify-center gap-1 sm:gap-1.5 px-2 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-[#7FAE82] hover:bg-[#6C9C70] text-white text-[11px] sm:text-xs font-semibold transition-all cursor-pointer shadow-2xs whitespace-nowrap active:scale-95"
           >
             <Plus size={16} />
             <span>Add Product</span>
