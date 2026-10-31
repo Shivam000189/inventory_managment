@@ -223,10 +223,10 @@ export const ProductsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Toolbar */}
-      <div className="bg-white rounded-2xl p-3 sm:p-4 border border-[#EEE6DA] flex flex-col gap-3 shadow-2xs">
+      {/* Mobile Toolbar (Visible on mobile only < md) */}
+      <div className="md:hidden bg-white rounded-2xl p-3 border border-[#EEE6DA] flex flex-col gap-2.5 shadow-2xs">
         {/* Row 1: Search Bar + Grid/Table View Toggle */}
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-2">
           <div className="relative flex-1">
             <Search size={15} className="absolute left-3 top-2.5 text-[#9A948A]" />
             <input
@@ -270,7 +270,7 @@ export const ProductsPage: React.FC = () => {
         </div>
 
         {/* Row 2: Category Dropdown + Sort Dropdown */}
-        <div className="grid grid-cols-2 gap-2 sm:gap-3">
+        <div className="grid grid-cols-2 gap-2">
           <select
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
@@ -310,6 +310,93 @@ export const ProductsPage: React.FC = () => {
               {status}
             </button>
           ))}
+        </div>
+      </div>
+
+      {/* Desktop Toolbar (Visible on desktop >= md) */}
+      <div className="hidden md:flex bg-white rounded-2xl p-3 border border-[#EEE6DA] items-center justify-between gap-3 shadow-2xs">
+        <div className="flex items-center gap-3 flex-1 min-w-[280px]">
+          {/* Search */}
+          <div className="relative flex-1 max-w-md">
+            <Search size={15} className="absolute left-3 top-2.5 text-[#9A948A]" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by name, SKU, or barcode..."
+              className="w-full pl-9 pr-3 py-1.5 rounded-xl border border-[#EEE6DA] text-xs focus:border-[#7FAE82] outline-none"
+            />
+          </div>
+
+          {/* Category Dropdown */}
+          <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="px-3 py-1.5 rounded-xl border border-[#EEE6DA] text-xs text-[#1C1B18] bg-white cursor-pointer outline-none"
+          >
+            {categories.map((c) => (
+              <option key={c} value={c}>
+                Category: {c}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Stock Status Pills */}
+        <div className="flex items-center gap-1 bg-[#FAF6EF] p-1 rounded-xl border border-[#EEE6DA]/80">
+          {(['All', 'In stock', 'Low', 'Out'] as const).map((status) => (
+            <button
+              key={status}
+              type="button"
+              onClick={() => setStatusFilter(status)}
+              className={`px-3 py-1 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
+                statusFilter === status
+                  ? 'bg-white text-[#1C1B18] shadow-2xs'
+                  : 'text-[#6B665E] hover:text-[#1C1B18]'
+              }`}
+            >
+              {status}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-2">
+          {/* Sort */}
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as any)}
+            className="px-3 py-1.5 rounded-xl border border-[#EEE6DA] text-xs text-[#6B665E] bg-white cursor-pointer outline-none"
+          >
+            <option value="name">Sort: Name</option>
+            <option value="price">Sort: Price (High to Low)</option>
+            <option value="stock">Sort: Stock</option>
+          </select>
+
+          {/* View Toggle */}
+          <div className="flex items-center bg-[#FAF6EF] p-0.5 rounded-xl border border-[#EEE6DA]">
+            <button
+              type="button"
+              onClick={() => setViewMode('table')}
+              className={`p-1.5 rounded-lg cursor-pointer ${
+                viewMode === 'table' ? 'bg-white text-[#1C1B18] shadow-2xs' : 'text-[#6B665E]'
+              }`}
+              title="Table view"
+              aria-label="Table view"
+            >
+              <List size={16} />
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('grid')}
+              className={`p-1.5 rounded-lg cursor-pointer ${
+                viewMode === 'grid' ? 'bg-white text-[#1C1B18] shadow-2xs' : 'text-[#6B665E]'
+              }`}
+              title="Grid view"
+              aria-label="Grid view"
+            >
+              <LayoutGrid size={16} />
+            </button>
+          </div>
         </div>
       </div>
 
