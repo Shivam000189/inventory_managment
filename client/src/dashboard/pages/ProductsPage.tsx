@@ -33,7 +33,6 @@ export const ProductsPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<'All' | 'In stock' | 'Low' | 'Out'>('All');
   const [sortBy, setSortBy] = useState<'name' | 'price' | 'stock'>('name');
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
-  const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
 
   // Drawer & Modals
   const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
@@ -157,27 +156,6 @@ export const ProductsPage: React.FC = () => {
       p.stock === 0 ? 'Out of stock' : p.stock <= p.reorderLevel ? 'Low stock' : 'In stock',
     ]);
     downloadCSV('Inventory-products', headers, rows);
-  };
-
-  const toggleSelectAll = () => {
-    if (selectedProductIds.length === filteredProducts.length) {
-      setSelectedProductIds([]);
-    } else {
-      setSelectedProductIds(filteredProducts.map((p) => p.id));
-    }
-  };
-
-  const toggleSelectOne = (id: string) => {
-    setSelectedProductIds((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
-    );
-  };
-
-  const handleBulkDelete = () => {
-    if (confirm(`Are you sure you want to delete ${selectedProductIds.length} items?`)) {
-      selectedProductIds.forEach((id) => deleteProduct(id));
-      setSelectedProductIds([]);
-    }
   };
 
   return (
@@ -400,32 +378,6 @@ export const ProductsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Bulk Action Bar */}
-      {selectedProductIds.length > 0 && (
-        <div className="bg-[#FAF6EF] border border-[#DDD3C4] rounded-xl px-4 py-2.5 flex items-center justify-between animate-in fade-in duration-150">
-          <div className="text-xs font-semibold text-[#1C1B18] flex items-center gap-2">
-            <span>{selectedProductIds.length} products selected</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleBulkDelete}
-              className="px-3 py-1 rounded-lg bg-[#FDECEC] text-[#D64545] text-xs font-semibold hover:bg-[#fad4d4] transition-colors cursor-pointer flex items-center gap-1"
-            >
-              <Trash2 size={13} />
-              <span>Delete Selected</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setSelectedProductIds([])}
-              className="text-xs text-[#6B665E] hover:text-[#1C1B18] px-2 py-1 cursor-pointer"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Products Content: Table or Grid */}
       {filteredProducts.length === 0 ? (
         <div className="bg-white rounded-2xl p-12 text-center border border-[#EEE6DA]">
@@ -450,18 +402,7 @@ export const ProductsPage: React.FC = () => {
             <table className="w-full text-left text-xs min-w-[760px]">
               <thead className="sticky top-0 z-10 bg-[#FAF6EF] border-b border-[#EEE6DA] text-[#8C867A] text-[11px] font-semibold uppercase tracking-wider">
                 <tr>
-                  <th className="py-3 px-4 w-10">
-                    <input
-                      type="checkbox"
-                      checked={
-                        selectedProductIds.length === filteredProducts.length &&
-                        filteredProducts.length > 0
-                      }
-                      onChange={toggleSelectAll}
-                      className="rounded border-[#DDD3C4] text-[#7FAE82] cursor-pointer"
-                    />
-                  </th>
-                  <th className="py-3 px-3 font-medium">Product</th>
+                  <th className="py-3 px-4 font-medium">Product</th>
                   <th className="py-3 px-3 font-medium">Category</th>
                   <th className="py-3 px-3 font-medium text-right">Purchase</th>
                   <th className="py-3 px-3 font-medium text-right">Selling</th>
@@ -484,22 +425,7 @@ export const ProductsPage: React.FC = () => {
                       className="hover:bg-[#FAF6EF]/60 transition-colors group cursor-pointer"
                       onClick={() => setViewingProduct(p)}
                     >
-                      <td
-                        className="py-3 px-4"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleSelectOne(p.id);
-                        }}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedProductIds.includes(p.id)}
-                          onChange={() => { }}
-                          className="rounded border-[#DDD3C4] text-[#7FAE82] cursor-pointer"
-                        />
-                      </td>
-
-                      <td className="py-3 px-3">
+                      <td className="py-3 px-4">
                         <div className="flex items-center gap-3">
                           <ProductIcon name={p.name} type={p.iconType} />
                           <div>
