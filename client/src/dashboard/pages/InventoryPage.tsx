@@ -484,7 +484,7 @@ export const InventoryPage: React.FC = () => {
 
             <div>
               <label className="block text-xs font-semibold text-[#1C1B18] mb-1">
-                Quantity to Add ({selectedProd.unit})
+                Quantity to Add ({selectedProd?.unit || 'units'})
               </label>
               <input
                 type="number"
@@ -555,12 +555,12 @@ export const InventoryPage: React.FC = () => {
 
             <div>
               <label className="block text-xs font-semibold text-[#1C1B18] mb-1">
-                Quantity to Deduct ({selectedProd.unit})
+                Quantity to Deduct ({selectedProd?.unit || 'units'})
               </label>
               <input
                 type="number"
                 min={1}
-                max={selectedProd.stock}
+                max={selectedProd?.stock || 0}
                 required
                 value={qtyInput}
                 onChange={(e) => setQtyInput(parseInt(e.target.value) || 1)}
@@ -634,7 +634,7 @@ export const InventoryPage: React.FC = () => {
 
             <div>
               <label className="block text-xs font-semibold text-[#1C1B18] mb-1">
-                New Physical Count ({selectedProd.unit})
+                New Physical Count ({selectedProd?.unit || 'units'})
               </label>
               <input
                 type="number"
@@ -648,13 +648,13 @@ export const InventoryPage: React.FC = () => {
                 Variance:{' '}
                 <span
                   className={`font-semibold ${
-                    adjustTargetInput - selectedProd.stock >= 0
+                    adjustTargetInput - (selectedProd?.stock || 0) >= 0
                       ? 'text-[#2E8B57]'
                       : 'text-[#D64545]'
                   }`}
                 >
-                  {adjustTargetInput - selectedProd.stock >= 0 ? '+' : ''}
-                  {adjustTargetInput - selectedProd.stock} {selectedProd.unit}
+                  {adjustTargetInput - (selectedProd?.stock || 0) >= 0 ? '+' : ''}
+                  {adjustTargetInput - (selectedProd?.stock || 0)} {selectedProd?.unit || 'units'}
                 </span>
               </div>
             </div>

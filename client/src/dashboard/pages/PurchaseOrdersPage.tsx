@@ -104,14 +104,14 @@ export const PurchaseOrdersPage: React.FC = () => {
   });
 
   const handleAddLine = () => {
-    const nextProd = products[poLines.length % products.length] || products[0];
+    const nextProd = products.length > 0 ? (products[poLines.length % products.length] || products[0]) : null;
     setPoLines([
       ...poLines,
       {
-        productId: nextProd.id,
+        productId: nextProd?.id || '',
         quantity: 20,
-        unitCost: nextProd.purchasePrice,
-        taxRate: nextProd.taxRate,
+        unitCost: nextProd?.purchasePrice || 0,
+        taxRate: nextProd?.taxRate || 18,
       },
     ]);
   };
@@ -121,21 +121,22 @@ export const PurchaseOrdersPage: React.FC = () => {
   };
 
   // Calculations for new PO
-  const calculatedItems: POItem[] = poLines.map((line) => {
-    const prod = products.find((p) => p.id === line.productId) || products[0];
-    const itemSubtotal = line.quantity * line.unitCost;
-    const tax = (itemSubtotal * line.taxRate) / 100;
-    return {
-      productId: prod.id,
-      productName: prod.name,
-      sku: prod.sku,
-      orderedQty: line.quantity,
-      receivedQty: 0,
-      unitCost: line.unitCost,
-      taxRate: line.taxRate,
-      lineTotal: Math.round(itemSubtotal + tax),
-    };
-  });
+  const calculatedItems: POItem[] = poLines
+    .map((line) => {
+      const prod = products.find((p) => p.id === line.productId) || (products.length > 0 ? products[0] : null);
+      const itemSubtotal = line.quantity * line.unitCost;
+      const tax = (itemSubtotal * line.taxRate) / 100;
+      return {
+        productId: prod?.id || line.productId || '',
+        productName: prod?.name || 'Product',
+        sku: prod?.sku || '',
+        orderedQty: line.quantity,
+        receivedQty: 0,
+        unitCost: line.unitCost,
+        taxRate: line.taxRate,
+        lineTotal: Math.round(itemSubtotal + tax),
+      };
+    });
 
   const subtotal = calculatedItems.reduce(
     (acc, it) => acc + it.orderedQty * it.unitCost,
