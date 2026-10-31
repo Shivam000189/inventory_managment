@@ -34,11 +34,13 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = () => {
     activeRoute === '/app' ||
     activeRoute === '/app/overview';
 
-  // Role Guard: Salesperson can access POS; back-office routes are restricted
+  // Role Guard: Salesperson can access POS and Business Profile; back-office routes are restricted
   const isSalespersonBlocked =
     currentUser.role === 'salesperson' &&
     !activeRoute.startsWith('/pos') &&
     !activeRoute.startsWith('/app/pos') &&
+    !activeRoute.startsWith('/settings') &&
+    !activeRoute.startsWith('/app/settings') &&
     !isDefaultOverviewRoute;
 
   const renderCurrentPage = () => {
@@ -134,4 +136,3 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = () => {
 };
 
 export default DashboardLayout;
-

@@ -14,6 +14,8 @@ import { useApp } from '../context/AppContext';
 export const SettingsPage: React.FC = () => {
   const { businessProfile, updateBusinessProfile, currentUser } = useApp();
 
+  const isAdmin = currentUser.role === 'admin' || (currentUser.role as any) === 'owner';
+
   const [activeSubTab, setActiveSubTab] = useState<
     'profile' | 'billing' | 'payments' | 'inventory' | 'account'
   >('profile');
@@ -35,10 +37,12 @@ export const SettingsPage: React.FC = () => {
       {/* Header */}
       <div>
         <h1 className="text-[28px] font-semibold text-[#1C1B18] tracking-tight leading-tight">
-          System Settings
+          {isAdmin ? 'System Settings' : 'Business Profile'}
         </h1>
         <p className="text-[13px] text-[#6B665E] mt-0.5">
-          Configure business identity, invoicing defaults, UPI payment integrations, and stock thresholds.
+          {isAdmin
+            ? 'Configure business identity, invoicing defaults, UPI payment integrations, and stock thresholds.'
+            : 'View and update company and store identity.'}
         </p>
       </div>
 
@@ -46,13 +50,16 @@ export const SettingsPage: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
         {/* Left Sub-tabs */}
         <div className="md:col-span-3 bg-white rounded-2xl border border-[#EEE6DA] p-2 space-y-1">
-          {[
-            { id: 'profile', label: 'Business Profile', icon: Building2 },
-            { id: 'billing', label: 'Billing & POS', icon: Receipt },
-            { id: 'payments', label: 'UPI & Payments', icon: CreditCard },
-            { id: 'inventory', label: 'Inventory Rules', icon: Layers },
-            { id: 'account', label: 'My Account', icon: User },
-          ].map((tab) => {
+          {(isAdmin
+            ? [
+                { id: 'profile', label: 'Business Profile', icon: Building2 },
+                { id: 'billing', label: 'Billing & POS', icon: Receipt },
+                { id: 'payments', label: 'UPI & Payments', icon: CreditCard },
+                { id: 'inventory', label: 'Inventory Rules', icon: Layers },
+                { id: 'account', label: 'My Account', icon: User },
+              ]
+            : [{ id: 'profile', label: 'Business Profile', icon: Building2 }]
+          ).map((tab) => {
             const Icon = tab.icon;
             const isActive = activeSubTab === tab.id;
             return (
