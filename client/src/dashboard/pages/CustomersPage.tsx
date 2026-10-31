@@ -212,9 +212,9 @@ export const CustomersPage: React.FC = () => {
                   onClick={() => setViewingCustomer(c)}
                   className="hover:bg-[#FAF6EF]/60 transition-colors cursor-pointer group"
                 >
-                  <td className="py-3 px-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-[#1C1B18] text-white flex items-center justify-center font-bold text-xs uppercase">
+                  <td className="py-3 px-4 whitespace-nowrap">
+                    <div className="flex items-center gap-3 min-w-[160px]">
+                      <div className="w-8 h-8 rounded-full bg-[#1C1B18] text-white flex items-center justify-center font-bold text-xs uppercase shrink-0 aspect-square shadow-2xs">
                         {c.name.slice(0, 2)}
                       </div>
                       <div>

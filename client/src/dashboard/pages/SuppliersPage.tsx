@@ -193,9 +193,9 @@ export const SuppliersPage: React.FC = () => {
                   onClick={() => setViewingSupplier(s)}
                   className="hover:bg-[#FAF6EF]/60 transition-colors cursor-pointer group"
                 >
-                  <td className="py-3 px-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-xl bg-[#FAF6EF] text-[#6B665E] border border-[#EEE6DA] flex items-center justify-center font-bold text-xs uppercase">
+                  <td className="py-3 px-4 whitespace-nowrap">
+                    <div className="flex items-center gap-3 min-w-[160px]">
+                      <div className="w-8 h-8 rounded-xl bg-[#FAF6EF] text-[#6B665E] border border-[#EEE6DA] flex items-center justify-center font-bold text-xs uppercase shrink-0 aspect-square shadow-2xs">
                         {s.name.slice(0, 2)}
                       </div>
                       <div>

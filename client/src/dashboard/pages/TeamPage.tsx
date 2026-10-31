@@ -96,9 +96,9 @@ export const TeamPage: React.FC = () => {
           <tbody className="divide-y divide-[#EEE6DA]/80">
             {users.map((u) => (
               <tr key={u.id} className="hover:bg-[#FAF6EF]/50 transition-colors">
-                <td className="py-3 px-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-[#1C1B18] text-white flex items-center justify-center font-bold text-xs uppercase">
+                <td className="py-3 px-4 whitespace-nowrap">
+                  <div className="flex items-center gap-3 min-w-[150px]">
+                    <div className="w-8 h-8 rounded-full bg-[#1C1B18] text-white flex items-center justify-center font-bold text-xs uppercase shrink-0 aspect-square shadow-2xs">
                       {u.avatarInitials}
                     </div>
                     <span className="font-bold text-[#1C1B18] text-[13px]">{u.name}</span>
