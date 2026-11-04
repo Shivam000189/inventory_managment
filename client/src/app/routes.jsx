@@ -4,22 +4,22 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import { useApp } from '../dashboard/context/AppContext.tsx';
 import { TablePageSkeleton } from '../components/ui/Feedback.tsx';
 
-// Core Dashboard Pages (Active TypeScript Implementations)
-import { OverviewPage } from '../dashboard/pages/OverviewPage.tsx';
-import { ProductsPage } from '../dashboard/pages/ProductsPage.tsx';
-import { InventoryPage } from '../dashboard/pages/InventoryPage.tsx';
-import { SuppliersPage } from '../dashboard/pages/SuppliersPage.tsx';
-import { PurchaseOrdersPage } from '../dashboard/pages/PurchaseOrdersPage.tsx';
-import { PosSalesPage } from '../dashboard/pages/PosSalesPage.tsx';
-import { CustomersPage } from '../dashboard/pages/CustomersPage.tsx';
-import { ReportsPage } from '../dashboard/pages/ReportsPage.tsx';
-import { TeamPage } from '../dashboard/pages/TeamPage.tsx';
-import { SettingsPage } from '../dashboard/pages/SettingsPage.tsx';
-import { ForbiddenPage } from '../dashboard/pages/ForbiddenPage.tsx';
-import { NotFoundPage } from '../dashboard/pages/NotFoundPage.tsx';
-import { BatchManagementPage } from '../dashboard/pages/BatchManagementPage.tsx';
-import { ExpiryTrackingPage } from '../dashboard/pages/ExpiryTrackingPage.tsx';
-import { PrescriptionManagementPage } from '../dashboard/pages/PrescriptionManagementPage.tsx';
+// Core Dashboard Pages (Active TypeScript Implementations - Lazy Loaded for Fast First Paint)
+const OverviewPage = lazy(() => import('../dashboard/pages/OverviewPage.tsx').then((m) => ({ default: m.OverviewPage })));
+const ProductsPage = lazy(() => import('../dashboard/pages/ProductsPage.tsx').then((m) => ({ default: m.ProductsPage })));
+const InventoryPage = lazy(() => import('../dashboard/pages/InventoryPage.tsx').then((m) => ({ default: m.InventoryPage })));
+const SuppliersPage = lazy(() => import('../dashboard/pages/SuppliersPage.tsx').then((m) => ({ default: m.SuppliersPage })));
+const PurchaseOrdersPage = lazy(() => import('../dashboard/pages/PurchaseOrdersPage.tsx').then((m) => ({ default: m.PurchaseOrdersPage })));
+const PosSalesPage = lazy(() => import('../dashboard/pages/PosSalesPage.tsx').then((m) => ({ default: m.PosSalesPage })));
+const CustomersPage = lazy(() => import('../dashboard/pages/CustomersPage.tsx').then((m) => ({ default: m.CustomersPage })));
+const ReportsPage = lazy(() => import('../dashboard/pages/ReportsPage.tsx').then((m) => ({ default: m.ReportsPage })));
+const TeamPage = lazy(() => import('../dashboard/pages/TeamPage.tsx').then((m) => ({ default: m.TeamPage })));
+const SettingsPage = lazy(() => import('../dashboard/pages/SettingsPage.tsx').then((m) => ({ default: m.SettingsPage })));
+const ForbiddenPage = lazy(() => import('../dashboard/pages/ForbiddenPage.tsx').then((m) => ({ default: m.ForbiddenPage })));
+const NotFoundPage = lazy(() => import('../dashboard/pages/NotFoundPage.tsx').then((m) => ({ default: m.NotFoundPage })));
+const BatchManagementPage = lazy(() => import('../dashboard/pages/BatchManagementPage.tsx').then((m) => ({ default: m.BatchManagementPage })));
+const ExpiryTrackingPage = lazy(() => import('../dashboard/pages/ExpiryTrackingPage.tsx').then((m) => ({ default: m.ExpiryTrackingPage })));
+const PrescriptionManagementPage = lazy(() => import('../dashboard/pages/PrescriptionManagementPage.tsx').then((m) => ({ default: m.PrescriptionManagementPage })));
 
 // Feature Pages (Workflows)
 const ReceivingGrnPage = lazy(() => import('../features/purchasing/ReceivingGrnPage.jsx'));
@@ -34,7 +34,17 @@ const ClothingModule = lazy(() => import('../features/industries/clothing/Clothi
 const IndustryModule = lazy(() => import('../features/industries/generic/IndustryModule.jsx'));
 const BulkPricingPage = lazy(() => import('../features/industries/wholesale/BulkPricingPage.jsx'));
 
-export { NotFoundPage, ForbiddenPage };
+const LazyNotFoundPage = (props) => (
+  <Suspense fallback={<TablePageSkeleton className="p-6" />}>
+    <NotFoundPage {...props} />
+  </Suspense>
+);
+const LazyForbiddenPage = (props) => (
+  <Suspense fallback={<TablePageSkeleton className="p-6" />}>
+    <ForbiddenPage {...props} />
+  </Suspense>
+);
+export { LazyNotFoundPage as NotFoundPage, LazyForbiddenPage as ForbiddenPage };
 
 export const NAV_LABEL_MAP = {
   Overview: '/overview',
@@ -118,7 +128,11 @@ export function AdminRouteGuard({ children }) {
   const { currentUser } = useApp();
   const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'owner';
   if (!isAdmin) {
-    return <ForbiddenPage />;
+    return (
+      <Suspense fallback={<TablePageSkeleton className="p-6" />}>
+        <ForbiddenPage />
+      </Suspense>
+    );
   }
   return <>{children}</>;
 }
@@ -127,9 +141,25 @@ export function OverviewRoute() {
   const { currentUser } = useApp();
   const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'owner';
   if (!isAdmin) {
-    return <PosSalesPage />;
+    return (
+      <Suspense fallback={<TablePageSkeleton className="p-6" />}>
+        <PosSalesPage />
+      </Suspense>
+    );
   }
-  return <OverviewPage />;
+  return (
+    <Suspense fallback={<TablePageSkeleton className="p-6" />}>
+      <OverviewPage />
+    </Suspense>
+  );
+}
+
+function LazyRoute({ Component }) {
+  return (
+    <Suspense fallback={<TablePageSkeleton className="p-6" />}>
+      <Component />
+    </Suspense>
+  );
 }
 
 export function FeaturePageWrapper({ Component, ...extraProps }) {
@@ -165,16 +195,16 @@ export const DASHBOARD_CHILD_ROUTES = [
   { path: '', element: <OverviewRoute /> },
   { path: 'overview', element: <OverviewRoute /> },
 
-  // Core Dashboard Pages (Active TS implementations)
-  { path: 'products', element: <AdminRouteGuard><ProductsPage /></AdminRouteGuard> },
-  { path: 'inventory', element: <AdminRouteGuard><InventoryPage /></AdminRouteGuard> },
-  { path: 'suppliers', element: <AdminRouteGuard><SuppliersPage /></AdminRouteGuard> },
-  { path: 'purchase-orders', element: <AdminRouteGuard><PurchaseOrdersPage /></AdminRouteGuard> },
-  { path: 'pos', element: <PosSalesPage /> },
-  { path: 'customers', element: <AdminRouteGuard><CustomersPage /></AdminRouteGuard> },
-  { path: 'reports', element: <AdminRouteGuard><ReportsPage /></AdminRouteGuard> },
-  { path: 'team', element: <AdminRouteGuard><TeamPage /></AdminRouteGuard> },
-  { path: 'settings', element: <AdminRouteGuard><SettingsPage /></AdminRouteGuard> },
+  // Core Dashboard Pages (Active TS implementations - Lazily loaded)
+  { path: 'products', element: <AdminRouteGuard><LazyRoute Component={ProductsPage} /></AdminRouteGuard> },
+  { path: 'inventory', element: <AdminRouteGuard><LazyRoute Component={InventoryPage} /></AdminRouteGuard> },
+  { path: 'suppliers', element: <AdminRouteGuard><LazyRoute Component={SuppliersPage} /></AdminRouteGuard> },
+  { path: 'purchase-orders', element: <AdminRouteGuard><LazyRoute Component={PurchaseOrdersPage} /></AdminRouteGuard> },
+  { path: 'pos', element: <LazyRoute Component={PosSalesPage} /> },
+  { path: 'customers', element: <AdminRouteGuard><LazyRoute Component={CustomersPage} /></AdminRouteGuard> },
+  { path: 'reports', element: <AdminRouteGuard><LazyRoute Component={ReportsPage} /></AdminRouteGuard> },
+  { path: 'team', element: <AdminRouteGuard><LazyRoute Component={TeamPage} /></AdminRouteGuard> },
+  { path: 'settings', element: <AdminRouteGuard><LazyRoute Component={SettingsPage} /></AdminRouteGuard> },
 
   // Feature Workflows (Richer implementations)
   { path: 'receiving', element: <AdminRouteGuard><FeaturePageWrapper Component={ReceivingGrnPage} /></AdminRouteGuard> },
@@ -195,9 +225,9 @@ export const DASHBOARD_CHILD_ROUTES = [
   { path: 'colors', element: <AdminRouteGuard><FeaturePageWrapper Component={ColorManagementPage} /></AdminRouteGuard> },
   { path: 'sizes', element: <AdminRouteGuard><FeaturePageWrapper Component={IndustryModule} section="Size Management" /></AdminRouteGuard> },
   { path: 'variants', element: <AdminRouteGuard><FeaturePageWrapper Component={IndustryModule} section="Product Variants" /></AdminRouteGuard> },
-  { path: 'batches', element: <AdminRouteGuard><BatchManagementPage /></AdminRouteGuard> },
-  { path: 'expiry', element: <AdminRouteGuard><ExpiryTrackingPage /></AdminRouteGuard> },
-  { path: 'prescriptions', element: <AdminRouteGuard><PrescriptionManagementPage /></AdminRouteGuard> },
+  { path: 'batches', element: <AdminRouteGuard><LazyRoute Component={BatchManagementPage} /></AdminRouteGuard> },
+  { path: 'expiry', element: <AdminRouteGuard><LazyRoute Component={ExpiryTrackingPage} /></AdminRouteGuard> },
+  { path: 'prescriptions', element: <AdminRouteGuard><LazyRoute Component={PrescriptionManagementPage} /></AdminRouteGuard> },
   { path: 'serial-numbers', element: <AdminRouteGuard><FeaturePageWrapper Component={IndustryModule} section="Serial Numbers" /></AdminRouteGuard> },
   { path: 'warranties', element: <AdminRouteGuard><FeaturePageWrapper Component={IndustryModule} section="Warranty Tracking" /></AdminRouteGuard> },
   { path: 'offers', element: <AdminRouteGuard><FeaturePageWrapper Component={IndustryModule} section="Offers / Discounts" /></AdminRouteGuard> },
@@ -228,8 +258,8 @@ export const DASHBOARD_CHILD_ROUTES = [
   { path: 'bulk-import', element: <Navigate to="/product-import" replace /> },
 
   // Status & Fallback
-  { path: 'forbidden', element: <ForbiddenPage /> },
-  { path: '*', element: <NotFoundPage /> },
+  { path: 'forbidden', element: <LazyRoute Component={ForbiddenPage} /> },
+  { path: '*', element: <LazyRoute Component={NotFoundPage} /> },
 ];
 
 export const TOP_LEVEL_REDIRECTS = [

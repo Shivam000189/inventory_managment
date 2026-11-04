@@ -625,33 +625,36 @@ export const AppProvider: React.FC<AppProviderProps> = ({
     });
     let session: any = null;
     try {
-      // 1. Check existing session without hard-coded credentials
-      try {
-        session = await authApi.me();
-      } catch {
-        // Me failed; proceed without silent authentication
-      }
-
-      if (session?.user) {
+      // 1. Reuse session if already provided by AuthProvider to avoid duplicate network roundtrip
+      if (initialUser) {
+        session = { user: initialUser, business: initialBusiness };
         setIsBackendConnected(true);
-        setCurrentUser({
-          id: session.user.id || session.user.accountId || initialUser?.id || 'user-01',
-          name: session.user.name || initialUser?.name || 'User',
-          email: session.user.email || initialUser?.email || '',
-          role: session.user.role === 'owner' || session.user.role === 'admin' ? 'admin' : 'salesperson',
-          avatarInitials: (session.user.name || initialUser?.name || 'US')
-            .split(' ')
-            .map((n: string) => n[0])
-            .join('')
-            .slice(0, 2)
-            .toUpperCase(),
-          status: 'active',
-          lastLogin: 'Just now',
-        });
-      }
-
-      if (session?.business) {
-        setBusinessProfile((prev) => mapBusinessProfileFromBackend(session.business, prev));
+      } else {
+        try {
+          session = await authApi.me();
+          if (session?.user) {
+            setIsBackendConnected(true);
+            setCurrentUser({
+              id: session.user.id || session.user.accountId || 'user-01',
+              name: session.user.name || 'User',
+              email: session.user.email || '',
+              role: session.user.role === 'owner' || session.user.role === 'admin' ? 'admin' : 'salesperson',
+              avatarInitials: (session.user.name || 'US')
+                .split(' ')
+                .map((n: string) => n[0])
+                .join('')
+                .slice(0, 2)
+                .toUpperCase(),
+              status: 'active',
+              lastLogin: 'Just now',
+            });
+          }
+          if (session?.business) {
+            setBusinessProfile((prev) => mapBusinessProfileFromBackend(session.business, prev));
+          }
+        } catch {
+          // Me failed
+        }
       }
 
       // Helper to cleanly unwrap backend arrays from various wrapper shapes
@@ -667,26 +670,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({
         return [];
       };
 
-      // 2. Fetch live database collections in parallel
-      const [
-        prodsRes,
-        supsRes,
-        custsRes,
-        posRes,
-        sosRes,
-        historyRes,
-        bizRes,
-        usersRes,
-        notifsRes,
-      ] = await Promise.allSettled([
+      // 2. Stage 1: Load critical overview datasets first for fast initial paint
+      const [prodsRes, bizRes, notifsRes] = await Promise.allSettled([
         productsApi.list(),
-        suppliersApi.list(),
-        customersApi.list(),
-        purchaseOrdersApi.list(),
-        salesOrdersApi.list(),
-        inventoryApi.history(),
-        businessApi.get(),
-        usersApi.listMembers(),
+        initialBusiness ? Promise.resolve(initialBusiness) : businessApi.get(),
         notificationsApi.list(),
       ]);
 
@@ -707,84 +694,93 @@ export const AppProvider: React.FC<AppProviderProps> = ({
         }
       }
 
-      if (supsRes.status === 'fulfilled') {
-        const sups = extractArray(supsRes.value);
-        setSuppliers(sups.map(mapBackendSupplier));
-      }
-
-      if (custsRes.status === 'fulfilled') {
-        const custs = extractArray(custsRes.value);
-        setCustomers(custs.map(mapBackendCustomer));
-      }
-
-      if (posRes.status === 'fulfilled') {
-        const pos = extractArray(posRes.value);
-        setPurchaseOrders(pos.map(mapBackendPurchaseOrder));
-      }
-
-      if (sosRes.status === 'fulfilled') {
-        const sos = extractArray(sosRes.value);
-        setBills(sos.map(mapBackendSalesOrder));
-      }
-
-      if (historyRes.status === 'fulfilled') {
-        const txs = extractArray(historyRes.value);
-        if (txs.length > 0) {
-          setStockMovements(txs.map((tx: any) => mapBackendMovement(tx, loadedProducts)));
-        }
-      }
-
-      if (usersRes.status === 'fulfilled') {
-        const uList = extractArray(usersRes.value);
-        if (uList.length > 0) {
-          const mappedUsers: User[] = uList.map((m: any) => {
-            const initials = (m.name || m.email || 'US')
-              .split(' ')
-              .map((n: string) => n[0])
-              .join('')
-              .slice(0, 2)
-              .toUpperCase();
-            return {
-              id: String(m.id || m.memberId || m._id || m.userId || m.accountId || `user-${Date.now()}`),
-              memberId: String(m.memberId || m.id || m._id || ''),
-              accountId: String(m.accountId || m.userId || m.account_id || ''),
-              name: m.name || m.email,
-              email: m.email,
-              role: (m.roleId === 'ROLE-ADMIN' || m.role === 'admin' || m.role === 'owner') ? 'admin' : 'salesperson',
-              avatarInitials: initials,
-              status: m.status === 'inactive' || m.status === 'suspended' ? 'suspended' : 'active',
-              lastLogin: m.lastLogin || (m.createdAt ? new Date(m.createdAt).toLocaleDateString('en-IN') : 'Recently'),
-            };
-          });
-          setUsers(mappedUsers);
-        }
-      }
-
       if (notifsRes.status === 'fulfilled') {
         const notifList = extractArray(notifsRes.value);
         const validNotifications = notifList.filter((item) =>
           UUID_PATTERN.test(String(item.id || item.notificationId || item._id || '')),
         );
-        if (validNotifications.length !== notifList.length) {
-          console.warn('Ignoring notifications without valid database IDs.');
-        }
         setNotifications(validNotifications.map(mapBackendNotification));
-      } else {
-        setNotifications([]);
-        console.warn('Failed to load notifications from the backend:', notifsRes.reason);
       }
+
+      // Immediately unblock the UI so the user sees the dashboard right away!
+      setIsLoadingBackend(false);
+      setLoadingStates((prev) => ({ ...prev, products: false, inventory: false }));
+
+      // 3. Stage 2: Fetch remaining tab collections asynchronously in background
+      Promise.allSettled([
+        purchaseOrdersApi.list(),
+        salesOrdersApi.list(),
+        suppliersApi.list(),
+        customersApi.list(),
+        inventoryApi.history(),
+        usersApi.listMembers(),
+      ]).then(([posRes, sosRes, supsRes, custsRes, historyRes, usersRes]) => {
+        if (posRes.status === 'fulfilled') {
+          const pos = extractArray(posRes.value);
+          setPurchaseOrders(pos.map(mapBackendPurchaseOrder));
+        }
+
+        if (sosRes.status === 'fulfilled') {
+          const sos = extractArray(sosRes.value);
+          setBills(sos.map(mapBackendSalesOrder));
+        }
+
+        if (supsRes.status === 'fulfilled') {
+          const sups = extractArray(supsRes.value);
+          setSuppliers(sups.map(mapBackendSupplier));
+        }
+
+        if (custsRes.status === 'fulfilled') {
+          const custs = extractArray(custsRes.value);
+          setCustomers(custs.map(mapBackendCustomer));
+        }
+
+        if (historyRes.status === 'fulfilled') {
+          const txs = extractArray(historyRes.value);
+          if (txs.length > 0) {
+            setStockMovements(txs.map((tx: any) => mapBackendMovement(tx, loadedProducts)));
+          }
+        }
+
+        if (usersRes.status === 'fulfilled') {
+          const uList = extractArray(usersRes.value);
+          if (uList.length > 0) {
+            const mappedUsers: User[] = uList.map((m: any) => {
+              const initials = (m.name || m.email || 'US')
+                .split(' ')
+                .map((n: string) => n[0])
+                .join('')
+                .slice(0, 2)
+                .toUpperCase();
+              return {
+                id: String(m.id || m.memberId || m._id || m.userId || m.accountId || `user-${Date.now()}`),
+                memberId: String(m.memberId || m.id || m._id || ''),
+                accountId: String(m.accountId || m.userId || m.account_id || ''),
+                name: m.name || m.email,
+                email: m.email,
+                role: (m.roleId === 'ROLE-ADMIN' || m.role === 'admin' || m.role === 'owner') ? 'admin' : 'salesperson',
+                avatarInitials: initials,
+                status: m.status === 'inactive' || m.status === 'suspended' ? 'suspended' : 'active',
+                lastLogin: m.lastLogin || (m.createdAt ? new Date(m.createdAt).toLocaleDateString('en-IN') : 'Recently'),
+              };
+            });
+            setUsers(mappedUsers);
+          }
+        }
+
+        setLoadingStates({
+          products: false,
+          suppliers: false,
+          customers: false,
+          purchaseOrders: false,
+          salesOrders: false,
+          inventory: false,
+        });
+      });
 
     } catch (err) {
       console.warn('Backend live sync notice:', err);
     } finally {
-      setLoadingStates({
-        products: false,
-        suppliers: false,
-        customers: false,
-        purchaseOrders: false,
-        salesOrders: false,
-        inventory: false,
-      });
       setIsLoadingBackend(false);
     }
   };

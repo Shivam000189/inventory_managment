@@ -1,5 +1,3 @@
-import { AppProvider } from '../dashboard/context/AppContext.tsx';
-import { DashboardLayout } from '../dashboard/DashboardLayout.tsx';
 import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import "../App.css";
@@ -26,26 +24,7 @@ const PasswordChangePage = lazy(() => import("../platform/PasswordChangePage").t
 const PlatformDashboardPage = lazy(() => import("../platform/PlatformDashboardPage").then((module) => ({ default: module.PlatformDashboardPage })));
 const PlatformBusinessesPage = lazy(() => import("../platform/PlatformBusinessesPage").then((module) => ({ default: module.PlatformBusinessesPage })));
 const PlatformBusinessAdminsPage = lazy(() => import("../platform/PlatformBusinessAdminsPage").then((module) => ({ default: module.PlatformBusinessAdminsPage })));
-
-function DashboardView() {
-  const { account, business, logout } = useAuth();
-  const navigate = useNavigate();
-
-  return (
-    <AppProvider
-      initialUser={account}
-      initialBusiness={business}
-      onLogout={logout}
-      onNavigate={(p) => {
-        if (p === '/' || p === '/landing') {
-          navigate('/landing');
-        }
-      }}
-    >
-      <DashboardLayout onLogout={logout} />
-    </AppProvider>
-  );
-}
+const DashboardView = lazy(() => import("../dashboard/DashboardView.tsx"));
 
 function BusinessProvisioningRequired() {
   const { account, logout } = useAuth();
@@ -242,7 +221,14 @@ function MainApp() {
               isSuperAdmin(session?.user) ? (
                 <Navigate to={defaultAuthenticatedPath} replace />
               ) : (
-                <DashboardView />
+                <Suspense fallback={
+                  <div className="app-loading" role="status" aria-busy="true">
+                    <span className="sr-only">Loading workspace…</span>
+                    <Spinner size={32} />
+                  </div>
+                }>
+                  <DashboardView />
+                </Suspense>
               )
             ) : (
               <Navigate to="/login" replace state={{ from: location.pathname }} />
