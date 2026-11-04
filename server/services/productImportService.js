@@ -8,16 +8,23 @@ import { toObjectId } from '../validators/assert.js'
 
 const MAX_ROWS = 5000
 const HEADER_ALIASES = {
-  name: ['product name', 'product', 'item name', 'item', 'description'],
+  name: ['name', 'product name', 'product', 'item name', 'item', 'description'],
   parentSku: ['parent sku', 'parentsku', 'style sku', 'product sku', 'parent product code'],
   sku: ['sku', 'product code', 'item code', 'code'],
   barcode: ['barcode', 'bar code', 'ean', 'upc'],
   category: ['category', 'product category'],
   brand: ['brand', 'make'],
-  size: ['size'], color: ['color', 'colour'], quantity: ['quantity', 'qty', 'stock'],
+  size: ['size'], color: ['color', 'colour'], quantity: ['quantity', 'qty', 'stock'], unit: ['unit', 'uom', 'measurement'],
+  description: ['description', 'desc', 'details', 'about'],
   purchasePrice: ['purchase price', 'purchaseprice', 'cost price', 'costprice', 'cost', 'buy price', 'rate'],
-  sellingPrice: ['selling price', 'sellingprice', 'retail price', 'sale price', 'saleprice', 'mrp'],
+  sellingPrice: ['selling price', 'sellingprice', 'retail price', 'sale price', 'saleprice'],
   wholesalePrice: ['wholesale price', 'wholesale rate', 'bulk price'],
+  mrp: ['mrp', 'max retail price', 'maximum retail price'],
+  genericName: ['generic', 'generic name', 'generic molecule', 'salt', 'active ingredient', 'molecule', 'composition'],
+  manufacturer: ['manufacturer', 'mfg', 'pharma company', 'producer'],
+  batchNumber: ['batch', 'batch no', 'batch number', 'lot', 'lot no', 'lot number'],
+  manufacturingDate: ['mfg date', 'manufacturing date', 'mfg dt', 'mfd'],
+  expiryDate: ['expiry', 'expiry date', 'exp date', 'exp dt', 'expiration'],
   gstRate: ['gst', 'gst %', 'gst rate', 'gstrate', 'tax', 'tax %'],
   lineTotal: ['line total', 'item total', 'total amount', 'amount'],
   hsnCode: ['hsn', 'hsn code', 'hsncode'], supplierName: ['supplier', 'supplier name', 'vendor'],
@@ -190,6 +197,14 @@ function normalizeRow(raw, index) {
     brand: String(raw.brand ?? '').trim(), size: String(raw.size ?? '').trim(), color: String(raw.color ?? '').trim(),
     quantity: numberValue(raw.quantity), purchasePrice, sellingPrice: sellingPriceMissing ? purchasePrice : numberValue(raw.sellingPrice),
     wholesalePrice: numberValue(raw.wholesalePrice), gstRate: numberValue(raw.gstRate), hsnCode: String(raw.hsnCode ?? '').trim(),
+    unit: String(raw.unit ?? '').trim() || 'pcs',
+    description: String(raw.description ?? '').trim(),
+    genericName: String(raw.genericName ?? '').trim(),
+    manufacturer: String(raw.manufacturer ?? '').trim(),
+    batchNumber: String(raw.batchNumber ?? '').trim(),
+    manufacturingDate: raw.manufacturingDate ? String(raw.manufacturingDate).trim() : null,
+    expiryDate: raw.expiryDate ? String(raw.expiryDate).trim() : null,
+    mrp: numberValue(raw.mrp) || numberValue(raw.sellingPrice),
     supplierName: String(raw.supplierName ?? '').trim(), supplierPhone: String(raw.supplierPhone ?? '').trim(), supplierEmail: String(raw.supplierEmail ?? '').trim().toLowerCase(),
     minimumStock: numberValue(raw.minimumStock), reorderPoint: numberValue(raw.reorderPoint), targetStock: numberValue(raw.targetStock), reorderQuantity: numberValue(raw.reorderQuantity),
     duplicateAction: ['skip', 'update', 'merge'].includes(raw.duplicateAction) ? raw.duplicateAction : 'merge',
@@ -300,7 +315,7 @@ async function confirmClothingVariants(businessId, payload, actor, normalizedRow
       if (!parent) {
         let parentSku = row.parentSku || styleSku(row.name); let suffix = 1
         while (await Product.exists({ business, sku: parentSku }).session(session)) parentSku = `${styleSku(row.name)}-${suffix++}`
-        ;[parent] = await Product.create([{ business, name: row.name, sku: parentSku, category: row.category, brand: row.brand, purchasePrice: row.purchasePrice, sellingPrice: row.sellingPrice, wholesalePrice: row.wholesalePrice, gstRate: row.gstRate, hsnCode: row.hsnCode, supplier: rowSupplier?.supplierName || '', supplierId: rowSupplier?._id || null, currentStock: 0, variants: [] }], { session })
+        ;[parent] = await Product.create([{ business, name: row.name, sku: parentSku, category: row.category, brand: row.brand, purchasePrice: row.purchasePrice, sellingPrice: row.sellingPrice, wholesalePrice: row.wholesalePrice, unit: row.unit || 'pcs', description: row.description || '', gstRate: row.gstRate, hsnCode: row.hsnCode, supplier: rowSupplier?.supplierName || '', supplierId: rowSupplier?._id || null, currentStock: 0, variants: [] }], { session })
       }
       const collision = await Product.findOne({ business, _id: { $ne: parent._id }, $or: [{ sku: row.sku }, { 'variants.sku': row.sku }, ...(row.barcode ? [{ barcode: row.barcode }, { 'variants.barcode': row.barcode }] : [])] }).session(session)
       if (collision) { failures.push({ rowNumber: row.rowNumber, sku: row.sku, barcode: row.barcode, name: row.name, reasons: ['Variant SKU or barcode already belongs to another product.'] }); continue }
@@ -346,7 +361,9 @@ export async function confirm(businessId, payload, actor) {
       const existing = row.duplicate
       if (existing && row.duplicateAction === 'skip') { counts.skipped += 1; continue }
       const rowSupplier = await resolveSupplier(row)
-      const productFields = { name: row.name, sku: row.sku, barcode: row.barcode, category: row.category, brand: row.brand, size: row.size, color: row.color, purchasePrice: row.purchasePrice, sellingPrice: row.sellingPrice, wholesalePrice: row.wholesalePrice, gstRate: row.gstRate, hsnCode: row.hsnCode, supplier: rowSupplier?.supplierName || '', supplierId: rowSupplier?._id || null }
+      const productFields = { name: row.name, sku: row.sku, barcode: row.barcode, category: row.category, brand: row.brand, size: row.size, color: row.color, purchasePrice: row.purchasePrice, sellingPrice: row.sellingPrice, wholesalePrice: row.wholesalePrice, gstRate: row.gstRate, hsnCode: row.hsnCode, supplier: rowSupplier?.supplierName || '', supplierId: rowSupplier?._id || null,
+        genericName: row.genericName, manufacturer: row.manufacturer, batchNumber: row.batchNumber,
+        manufacturingDate: row.manufacturingDate, expiryDate: row.expiryDate, mrp: row.mrp }
       let productId; let previousStock = 0; let newStock = row.quantity
       if (existing) {
         productId = toObjectId(existing.productId, 'product'); previousStock = existing.currentStock
@@ -368,7 +385,25 @@ export async function confirm(businessId, payload, actor) {
   return { import: history.toJSON(), counts, failures }
 }
 
-export async function history(businessId) {
-  const docs = await ProductImport.find({ business: toObjectId(businessId, 'business') }).sort('-createdAt').limit(100)
-  return docs.map((doc) => doc.toJSON())
+export async function history(businessId, query = {}) {
+  const filter = { business: toObjectId(businessId, 'business') }
+  const page = Math.max(1, Number(query?.page) || 1)
+  const limit = Math.min(100, Math.max(1, Number(query?.limit) || 20))
+  const skip = (page - 1) * limit
+
+  const [docs, total] = await Promise.all([
+    ProductImport.find(filter).sort('-createdAt').skip(skip).limit(limit),
+    ProductImport.countDocuments(filter),
+  ])
+
+  const items = docs.map((doc) => doc.toJSON())
+  return {
+    items,
+    meta: {
+      page,
+      limit,
+      total,
+      pages: Math.ceil(total / limit) || 1,
+    },
+  }
 }

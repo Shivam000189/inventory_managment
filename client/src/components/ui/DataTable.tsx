@@ -1,6 +1,7 @@
 import React, { Fragment, useCallback, useMemo, type ReactNode } from 'react'
 import { Icon } from './icons'
 import { Button } from './Button'
+import { Skeleton } from './Feedback'
 import './DataTable.css'
 
 export interface DataTableColumn<T = any> {
@@ -95,28 +96,74 @@ export function DataTable<T = any>({
 
   // Loading State
   if (loading) {
+    const cols = columns && columns.length > 0 ? columns : [
+      { key: '1', header: 'Col 1', width: '25%' },
+      { key: '2', header: 'Col 2', width: '25%' },
+      { key: '3', header: 'Col 3', width: '25%' },
+      { key: '4', header: 'Col 4', width: '25%' },
+    ];
     return (
       <div className={`ui-data-table-container ${className}`}>
-        <div className="ui-data-table-wrap invoice-table-wrap" aria-busy="true">
-          <div className="ui-table-skeleton-row">
-            <div className="ui-skeleton-pulse" style={{ width: '40px' }} />
-            <div className="ui-skeleton-pulse" style={{ width: '25%' }} />
-            <div className="ui-skeleton-pulse" style={{ width: '20%' }} />
-            <div className="ui-skeleton-pulse" style={{ width: '15%' }} />
-            <div className="ui-skeleton-pulse" style={{ width: '20%' }} />
-          </div>
-          {[1, 2, 3, 4].map((n) => (
-            <div key={n} className="ui-table-skeleton-row">
-              <div className="ui-skeleton-pulse" style={{ width: '40px' }} />
-              <div className="ui-skeleton-pulse" style={{ width: '30%' }} />
-              <div className="ui-skeleton-pulse" style={{ width: '25%' }} />
-              <div className="ui-skeleton-pulse" style={{ width: '18%' }} />
-              <div className="ui-skeleton-pulse" style={{ width: '15%' }} />
-            </div>
-          ))}
+        <div className="ui-data-table-wrap invoice-table-wrap" aria-busy="true" role="status">
+          <span className="sr-only">Loading table data...</span>
+          <table className="ui-data-table invoice-table">
+            <thead>
+              <tr>
+                {selectable && (
+                  <th style={{ width: '48px', textAlign: 'center' }}>
+                    <Skeleton width={18} height={18} borderRadius={4} />
+                  </th>
+                )}
+                {cols.map((col, idx) => (
+                  <th
+                    key={col.key || String(idx)}
+                    style={{
+                      width: col.width,
+                      textAlign: col.align || 'left',
+                    }}
+                  >
+                    <Skeleton
+                      width={typeof col.header === 'string' ? `${Math.max(40, col.header.length * 8)}px` : '65%'}
+                      height={14}
+                      borderRadius={4}
+                      style={{
+                        margin: col.align === 'center' ? '0 auto' : col.align === 'right' ? '0 0 0 auto' : undefined,
+                      }}
+                    />
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#EEE6DA]/70">
+              {Array.from({ length: 5 }).map((_, rIdx) => (
+                <tr key={rIdx}>
+                  {selectable && (
+                    <td style={{ textAlign: 'center' }}>
+                      <Skeleton width={18} height={18} borderRadius={4} />
+                    </td>
+                  )}
+                  {cols.map((col, cIdx) => (
+                    <td
+                      key={col.key || String(cIdx)}
+                      style={{ textAlign: col.align || 'left' }}
+                    >
+                      <Skeleton
+                        width={cIdx === 0 ? '70%' : col.align === 'center' ? '40%' : col.align === 'right' ? '50%' : '55%'}
+                        height={16}
+                        borderRadius={4}
+                        style={{
+                          margin: col.align === 'center' ? '0 auto' : col.align === 'right' ? '0 0 0 auto' : undefined,
+                        }}
+                      />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
-    )
+    );
   }
 
   // Error State

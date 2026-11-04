@@ -1,6 +1,13 @@
 import { notifyEvent } from './notificationService.js'
 
-const send = (businessId, event) => notifyEvent(businessId, event)
+const send = async (businessId, event) => {
+  try {
+    return await notifyEvent(businessId, event);
+  } catch (err) {
+    console.warn('[Notification] Event dispatch failed non-blocking:', err?.message || err);
+    return null;
+  }
+};
 const entityId = (record) => record.purchaseOrderId || record.refundId || record.orderId || record.receivingId || record.paymentId || record.returnId || record.transactionId || record.userId || record._id
 
 export const notificationEvents = {

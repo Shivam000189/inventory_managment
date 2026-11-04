@@ -2,6 +2,7 @@ import express from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
 import cookieParser from 'cookie-parser'
+import { randomUUID } from 'node:crypto'
 import { env, isProduction } from './config/env.js'
 import { api } from './routes/index.js'
 import { csrfGuard } from './middleware/csrf.js'
@@ -36,6 +37,11 @@ export function createApp() {
   )
   app.use(express.json({ limit: '1mb' }))
   app.use(cookieParser())
+  app.use((req, res, next) => {
+    req.id = randomUUID()
+    res.setHeader('X-Request-Id', req.id)
+    next()
+  })
   app.use(csrfGuard)
 
   app.get('/', (_req, res) => res.json({ success: true, data: { service: 'stockroom-api', health: '/api/health' } }))

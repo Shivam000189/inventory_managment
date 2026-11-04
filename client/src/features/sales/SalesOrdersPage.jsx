@@ -1,4 +1,21 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  ShoppingCart,
+  Truck,
+  CheckCircle2,
+  Clock,
+  Search,
+  Download,
+  Plus,
+  Printer,
+  Eye,
+  Edit2,
+  Trash2,
+  Package,
+} from 'lucide-react'
+import { StatCard } from '../../dashboard/components/common/StatCard.tsx'
+import { Badge } from '../../dashboard/components/common/Badge.tsx'
+import { TableSkeleton } from '../../components/ui/Feedback.tsx'
 import { salesOrderApi } from '../../api/salesOrderApi.js'
 import { productApi } from '../../api/productApi.js'
 import { customerApi } from '../../api/customerApi.js'
@@ -570,6 +587,19 @@ function SalesOrders({ business = {}, creditSales = false, section = 'Credit Sal
     },
   ]
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [tab, search, channelFilter, statusFilter]);
+
+  const totalPages = Math.ceil(visibleOrders.length / pageSize) || 1;
+  const paginatedOrders = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return visibleOrders.slice(start, start + pageSize);
+  }, [visibleOrders, currentPage, pageSize]);
+
   if (creditSales) {
     return (
       <section className="sales-orders-unified">
@@ -617,128 +647,126 @@ function SalesOrders({ business = {}, creditSales = false, section = 'Credit Sal
     )
   }
 
-  const pageActions = [
-    {
-      label: 'Print Slips',
-      variant: 'secondary',
-      onClick: () => window.print(),
-    },
-    {
-      label: 'Export CSV',
-      variant: 'secondary',
-      onClick: exportCsv,
-      disabled: loading || !!error || !orders.length,
-    },
-    {
-      label: 'Create Order',
-      variant: 'primary',
-      onClick: () => openForm(),
-    },
-  ]
-
   return (
-    <section className="sales-orders-unified" aria-labelledby="ord-title">
-      <PageHeader
-        kicker={`${business?.name || 'Store'} · ${business?.industry || 'Retail'}`}
-        title={section || 'Orders'}
-        description="Manage customer sales, dispatch statuses, invoices, and point-of-sale receipts."
-        scope={`${stats.todayCount} sales registered today`}
-        actions={pageActions}
-      />
+    <div className="space-y-6 animate-in fade-in duration-150 pb-10" aria-labelledby="ord-title">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 id="ord-title" className="text-[28px] font-semibold text-[#1C1B18] tracking-tight leading-tight">
+            {section || 'Orders'}
+          </h1>
+          <p className="text-[13px] text-[#6B665E] mt-0.5">
+            Manage customer sales, dispatch statuses, invoices, and point-of-sale receipts.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2.5 py-0.5">
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-[#EEE6DA] bg-white text-xs font-semibold text-[#1C1B18] hover:bg-[#FAF6EF] transition-all cursor-pointer shadow-2xs whitespace-nowrap active:scale-95"
+          >
+            <Printer size={15} />
+            <span>Print</span>
+          </button>
+          <button
+            type="button"
+            onClick={exportCsv}
+            disabled={loading || !!error || !orders.length}
+            className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl border border-[#EEE6DA] bg-white text-xs font-semibold text-[#1C1B18] hover:bg-[#FAF6EF] transition-all cursor-pointer shadow-2xs whitespace-nowrap active:scale-95 disabled:opacity-50"
+          >
+            <Download size={15} />
+            <span>Export</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => openForm()}
+            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-[#7FAE82] hover:bg-[#6C9C70] text-white text-xs font-semibold transition-all cursor-pointer shadow-2xs whitespace-nowrap active:scale-95"
+          >
+            <Plus size={16} />
+            <span>+ Create Order</span>
+          </button>
+        </div>
+      </div>
 
       {message && (
         <div
-          className={`form-status ${message.type}`}
+          className={`p-3.5 rounded-xl text-xs font-medium border ${
+            message.type === 'error'
+              ? 'bg-[#FDECEC] text-[#D64545] border-[#F9C2C2]'
+              : 'bg-[#E8F5EC] text-[#2E8B57] border-[#CDEBD5]'
+          }`}
           role={message.type === 'error' ? 'alert' : 'status'}
         >
           {message.text}
         </div>
       )}
 
-      {/* 4 Pastel KPI Summary Cards */}
-      <div className="ledger-kpi-grid">
-        <div
-          className={`ledger-kpi-card theme-blue ${tab === 'all' ? 'is-active' : ''}`}
+      {/* 4 Dashboard-style StatCards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <StatCard
+          icon={<ShoppingCart size={18} strokeWidth={2} />}
+          iconBgColor="bg-[#E6F1E6] text-[#2E8B57]"
+          label="Total Orders"
+          value={orders.length}
+          trend={`${stats.todayCount} today`}
+          isPositive={true}
           onClick={() => setTab('all')}
-          role="button"
-          tabIndex={0}
-        >
-          <div className="ledger-kpi-bubble">
-            <Icon name="list" size={20} />
-          </div>
-          <div className="ledger-kpi-content">
-            <span className="ledger-kpi-label">Total</span>
-            <span className="ledger-kpi-val">{orders.length} Invoices</span>
-          </div>
-        </div>
-
-        <div
-          className={`ledger-kpi-card theme-slate ${tab === 'processing' ? 'is-active' : ''}`}
+          className={tab === 'all' ? 'ring-2 ring-[#7FAE82]' : ''}
+        />
+        <StatCard
+          icon={<Truck size={18} strokeWidth={2} />}
+          iconBgColor="bg-[#EBF2FA] text-[#2563EB]"
+          label="Shipped / In Fulfilment"
+          value={stats.inFulfilment}
+          trend={`${stats.fulfilUnits} units`}
+          isPositive={true}
           onClick={() => setTab('processing')}
-          role="button"
-          tabIndex={0}
-        >
-          <div className="ledger-kpi-bubble">
-            <Icon name="truck" size={20} />
-          </div>
-          <div className="ledger-kpi-content">
-            <span className="ledger-kpi-label">Shipped</span>
-            <span className="ledger-kpi-val">{stats.inFulfilment} Invoices</span>
-          </div>
-        </div>
-
-        <div
-          className={`ledger-kpi-card theme-green ${tab === 'completed' ? 'is-active' : ''}`}
+          className={tab === 'processing' ? 'ring-2 ring-[#7FAE82]' : ''}
+        />
+        <StatCard
+          icon={<CheckCircle2 size={18} strokeWidth={2} />}
+          iconBgColor="bg-[#E8F5EC] text-[#2E8B57]"
+          label="Delivered / Completed"
+          value={money(stats.todaySales)}
+          trend={`${stats.fulfilRate}% rate`}
+          isPositive={true}
           onClick={() => setTab('completed')}
-          role="button"
-          tabIndex={0}
-        >
-          <div className="ledger-kpi-bubble">
-            <Icon name="dollar" size={20} />
-          </div>
-          <div className="ledger-kpi-content">
-            <span className="ledger-kpi-label">Delivered</span>
-            <span className="ledger-kpi-val">{money(stats.todaySales)}</span>
-          </div>
-        </div>
-
-        <div
-          className={`ledger-kpi-card theme-amber ${tab === 'pending' ? 'is-active' : ''}`}
+          className={tab === 'completed' ? 'ring-2 ring-[#7FAE82]' : ''}
+        />
+        <StatCard
+          icon={<Clock size={18} strokeWidth={2} />}
+          iconBgColor="bg-[#FFF4DC] text-[#D98E0B]"
+          label="Pending Payment"
+          value={stats.awaitingCount}
+          trend={stats.awaitingAmount ? money(stats.awaitingAmount) : 'Settled'}
+          isPositive={false}
           onClick={() => setTab('pending')}
-          role="button"
-          tabIndex={0}
-        >
-          <div className="ledger-kpi-bubble">
-            <Icon name="pending" size={20} />
-          </div>
-          <div className="ledger-kpi-content">
-            <span className="ledger-kpi-label">Pending</span>
-            <span className="ledger-kpi-val">{stats.awaitingCount} Invoices</span>
-          </div>
-        </div>
+          className={tab === 'pending' ? 'ring-2 ring-[#7FAE82]' : ''}
+        />
       </div>
 
-      {/* Pill Search & Action Toolbar */}
-      <div className="ledger-toolbar">
-        <div className="ledger-toolbar-left">
-          <div className="ledger-search-box">
+      {/* Toolbar matching Product Page */}
+      <div className="bg-white rounded-2xl p-3 border border-[#EEE6DA] flex flex-col md:flex-row items-center justify-between gap-3 shadow-2xs">
+        <div className="flex items-center gap-3 flex-1 w-full md:w-auto">
+          {/* Search */}
+          <div className="relative flex-1 max-w-md">
+            <Search size={15} className="absolute left-3 top-2.5 text-[#9A948A]" />
             <input
               ref={searchRef}
               type="text"
-              className="ledger-search-input"
-              placeholder="Search..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by order #, invoice, customer, or product..."
+              className="w-full pl-9 pr-3 py-1.5 rounded-xl border border-[#EEE6DA] text-xs focus:border-[#7FAE82] outline-none"
             />
-            <span className="ledger-search-icon">
-              <Icon name="search" size={17} />
-            </span>
           </div>
 
+          {/* Channel Dropdown */}
           <select
-            className="ledger-pill-select"
             value={channelFilter}
             onChange={(e) => setChannelFilter(e.target.value)}
+            className="px-3 py-1.5 rounded-xl border border-[#EEE6DA] text-xs text-[#1C1B18] bg-white cursor-pointer outline-none"
           >
             {channels.map((ch) => (
               <option key={ch.id} value={ch.id}>
@@ -747,10 +775,11 @@ function SalesOrders({ business = {}, creditSales = false, section = 'Credit Sal
             ))}
           </select>
 
+          {/* Status Dropdown */}
           <select
-            className="ledger-pill-select"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
+            className="px-3 py-1.5 rounded-xl border border-[#EEE6DA] text-xs text-[#1C1B18] bg-white cursor-pointer outline-none"
           >
             <option value="all">All Statuses</option>
             <option value="Pending">Pending</option>
@@ -759,44 +788,246 @@ function SalesOrders({ business = {}, creditSales = false, section = 'Credit Sal
           </select>
         </div>
 
-        <div className="ledger-toolbar-right">
-          <button
-            type="button"
-            className="ledger-btn-secondary"
-            onClick={exportCsv}
-            disabled={loading || !!error || !orders.length}
-          >
-            <Icon name="download" size={15} />
-            <span>Export</span>
-          </button>
-          <button
-            type="button"
-            className="ledger-btn-primary"
-            onClick={() => openForm()}
-          >
-            <Icon name="plus" size={16} />
-            <span>+ New Order</span>
-          </button>
+        {/* Status Pills */}
+        <div className="flex items-center gap-1 bg-[#FAF6EF] p-1 rounded-xl border border-[#EEE6DA]/80 overflow-x-auto w-full md:w-auto">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setTab(t.id)}
+              className={`px-3 py-1 text-xs font-semibold rounded-lg transition-colors cursor-pointer whitespace-nowrap ${
+                tab === t.id
+                  ? 'bg-white text-[#1C1B18] shadow-2xs'
+                  : 'text-[#6B665E] hover:text-[#1C1B18]'
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
         </div>
       </div>
 
-      <DataTable
-        columns={columns}
-        data={visibleOrders}
-        keyField="orderId"
-        loading={loading}
-        error={error}
-        onRetry={refetch}
-        emptyMessage={
-          orders.length
-            ? 'No orders match these filters.'
-            : 'No sales orders yet. Create one or ring up a sale at the POS.'
-        }
-        pagination
-        pageSize={10}
-        onRowClick={(order) => setViewingOrder(order)}
-      />
+      {/* Table matching Product Page */}
+      {loading && orders.length === 0 ? (
+        <TableSkeleton
+          columns={[
+            { title: 'Order ID', width: '15%' },
+            { title: 'Customer', width: '22%' },
+            { title: 'Date & Channel', width: '15%' },
+            { title: 'Items', width: '12%', align: 'center' },
+            { title: 'Total Amount', width: '14%', align: 'right' },
+            { title: 'Payment', width: '11%', align: 'center' },
+            { title: 'Status', width: '11%', align: 'center' },
+          ]}
+          rows={6}
+        />
+      ) : visibleOrders.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-[#EEE6DA] p-12 text-center shadow-2xs">
+          <Package className="mx-auto text-[#9A948A] mb-3 opacity-60" size={36} />
+          <h3 className="text-sm font-semibold text-[#1C1B18]">No orders found</h3>
+          <p className="text-xs text-[#6B665E] mt-1 max-w-sm mx-auto">
+            {orders.length ? 'No orders match your filter criteria.' : 'No sales orders yet. Create your first order.'}
+          </p>
+          <button
+            type="button"
+            onClick={() => openForm()}
+            className="mt-4 px-4 py-2 rounded-xl bg-[#7FAE82] hover:bg-[#6C9C70] text-white text-xs font-semibold transition-all cursor-pointer shadow-2xs active:scale-95"
+          >
+            + Create New Order
+          </button>
+        </div>
+      ) : (
+        <div className="bg-white rounded-2xl border border-[#EEE6DA] overflow-hidden shadow-2xs">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs min-w-[800px]">
+              <thead className="sticky top-0 z-10 bg-[#FAF6EF] border-b border-[#EEE6DA] text-[#8C867A] text-[11px] font-semibold uppercase tracking-wider">
+                <tr>
+                  <th className="py-3 px-4 font-medium">Order ID</th>
+                  <th className="py-3 px-3 font-medium">Customer</th>
+                  <th className="py-3 px-3 font-medium">Date & Channel</th>
+                  <th className="py-3 px-3 font-medium text-center">Items</th>
+                  <th className="py-3 px-3 font-medium text-right">Total Amount</th>
+                  <th className="py-3 px-3 font-medium text-center">Payment</th>
+                  <th className="py-3 px-3 font-medium text-center">Status</th>
+                  <th className="py-3 px-4 text-right font-medium">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#EEE6DA]/80">
+                {paginatedOrders.map((order) => {
+                  const customer = customerById.get(order.customerId);
+                  const channel = channelOf(order);
+                  const channelLabel = channel === 'pos' ? 'POS' : channel === 'wholesale' ? 'Wholesale' : 'Desk';
+                  const totalItemsCount = order.items?.length || 0;
+                  const totalUnitsCount = (order.items || []).reduce(
+                    (sumVal, item) => sumVal + Number(item.quantity || 0),
+                    0
+                  );
 
+                  let statusVariant = 'warning';
+                  let statusLabel = order.status || 'Pending';
+                  if (order.status === 'Completed') {
+                    statusVariant = 'success';
+                    statusLabel = 'Delivered';
+                  } else if (order.status === 'Cancelled') {
+                    statusVariant = 'danger';
+                    statusLabel = 'Cancelled';
+                  } else if (order.paymentStatus === 'Paid') {
+                    statusVariant = 'info';
+                    statusLabel = 'Shipped';
+                  }
+
+                  const paymentVariant =
+                    order.paymentStatus === 'Paid'
+                      ? 'success'
+                      : order.paymentStatus === 'Partial'
+                        ? 'warning'
+                        : 'danger';
+
+                  return (
+                    <tr
+                      key={order.orderId}
+                      className="hover:bg-[#FAF6EF]/60 transition-colors group cursor-pointer"
+                      onClick={() => setViewingOrder(order)}
+                    >
+                      <td className="py-3 px-4">
+                        <div className="font-semibold text-[#1C1B18] text-[13px] group-hover:text-[#6C9C70] transition-colors">
+                          #{order.invoiceNumber || order.orderNumber}
+                        </div>
+                        {order.orderNumber && order.invoiceNumber && (
+                          <div className="text-[11px] text-[#9A948A]">{order.orderNumber}</div>
+                        )}
+                      </td>
+
+                      <td className="py-3 px-3">
+                        <div className="font-semibold text-[#1C1B18] text-[13px] flex items-center gap-1.5">
+                          <span>{order.customerName || 'Walk-in customer'}</span>
+                          {order.billingType === 'wholesale' && (
+                            <span className="bg-[#EBF2FA] text-[#2563EB] text-[10px] font-semibold px-1.5 py-0.5 rounded border border-[#BFDBFE]">
+                              B2B
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[11px] text-[#9A948A]">
+                          {customer?.phone || order.customerSnapshot?.phone || 'Direct Sale'}
+                        </div>
+                      </td>
+
+                      <td className="py-3 px-3">
+                        <div className="text-[#1C1B18] text-xs font-medium">
+                          {new Date(order.createdAt).toLocaleDateString('en-GB', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                          })}
+                        </div>
+                        <div className="text-[11px] font-medium text-[#2563EB]">
+                          {channelLabel}
+                        </div>
+                      </td>
+
+                      <td className="py-3 px-3 text-center text-[#6B665E]">
+                        <span className="font-semibold text-[#1C1B18]">{totalItemsCount}</span> items{' '}
+                        <span className="text-[11px] text-[#9A948A]">({totalUnitsCount} pcs)</span>
+                      </td>
+
+                      <td className="py-3 px-3 text-right">
+                        <div className="font-bold text-[#1C1B18] text-sm tabular-nums">
+                          {money(order.totalAmount)}
+                        </div>
+                        {order.paymentStatus !== 'Paid' && (
+                          <div className="text-[11px] text-[#D98E0B] tabular-nums">
+                            Due: {money(order.balanceDue || order.totalAmount)}
+                          </div>
+                        )}
+                      </td>
+
+                      <td className="py-3 px-3 text-center">
+                        <Badge variant={paymentVariant}>{order.paymentStatus || 'Pending'}</Badge>
+                      </td>
+
+                      <td className="py-3 px-3 text-center">
+                        <Badge variant={statusVariant}>{statusLabel}</Badge>
+                      </td>
+
+                      <td
+                        className="py-3 px-4 text-right"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            type="button"
+                            onClick={() => setViewingOrder(order)}
+                            className="p-1.5 rounded-lg text-[#6B665E] hover:text-[#1C1B18] hover:bg-[#FAF6EF] transition-colors cursor-pointer"
+                            title="View Invoice"
+                            aria-label="View Invoice"
+                          >
+                            <Eye size={15} />
+                          </button>
+                          {order.status !== 'Completed' && order.status !== 'Cancelled' && (
+                            <button
+                              type="button"
+                              onClick={() => openForm(order)}
+                              className="p-1.5 rounded-lg text-[#6B665E] hover:text-[#1C1B18] hover:bg-[#FAF6EF] transition-colors cursor-pointer"
+                              title="Edit Order"
+                              aria-label="Edit Order"
+                            >
+                              <Edit2 size={15} />
+                            </button>
+                          )}
+                          {order.status !== 'Completed' && order.status !== 'Cancelled' && (
+                            <button
+                              type="button"
+                              onClick={() => cancelOrder(order)}
+                              className="p-1.5 rounded-lg text-[#D64545] hover:text-[#B33535] hover:bg-[#FDECEC] transition-colors cursor-pointer"
+                              title="Cancel Order"
+                              aria-label="Cancel Order"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination Footer */}
+          {totalPages > 1 && (
+            <div className="p-3 border-t border-[#EEE6DA] flex items-center justify-between text-xs text-[#6B665E]">
+              <span>
+                Showing {Math.min((currentPage - 1) * pageSize + 1, visibleOrders.length)} to{' '}
+                {Math.min(currentPage * pageSize, visibleOrders.length)} of {visibleOrders.length} orders
+              </span>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  className="px-2.5 py-1 rounded-lg border border-[#EEE6DA] bg-white text-xs font-semibold text-[#1C1B18] hover:bg-[#FAF6EF] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                >
+                  Previous
+                </button>
+                <span className="px-2 font-medium text-[#1C1B18]">
+                  {currentPage} / {totalPages}
+                </span>
+                <button
+                  type="button"
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  className="px-2.5 py-1 rounded-lg border border-[#EEE6DA] bg-white text-xs font-semibold text-[#1C1B18] hover:bg-[#FAF6EF] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Modals */}
       <OrderFormModal
         isOpen={formOpen}
         creditSales={creditSales}
@@ -822,7 +1053,7 @@ function SalesOrders({ business = {}, creditSales = false, section = 'Credit Sal
           onClose={() => setViewingOrder(null)}
         />
       )}
-    </section>
+    </div>
   )
 }
 

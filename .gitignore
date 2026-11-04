@@ -38,6 +38,8 @@ server/data/*.local.json
 
 .vercel
 
+docs/
+
 
 
 SUPABASE_MIGRATION_GUIDE.md

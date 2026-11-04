@@ -1,472 +1,294 @@
 /* oxlint-disable react/only-export-components */
-import { lazy } from 'react'
+import { lazy, Suspense } from 'react';
+import { Navigate, useNavigate } from 'react-router-dom';
+import { useApp } from '../dashboard/context/AppContext.tsx';
+import { TablePageSkeleton } from '../components/ui/Feedback.tsx';
 
-const DashboardOverview = lazy(() => import('../features/dashboard/DashboardOverview.jsx'))
-const ProductsPage = lazy(() => import('../features/products/ProductsPage.jsx'))
-const InventoryOperations = lazy(() => import('../features/inventory/InventoryOperations.jsx'))
-const PurchaseOrdersPage = lazy(() => import('../features/purchasing/PurchaseOrdersPage.jsx'))
-const ReceivingGrnPage = lazy(() => import('../features/purchasing/ReceivingGrnPage.jsx'))
-const SuppliersPage = lazy(() => import('../features/purchasing/SuppliersPage.jsx'))
-const PosTerminalPage = lazy(() => import('../features/pos/PosTerminalPage.jsx'))
-const SalesOrdersPage = lazy(() => import('../features/sales/SalesOrdersPage.jsx'))
-const CustomersPage = lazy(() => import('../features/customers/CustomersPage.jsx'))
-const PaymentsPage = lazy(() => import('../features/payments/PaymentsPage.jsx'))
-const UserManagementPage = lazy(() => import('../features/team/UserManagementPage.jsx'))
-const ReportsPage = lazy(() => import('../features/reports/ReportsPage.jsx'))
-const BusinessProfilePage = lazy(() => import('../features/settings/BusinessProfilePage.jsx'))
-const StoreSettingsPage = lazy(() => import('../features/settings/StoreSettingsPage.jsx'))
-const Returns = lazy(() => import('../features/returns/ReturnsPage.jsx'))
-const ProductImportPage = lazy(() => import('../features/product-import/ProductImportPage.jsx'))
-const ClothingModule = lazy(() => import('../features/industries/clothing/ClothingModule.jsx'))
-const ColorManagementPage = lazy(() => import('../features/industries/clothing/ColorManagementPage.jsx'))
-const BulkPricingPage = lazy(() => import('../features/industries/wholesale/BulkPricingPage.jsx'))
-const IndustryModule = lazy(() => import('../features/industries/generic/IndustryModule.jsx'))
+// Core Dashboard Pages (Active TypeScript Implementations)
+import { OverviewPage } from '../dashboard/pages/OverviewPage.tsx';
+import { ProductsPage } from '../dashboard/pages/ProductsPage.tsx';
+import { InventoryPage } from '../dashboard/pages/InventoryPage.tsx';
+import { SuppliersPage } from '../dashboard/pages/SuppliersPage.tsx';
+import { PurchaseOrdersPage } from '../dashboard/pages/PurchaseOrdersPage.tsx';
+import { PosSalesPage } from '../dashboard/pages/PosSalesPage.tsx';
+import { CustomersPage } from '../dashboard/pages/CustomersPage.tsx';
+import { ReportsPage } from '../dashboard/pages/ReportsPage.tsx';
+import { TeamPage } from '../dashboard/pages/TeamPage.tsx';
+import { SettingsPage } from '../dashboard/pages/SettingsPage.tsx';
+import { ForbiddenPage } from '../dashboard/pages/ForbiddenPage.tsx';
+import { NotFoundPage } from '../dashboard/pages/NotFoundPage.tsx';
+import { BatchManagementPage } from '../dashboard/pages/BatchManagementPage.tsx';
+import { ExpiryTrackingPage } from '../dashboard/pages/ExpiryTrackingPage.tsx';
+import { PrescriptionManagementPage } from '../dashboard/pages/PrescriptionManagementPage.tsx';
 
+// Feature Pages (Workflows)
+const ReceivingGrnPage = lazy(() => import('../features/purchasing/ReceivingGrnPage.jsx'));
+const InventoryOperations = lazy(() => import('../features/inventory/InventoryOperations.jsx'));
+const ProductImportPage = lazy(() => import('../features/product-import/ProductImportPage.jsx'));
+const SalesOrdersPage = lazy(() => import('../features/sales/SalesOrdersPage.jsx'));
+const PaymentsPage = lazy(() => import('../features/payments/PaymentsPage.jsx'));
+const ReturnsPage = lazy(() => import('../features/returns/ReturnsPage.jsx'));
+const UserManagementPage = lazy(() => import('../features/team/UserManagementPage.jsx'));
+const ColorManagementPage = lazy(() => import('../features/industries/clothing/ColorManagementPage.jsx'));
+const ClothingModule = lazy(() => import('../features/industries/clothing/ClothingModule.jsx'));
+const IndustryModule = lazy(() => import('../features/industries/generic/IndustryModule.jsx'));
+const BulkPricingPage = lazy(() => import('../features/industries/wholesale/BulkPricingPage.jsx'));
 
-export function NotFoundPage({ onNavigate }) {
-  return (
-    <div className="empty-dashboard not-found-page">
-      <span className="empty-dashboard-icon">🔍</span>
-      <h2>Page Not Found</h2>
-      <p>The page you requested does not exist or has been moved.</p>
-      <button
-        type="button"
-        className="ui-btn ui-btn-primary"
-        style={{ marginTop: '1rem' }}
-        onClick={() => (onNavigate ? onNavigate('Overview') : (window.location.href = '/'))}
-      >
-        Back to Dashboard
-      </button>
-    </div>
-  )
-}
+export { NotFoundPage, ForbiddenPage };
 
-export const ROUTE_TABLE = {
-  Overview: {
-    path: '/',
-    requiredPermission: null,
-    render: (ctx) => <DashboardOverview {...ctx.dashboardOverviewProps} />,
-  },
-  Products: {
-    path: '/products',
-    requiredPermission: 'view_inventory',
-    render: (ctx) => <ProductsPage business={ctx.business} account={ctx.account} />,
-  },
-  Medicines: {
-    path: '/medicines',
-    requiredPermission: 'view_inventory',
-    render: (ctx) => <ProductsPage business={ctx.business} account={ctx.account} />,
-  },
-  Categories: {
-    path: '/categories',
-    requiredPermission: 'view_inventory',
-    render: (ctx) => (
-      <InventoryOperations
-        section="Categories"
-        business={ctx.business}
-        account={ctx.account}
-        onNavigate={ctx.navigateTo}
-        canNavigate={ctx.canOpen}
-      />
-    ),
-  },
-  Stock: {
-    path: '/stock',
-    requiredPermission: 'view_inventory',
-    render: (ctx) => (
-      <InventoryOperations
-        section="Stock"
-        business={ctx.business}
-        account={ctx.account}
-        onNavigate={ctx.navigateTo}
-        canNavigate={ctx.canOpen}
-      />
-    ),
-  },
-  'Stock In': {
-    path: '/stock-in',
-    requiredPermission: 'stock_in',
-    render: (ctx) => (
-      <InventoryOperations
-        section="Stock In"
-        business={ctx.business}
-        account={ctx.account}
-        onNavigate={ctx.navigateTo}
-        canNavigate={ctx.canOpen}
-      />
-    ),
-  },
-  'Stock Out': {
-    path: '/stock-out',
-    requiredPermission: 'stock_out',
-    render: (ctx) => (
-      <InventoryOperations
-        section="Stock Out"
-        business={ctx.business}
-        account={ctx.account}
-        onNavigate={ctx.navigateTo}
-        canNavigate={ctx.canOpen}
-      />
-    ),
-  },
-  Adjustments: {
-    path: '/adjustments',
-    requiredPermission: 'edit_product',
-    render: (ctx) => (
-      <InventoryOperations
-        section="Adjustments"
-        business={ctx.business}
-        account={ctx.account}
-        onNavigate={ctx.navigateTo}
-        canNavigate={ctx.canOpen}
-      />
-    ),
-  },
-  'Stock History': {
-    path: '/stock-history',
-    requiredPermission: 'view_inventory',
-    render: (ctx) => (
-      <InventoryOperations
-        section="Stock History"
-        business={ctx.business}
-        account={ctx.account}
-        onNavigate={ctx.navigateTo}
-        canNavigate={ctx.canOpen}
-      />
-    ),
-  },
-  'Product Import': {
-    path: '/product-import',
-    requiredPermission: 'edit_product',
-    render: (ctx) => (
-      <ProductImportPage
-        business={ctx.business}
-        onImportSuccess={() => ctx.navigateTo('Products')}
-        onClose={() => ctx.navigateTo('Products')}
-      />
-    ),
-  },
-  'Purchase Orders': {
-    path: '/purchase-orders',
-    requiredPermission: 'view_inventory',
-    render: (ctx) => (
-      <PurchaseOrdersPage
-        business={ctx.business}
-        account={ctx.account}
-        onNavigate={ctx.navigateTo}
-      />
-    ),
-  },
-  Receiving: {
-    path: '/receiving',
-    requiredPermission: 'stock_in',
-    render: (ctx) => (
-      <ReceivingGrnPage
-        business={ctx.business}
-        account={ctx.account}
-        onNavigate={ctx.navigateTo}
-      />
-    ),
-  },
-  Suppliers: {
-    path: '/suppliers',
-    requiredPermission: 'view_inventory',
-    render: (ctx) => (
-      <SuppliersPage
-        business={ctx.business}
-        onNavigate={ctx.navigateTo}
-        canNavigate={ctx.canOpen}
-      />
-    ),
-  },
-  'POS / Billing': {
-    path: '/pos',
-    requiredPermission: 'process_pos_sale',
-    render: (ctx) => <PosTerminalPage business={ctx.business} account={ctx.account} />,
-  },
-  Orders: {
-    path: '/orders',
-    requiredPermission: 'create_order',
-    render: (ctx) => (
-      <SalesOrdersPage
-        business={ctx.business}
-        account={ctx.account}
-        creditSales={false}
-        section="Orders"
-      />
-    ),
-  },
-  Customers: {
-    path: '/customers',
-    requiredPermission: 'create_order',
-    render: (ctx) => <CustomersPage business={ctx.business} onNavigate={ctx.navigateTo} />,
-  },
-  Payments: {
-    path: '/payments',
-    requiredPermission: 'view_reports',
-    render: (ctx) => <PaymentsPage business={ctx.business} account={ctx.account} />,
-  },
-  Returns: {
-    path: '/returns',
-    requiredPermission: 'create_order',
-    render: (ctx) => <Returns business={ctx.business} account={ctx.account} purchase={false} />,
-  },
-  'Purchase Returns': {
-    path: '/purchase-returns',
-    requiredPermission: 'create_order',
-    render: (ctx) => <Returns business={ctx.business} account={ctx.account} purchase={true} />,
-  },
-  Users: {
-    path: '/users',
-    requiredPermission: 'manage_users',
-    render: (ctx) => (
-      <UserManagementPage section="Users" business={ctx.business} account={ctx.account} />
-    ),
-  },
-  Roles: {
-    path: '/roles',
-    requiredPermission: 'manage_users',
-    render: (ctx) => (
-      <UserManagementPage section="Roles" business={ctx.business} account={ctx.account} />
-    ),
-  },
-  Permissions: {
-    path: '/permissions',
-    requiredPermission: 'manage_users',
-    render: (ctx) => (
-      <UserManagementPage section="Permissions" business={ctx.business} account={ctx.account} />
-    ),
-  },
-  Reports: {
-    path: '/reports',
-    requiredPermission: 'view_reports',
-    render: (ctx) => <ReportsPage business={ctx.business} />,
-  },
-  'Business Profile': {
-    path: '/business-profile',
-    requiredPermission: 'manage_users',
-    render: (ctx) => (
-      <BusinessProfilePage
-        business={ctx.business}
-        onBusinessUpdate={ctx.updateBusiness}
-        onBusinessDeleted={ctx.logout}
-      />
-    ),
-  },
-  Industry: {
-    path: '/industry',
-    requiredPermission: 'manage_users',
-    render: (ctx) => (
-      <BusinessProfilePage
-        business={ctx.business}
-        onBusinessUpdate={ctx.updateBusiness}
-        onBusinessDeleted={ctx.logout}
-      />
-    ),
-  },
-  Settings: {
-    path: '/settings',
-    requiredPermission: 'manage_users',
-    render: (ctx) => (
-      <StoreSettingsPage business={ctx.business} onBusinessUpdate={ctx.updateBusiness} />
-    ),
-  },
-  'Color Management': {
-    path: '/colors',
-    requiredPermission: 'view_inventory',
-    render: (ctx) => <ColorManagementPage business={ctx.business} account={ctx.account} />,
-  },
-  'Size Management': {
-    path: '/sizes',
-    requiredPermission: 'view_inventory',
-    render: (ctx) => (
-      <IndustryModule section="Size Management" business={ctx.business} onNavigate={ctx.navigateTo} />
-    ),
-  },
-  'Product Variants': {
-    path: '/variants',
-    requiredPermission: 'view_inventory',
-    render: (ctx) => (
-      <IndustryModule section="Product Variants" business={ctx.business} onNavigate={ctx.navigateTo} />
-    ),
-  },
-  'Batch Management': {
-    path: '/batches',
-    requiredPermission: 'view_inventory',
-    render: (ctx) => (
-      <IndustryModule section="Batch Management" business={ctx.business} onNavigate={ctx.navigateTo} />
-    ),
-  },
-  'Expiry Tracking': {
-    path: '/expiry',
-    requiredPermission: 'view_inventory',
-    render: (ctx) => (
-      <IndustryModule section="Expiry Tracking" business={ctx.business} onNavigate={ctx.navigateTo} />
-    ),
-  },
-  'Prescription Management': {
-    path: '/prescriptions',
-    requiredPermission: 'create_order',
-    render: (ctx) => (
-      <IndustryModule section="Prescription Management" business={ctx.business} onNavigate={ctx.navigateTo} />
-    ),
-  },
-  'Serial Numbers': {
-    path: '/serial-numbers',
-    requiredPermission: 'view_inventory',
-    render: (ctx) => (
-      <IndustryModule section="Serial Numbers" business={ctx.business} onNavigate={ctx.navigateTo} />
-    ),
-  },
-  'Warranty Tracking': {
-    path: '/warranties',
-    requiredPermission: 'view_inventory',
-    render: (ctx) => (
-      <IndustryModule section="Warranty Tracking" business={ctx.business} onNavigate={ctx.navigateTo} />
-    ),
-  },
-  'Offers / Discounts': {
-    path: '/offers',
-    requiredPermission: 'process_pos_sale',
-    render: (ctx) => (
-      <IndustryModule section="Offers / Discounts" business={ctx.business} onNavigate={ctx.navigateTo} />
-    ),
-  },
-  'Bulk Orders': {
-    path: '/bulk-orders',
-    requiredPermission: 'create_order',
-    render: (ctx) => (
-      <SalesOrdersPage
-        business={ctx.business}
-        account={ctx.account}
-        creditSales={false}
-        section="Bulk Orders"
-      />
-    ),
-  },
-  'Credit Sales': {
-    path: '/credit-sales',
-    requiredPermission: 'create_order',
-    render: (ctx) => (
-      <SalesOrdersPage
-        business={ctx.business}
-        account={ctx.account}
-        creditSales={false}
-        section="Credit Sales"
-      />
-    ),
-  },
-  'Bulk Pricing': {
-    path: '/bulk-pricing',
-    requiredPermission: 'edit_product',
-    render: (ctx) => <BulkPricingPage business={ctx.business} account={ctx.account} />,
-  },
-  'Variant Grid': {
-    path: '/variant-grid',
-    requiredPermission: 'view_variants',
-    render: (ctx) => (
-      <ClothingModule section="Variant Grid" business={ctx.business} account={ctx.account} />
-    ),
-  },
-  Replenishment: {
-    path: '/replenishment',
-    requiredPermission: 'view_replenishment',
-    render: (ctx) => (
-      <ClothingModule section="Replenishment" business={ctx.business} account={ctx.account} />
-    ),
-  },
-  Promotions: {
-    path: '/promotions',
-    requiredPermission: 'manage_promotions',
-    render: (ctx) => (
-      <ClothingModule section="Promotions" business={ctx.business} account={ctx.account} />
-    ),
-  },
-  Loyalty: {
-    path: '/loyalty',
-    requiredPermission: 'manage_loyalty',
-    render: (ctx) => (
-      <ClothingModule section="Loyalty" business={ctx.business} account={ctx.account} />
-    ),
-  },
-  Coupons: {
-    path: '/coupons',
-    requiredPermission: 'manage_coupons',
-    render: (ctx) => (
-      <ClothingModule section="Coupons" business={ctx.business} account={ctx.account} />
-    ),
-  },
-  'Gift Cards': {
-    path: '/gift-cards',
-    requiredPermission: 'manage_gift_cards',
-    render: (ctx) => (
-      <ClothingModule section="Gift Cards" business={ctx.business} account={ctx.account} />
-    ),
-  },
-  'Cashier Shifts': {
-    path: '/cashier-shifts',
-    requiredPermission: 'manage_cashier_shift',
-    render: (ctx) => (
-      <ClothingModule section="Cashier Shifts" business={ctx.business} account={ctx.account} />
-    ),
-  },
-  'Clothing Reports': {
-    path: '/clothing-reports',
-    requiredPermission: 'view_clothing_reports',
-    render: (ctx) => (
-      <ClothingModule section="Clothing Reports" business={ctx.business} account={ctx.account} />
-    ),
-  },
-  'Raw Materials': {
-    path: '/raw-materials',
-    requiredPermission: 'view_inventory',
-    render: (ctx) => (
-      <IndustryModule section="Raw Materials" business={ctx.business} onNavigate={ctx.navigateTo} />
-    ),
-  },
-  'Bill of Materials': {
-    path: '/bill-of-materials',
-    requiredPermission: 'view_inventory',
-    render: (ctx) => (
-      <IndustryModule section="Bill of Materials" business={ctx.business} onNavigate={ctx.navigateTo} />
-    ),
-  },
-  Production: {
-    path: '/production',
-    requiredPermission: 'stock_out',
-    render: (ctx) => (
-      <IndustryModule section="Production" business={ctx.business} onNavigate={ctx.navigateTo} />
-    ),
-  },
-  'Finished Goods': {
-    path: '/finished-goods',
-    requiredPermission: 'view_inventory',
-    render: (ctx) => (
-      <IndustryModule section="Finished Goods" business={ctx.business} onNavigate={ctx.navigateTo} />
-    ),
-  },
-  'Production Tracking': {
-    path: '/production-tracking',
-    requiredPermission: 'view_inventory',
-    render: (ctx) => (
-      <IndustryModule section="Production Tracking" business={ctx.business} onNavigate={ctx.navigateTo} />
-    ),
-  },
+export const NAV_LABEL_MAP = {
+  Overview: '/overview',
+  Products: '/products',
+  Medicines: '/products',
+  Inventory: '/inventory',
+  Stock: '/inventory',
+  Suppliers: '/suppliers',
+  'Purchase Orders': '/purchase-orders',
+  Purchases: '/purchase-orders',
+  Receiving: '/receiving',
+  'POS / Billing': '/pos',
+  POS: '/pos',
+  Sales: '/pos',
+  Bills: '/pos',
+  Orders: '/orders',
+  Customers: '/customers',
+  Payments: '/payments',
+  Returns: '/returns',
+  'Purchase Returns': '/purchase-returns',
+  Team: '/team',
+  Users: '/team',
+  Roles: '/roles',
+  Permissions: '/permissions',
+  Reports: '/reports',
+  Settings: '/settings',
+  'Business Profile': '/settings',
+  Industry: '/settings',
+  'Color Management': '/colors',
+  'Size Management': '/sizes',
+  'Product Variants': '/variants',
+  'Batch Management': '/batches',
+  'Expiry Tracking': '/expiry',
+  'Prescription Management': '/prescriptions',
+  'Serial Numbers': '/serial-numbers',
+  'Warranty Tracking': '/warranties',
+  'Offers / Discounts': '/offers',
+  'Bulk Orders': '/bulk-orders',
+  'Credit Sales': '/credit-sales',
+  'Bulk Pricing': '/bulk-pricing',
+  'Variant Grid': '/variant-grid',
+  Replenishment: '/replenishment',
+  Promotions: '/promotions',
+  Loyalty: '/loyalty',
+  Coupons: '/coupons',
+  'Gift Cards': '/gift-cards',
+  'Cashier Shifts': '/cashier-shifts',
+  'Clothing Reports': '/clothing-reports',
+  'Raw Materials': '/raw-materials',
+  'Bill of Materials': '/bill-of-materials',
+  Production: '/production',
+  'Finished Goods': '/finished-goods',
+  'Production Tracking': '/production-tracking',
+  'Stock In': '/stock-in',
+  'Stock Out': '/stock-out',
+  Adjustments: '/adjustments',
+  'Stock History': '/stock-history',
+  Categories: '/categories',
+  'Product Import': '/product-import',
+};
+
+export function pathForNavLabel(label) {
+  if (!label) return '/overview';
+  if (NAV_LABEL_MAP[label]) return NAV_LABEL_MAP[label];
+  if (label.startsWith('/')) return label;
+  return '/overview';
 }
 
 export function shellClassFor(_routeOrLabel) {
-  return ''
+  return '';
 }
 
 export function navLabelForPath(pathname, productLabel = 'Products') {
-  if (pathname === '/' || pathname === '/overview') return 'Overview'
-  if (pathname === '/products' || pathname === '/medicines' || pathname === '/bulk-import') return productLabel
-  const entry = Object.entries(ROUTE_TABLE).find(([, config]) => config.path === pathname)
-  return entry ? entry[0] : ''
+  if (pathname === '/' || pathname === '/overview' || pathname === '/overview') return 'Overview';
+  if (pathname === '/products' || pathname === '/products' || pathname === '/medicines') return productLabel;
+  const entry = Object.entries(NAV_LABEL_MAP).find(([, targetPath]) => targetPath === pathname);
+  return entry ? entry[0] : '';
 }
 
-export function pathForNavLabel(label) {
-  if (!label) return '/'
-  if (ROUTE_TABLE[label]) return ROUTE_TABLE[label].path
-  return '/'
+export function AdminRouteGuard({ children }) {
+  const { currentUser } = useApp();
+  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'owner';
+  if (!isAdmin) {
+    return <ForbiddenPage />;
+  }
+  return <>{children}</>;
 }
+
+export function OverviewRoute() {
+  const { currentUser } = useApp();
+  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'owner';
+  if (!isAdmin) {
+    return <PosSalesPage />;
+  }
+  return <OverviewPage />;
+}
+
+export function FeaturePageWrapper({ Component, ...extraProps }) {
+  const { businessProfile, currentUser } = useApp();
+  const navigate = useNavigate();
+
+  return (
+    <Suspense fallback={<TablePageSkeleton className="p-6" />}>
+      <Component
+        business={businessProfile}
+        account={currentUser}
+        {...extraProps}
+        onNavigate={(dest) => {
+          if (typeof dest === 'string') {
+            navigate(pathForNavLabel(dest));
+          }
+        }}
+        navigateTo={(dest) => {
+          if (typeof dest === 'string') {
+            navigate(pathForNavLabel(dest));
+          }
+        }}
+        canNavigate={() => true}
+        onClose={() => navigate('/products')}
+        onImportSuccess={() => navigate('/products')}
+      />
+    </Suspense>
+  );
+}
+
+export const DASHBOARD_CHILD_ROUTES = [
+  // Overview
+  { path: '', element: <OverviewRoute /> },
+  { path: 'overview', element: <OverviewRoute /> },
+
+  // Core Dashboard Pages (Active TS implementations)
+  { path: 'products', element: <AdminRouteGuard><ProductsPage /></AdminRouteGuard> },
+  { path: 'inventory', element: <AdminRouteGuard><InventoryPage /></AdminRouteGuard> },
+  { path: 'suppliers', element: <AdminRouteGuard><SuppliersPage /></AdminRouteGuard> },
+  { path: 'purchase-orders', element: <AdminRouteGuard><PurchaseOrdersPage /></AdminRouteGuard> },
+  { path: 'pos', element: <PosSalesPage /> },
+  { path: 'customers', element: <AdminRouteGuard><CustomersPage /></AdminRouteGuard> },
+  { path: 'reports', element: <AdminRouteGuard><ReportsPage /></AdminRouteGuard> },
+  { path: 'team', element: <AdminRouteGuard><TeamPage /></AdminRouteGuard> },
+  { path: 'settings', element: <AdminRouteGuard><SettingsPage /></AdminRouteGuard> },
+
+  // Feature Workflows (Richer implementations)
+  { path: 'receiving', element: <AdminRouteGuard><FeaturePageWrapper Component={ReceivingGrnPage} /></AdminRouteGuard> },
+  { path: 'stock-in', element: <AdminRouteGuard><FeaturePageWrapper Component={InventoryOperations} section="Stock In" /></AdminRouteGuard> },
+  { path: 'stock-out', element: <AdminRouteGuard><FeaturePageWrapper Component={InventoryOperations} section="Stock Out" /></AdminRouteGuard> },
+  { path: 'adjustments', element: <AdminRouteGuard><FeaturePageWrapper Component={InventoryOperations} section="Adjustments" /></AdminRouteGuard> },
+  { path: 'stock-history', element: <AdminRouteGuard><FeaturePageWrapper Component={InventoryOperations} section="Stock History" /></AdminRouteGuard> },
+  { path: 'categories', element: <AdminRouteGuard><FeaturePageWrapper Component={InventoryOperations} section="Categories" /></AdminRouteGuard> },
+  { path: 'product-import', element: <AdminRouteGuard><FeaturePageWrapper Component={ProductImportPage} /></AdminRouteGuard> },
+  { path: 'orders', element: <AdminRouteGuard><FeaturePageWrapper Component={SalesOrdersPage} section="Orders" creditSales={false} /></AdminRouteGuard> },
+  { path: 'bulk-orders', element: <AdminRouteGuard><FeaturePageWrapper Component={SalesOrdersPage} section="Bulk Orders" creditSales={false} /></AdminRouteGuard> },
+  { path: 'credit-sales', element: <AdminRouteGuard><FeaturePageWrapper Component={SalesOrdersPage} section="Credit Sales" creditSales={true} /></AdminRouteGuard> },
+  { path: 'payments', element: <AdminRouteGuard><FeaturePageWrapper Component={PaymentsPage} /></AdminRouteGuard> },
+  { path: 'returns', element: <AdminRouteGuard><FeaturePageWrapper Component={ReturnsPage} purchase={false} /></AdminRouteGuard> },
+  { path: 'purchase-returns', element: <AdminRouteGuard><FeaturePageWrapper Component={ReturnsPage} purchase={true} /></AdminRouteGuard> },
+  { path: 'roles', element: <AdminRouteGuard><FeaturePageWrapper Component={UserManagementPage} section="Roles" /></AdminRouteGuard> },
+  { path: 'permissions', element: <AdminRouteGuard><FeaturePageWrapper Component={UserManagementPage} section="Permissions" /></AdminRouteGuard> },
+  { path: 'colors', element: <AdminRouteGuard><FeaturePageWrapper Component={ColorManagementPage} /></AdminRouteGuard> },
+  { path: 'sizes', element: <AdminRouteGuard><FeaturePageWrapper Component={IndustryModule} section="Size Management" /></AdminRouteGuard> },
+  { path: 'variants', element: <AdminRouteGuard><FeaturePageWrapper Component={IndustryModule} section="Product Variants" /></AdminRouteGuard> },
+  { path: 'batches', element: <AdminRouteGuard><BatchManagementPage /></AdminRouteGuard> },
+  { path: 'expiry', element: <AdminRouteGuard><ExpiryTrackingPage /></AdminRouteGuard> },
+  { path: 'prescriptions', element: <AdminRouteGuard><PrescriptionManagementPage /></AdminRouteGuard> },
+  { path: 'serial-numbers', element: <AdminRouteGuard><FeaturePageWrapper Component={IndustryModule} section="Serial Numbers" /></AdminRouteGuard> },
+  { path: 'warranties', element: <AdminRouteGuard><FeaturePageWrapper Component={IndustryModule} section="Warranty Tracking" /></AdminRouteGuard> },
+  { path: 'offers', element: <AdminRouteGuard><FeaturePageWrapper Component={IndustryModule} section="Offers / Discounts" /></AdminRouteGuard> },
+  { path: 'bulk-pricing', element: <AdminRouteGuard><FeaturePageWrapper Component={BulkPricingPage} /></AdminRouteGuard> },
+  { path: 'variant-grid', element: <AdminRouteGuard><FeaturePageWrapper Component={ClothingModule} section="Variant Grid" /></AdminRouteGuard> },
+  { path: 'replenishment', element: <AdminRouteGuard><FeaturePageWrapper Component={ClothingModule} section="Replenishment" /></AdminRouteGuard> },
+  { path: 'promotions', element: <AdminRouteGuard><FeaturePageWrapper Component={ClothingModule} section="Promotions" /></AdminRouteGuard> },
+  { path: 'loyalty', element: <AdminRouteGuard><FeaturePageWrapper Component={ClothingModule} section="Loyalty" /></AdminRouteGuard> },
+  { path: 'coupons', element: <AdminRouteGuard><FeaturePageWrapper Component={ClothingModule} section="Coupons" /></AdminRouteGuard> },
+  { path: 'gift-cards', element: <AdminRouteGuard><FeaturePageWrapper Component={ClothingModule} section="Gift Cards" /></AdminRouteGuard> },
+  { path: 'cashier-shifts', element: <AdminRouteGuard><FeaturePageWrapper Component={ClothingModule} section="Cashier Shifts" /></AdminRouteGuard> },
+  { path: 'clothing-reports', element: <AdminRouteGuard><FeaturePageWrapper Component={ClothingModule} section="Clothing Reports" /></AdminRouteGuard> },
+  { path: 'raw-materials', element: <AdminRouteGuard><FeaturePageWrapper Component={IndustryModule} section="Raw Materials" /></AdminRouteGuard> },
+  { path: 'bill-of-materials', element: <AdminRouteGuard><FeaturePageWrapper Component={IndustryModule} section="Bill of Materials" /></AdminRouteGuard> },
+  { path: 'production', element: <AdminRouteGuard><FeaturePageWrapper Component={IndustryModule} section="Production" /></AdminRouteGuard> },
+  { path: 'finished-goods', element: <AdminRouteGuard><FeaturePageWrapper Component={IndustryModule} section="Finished Goods" /></AdminRouteGuard> },
+  { path: 'production-tracking', element: <AdminRouteGuard><FeaturePageWrapper Component={IndustryModule} section="Production Tracking" /></AdminRouteGuard> },
+
+  // In-app Aliases & Redirects
+  { path: 'medicines', element: <Navigate to="/products" replace /> },
+  { path: 'stock', element: <Navigate to="/inventory" replace /> },
+  { path: 'purchases', element: <Navigate to="/purchase-orders" replace /> },
+  { path: 'sales', element: <Navigate to="/pos" replace /> },
+  { path: 'bills', element: <Navigate to="/pos" replace /> },
+  { path: 'users', element: <Navigate to="/team" replace /> },
+  { path: 'business-profile', element: <Navigate to="/settings" replace /> },
+  { path: 'industry', element: <Navigate to="/settings" replace /> },
+  { path: 'bulk-import', element: <Navigate to="/product-import" replace /> },
+
+  // Status & Fallback
+  { path: 'forbidden', element: <ForbiddenPage /> },
+  { path: '*', element: <NotFoundPage /> },
+];
+
+export const TOP_LEVEL_REDIRECTS = [
+  'overview',
+  'dashboard',
+  'products',
+  'medicines',
+  'inventory',
+  'stock',
+  'suppliers',
+  'purchase-orders',
+  'purchases',
+  'pos',
+  'sales',
+  'bills',
+  'customers',
+  'reports',
+  'team',
+  'users',
+  'settings',
+  'business-profile',
+  'industry',
+  'receiving',
+  'stock-in',
+  'stock-out',
+  'adjustments',
+  'stock-history',
+  'categories',
+  'product-import',
+  'bulk-import',
+  'orders',
+  'bulk-orders',
+  'credit-sales',
+  'payments',
+  'returns',
+  'purchase-returns',
+  'roles',
+  'permissions',
+  'colors',
+  'sizes',
+  'variants',
+  'batches',
+  'expiry',
+  'prescriptions',
+  'serial-numbers',
+  'warranties',
+  'offers',
+  'bulk-pricing',
+  'variant-grid',
+  'replenishment',
+  'promotions',
+  'loyalty',
+  'coupons',
+  'gift-cards',
+  'cashier-shifts',
+  'clothing-reports',
+  'raw-materials',
+  'bill-of-materials',
+  'production',
+  'finished-goods',
+  'production-tracking',
+];

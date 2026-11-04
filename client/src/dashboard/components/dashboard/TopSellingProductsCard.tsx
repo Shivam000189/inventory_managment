@@ -3,39 +3,64 @@ import { ArrowRight, PackagePlus } from 'lucide-react';
 import { ProductIcon } from '../common/ProductIcon';
 import { useApp } from '../../context/AppContext';
 
-export const TopSellingProductsCard: React.FC = () => {
-  const { products, bills, stockMovements, isLoadingBackend, navigate } = useApp();
+export const TopSellingProductsCard: React.FC<{ className?: string }> = ({ className = '' }) => {
+  const { products, bills, stockMovements, loadingStates, navigate } = useApp();
   const [viewMode, setViewMode] = useState<'stock' | 'selling'>('stock');
 
-  // Calculate sold quantities per product from bills and stock movements
+  const isProductsLoading = loadingStates?.products;
+
+  // Calculate sold quantities per product from the primary source without double-counting
   const salesMap = useMemo(() => {
     const map = new Map<string, number>();
-    bills.forEach((bill) => {
-      if (bill.status !== 'Cancelled') {
-        bill.items.forEach((item) => {
-          const keyId = item.productId;
-          const keyName = item.productName;
-          if (keyId) map.set(keyId, (map.get(keyId) || 0) + item.quantity);
-          if (keyName) map.set(keyName, (map.get(keyName) || 0) + item.quantity);
+
+    // If bills (sales orders) are present, use bills exclusively as the primary source of sales data
+    const nonCancelledBills = (bills || []).filter((b) => b.status !== 'Cancelled');
+    if (nonCancelledBills.length > 0) {
+      nonCancelledBills.forEach((bill) => {
+        (bill.items || []).forEach((item) => {
+          const qty = Number(item.quantity || 0);
+          if (qty > 0) {
+            if (item.productId) {
+              const idKey = String(item.productId);
+              map.set(idKey, (map.get(idKey) || 0) + qty);
+            }
+            if (item.productName) {
+              const nameKey = String(item.productName).trim().toLowerCase();
+              map.set(nameKey, (map.get(nameKey) || 0) + qty);
+            }
+          }
         });
-      }
-    });
-    stockMovements.forEach((movement) => {
+      });
+      return map;
+    }
+
+    // Fallback: If no bills exist, inspect stock movements for sales
+    (stockMovements || []).forEach((movement) => {
       if (movement.type === 'Sale' && movement.qtyDelta < 0) {
         const qty = Math.abs(movement.qtyDelta);
-        if (movement.productId) map.set(movement.productId, (map.get(movement.productId) || 0) + qty);
-        if (movement.productName) map.set(movement.productName, (map.get(movement.productName) || 0) + qty);
+        if (movement.productId) {
+          const idKey = String(movement.productId);
+          map.set(idKey, (map.get(idKey) || 0) + qty);
+        }
+        if (movement.productName) {
+          const nameKey = String(movement.productName).trim().toLowerCase();
+          map.set(nameKey, (map.get(nameKey) || 0) + qty);
+        }
       }
     });
+
     return map;
   }, [bills, stockMovements]);
 
-  // Derive ranked products according to the business
+  // Derive ranked products
   const displayProducts = useMemo(() => {
     if (!products || products.length === 0) return [];
 
     const enriched = products.map((p) => {
-      const soldQty = salesMap.get(p.id) || salesMap.get(p.name) || 0;
+      const idKey = String(p.id);
+      const nameKey = String(p.name || '').trim().toLowerCase();
+      const soldQty = mapGetEither(salesMap, idKey, nameKey);
+
       return {
         id: p.id,
         name: p.name,
@@ -67,16 +92,18 @@ export const TopSellingProductsCard: React.FC = () => {
   }, [products, salesMap, viewMode]);
 
   return (
-    <div className="bg-white rounded-[20px] p-5 border border-[#EEE6DA] flex flex-col justify-between">
-      <div>
+    <div className={`bg-white rounded-[20px] p-5 border border-[#EEE6DA] h-full flex flex-col justify-between shadow-2xs hover:shadow-xs transition-all min-h-[300px] ${className}`.trim()}>
+      <div className="flex-1 flex flex-col">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <h3 className="text-[15px] font-semibold text-[#1C1B18]">
               {viewMode === 'stock' ? 'Top Stock' : 'Top Selling'}
             </h3>
-            <div className="flex items-center bg-[#FAF6EF] p-0.5 rounded-lg border border-[#EEE6DA]">
+            <div className="flex items-center bg-[#FAF6EF] p-0.5 rounded-lg border border-[#EEE6DA]" role="tablist" aria-label="Inventory ranking criteria">
               <button
                 type="button"
+                role="tab"
+                aria-selected={viewMode === 'stock'}
                 onClick={() => setViewMode('stock')}
                 className={`px-2 py-0.5 text-[11px] font-semibold rounded-md transition-all cursor-pointer ${
                   viewMode === 'stock'
@@ -88,6 +115,8 @@ export const TopSellingProductsCard: React.FC = () => {
               </button>
               <button
                 type="button"
+                role="tab"
+                aria-selected={viewMode === 'selling'}
                 onClick={() => setViewMode('selling')}
                 className={`px-2 py-0.5 text-[11px] font-semibold rounded-md transition-all cursor-pointer ${
                   viewMode === 'selling'
@@ -101,7 +130,7 @@ export const TopSellingProductsCard: React.FC = () => {
           </div>
           <button
             type="button"
-            onClick={() => navigate(viewMode === 'stock' ? '/app/inventory' : '/app/reports')}
+            onClick={() => navigate(viewMode === 'stock' ? '/inventory' : '/reports')}
             className="text-xs font-semibold text-[#1C1B18] hover:text-[#6C9C70] inline-flex items-center gap-1 cursor-pointer transition-colors"
           >
             <span>View all</span>
@@ -109,56 +138,47 @@ export const TopSellingProductsCard: React.FC = () => {
           </button>
         </div>
 
-        <div className="divide-y divide-[#EEE6DA]">
-          {isLoadingBackend && products.length === 0 ? (
-            <div className="py-3 space-y-3">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="flex items-center justify-between animate-pulse py-1">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-[#FAF6EF]" />
-                    <div className="space-y-1.5">
-                      <div className="h-3 w-28 bg-[#FAF6EF] rounded" />
-                      <div className="h-2.5 w-16 bg-[#FAF6EF] rounded" />
-                    </div>
-                  </div>
-                  <div className="space-y-1.5 text-right">
-                    <div className="h-3 w-12 bg-[#FAF6EF] rounded ml-auto" />
-                    <div className="h-2.5 w-10 bg-[#FAF6EF] rounded ml-auto" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : displayProducts.length === 0 ? (
-            <div className="py-8 text-center flex flex-col items-center justify-center">
-              <p className="text-xs text-[#9A948A] mb-3">No products found for this business.</p>
-              <button
-                type="button"
-                onClick={() => navigate('/app/products')}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#2E8B57] text-white text-xs font-semibold hover:bg-[#257247] transition-colors cursor-pointer shadow-2xs"
-              >
-                <PackagePlus size={14} />
-                <span>Add First Product</span>
-              </button>
-            </div>
-          ) : (
-            displayProducts.map((p) => {
+        {displayProducts.length === 0 && !isProductsLoading ? (
+          <div className="flex-1 flex flex-col items-center justify-center py-8 text-center">
+            <p className="text-xs text-[#9A948A] mb-3">No products found for this business.</p>
+            <button
+              type="button"
+              onClick={() => navigate('/products')}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#2E8B57] text-white text-xs font-semibold hover:bg-[#257247] transition-colors cursor-pointer shadow-2xs"
+            >
+              <PackagePlus size={14} />
+              <span>Add First Product</span>
+            </button>
+          </div>
+        ) : (
+          <div className="divide-y divide-[#EEE6DA] flex-1 flex flex-col justify-around">
+            {displayProducts.map((p) => {
               const isOutOfStock = p.stock <= 0;
               const isLowStock = !isOutOfStock && p.stock <= p.reorderLevel;
 
               return (
                 <div
                   key={p.id || p.name}
-                  onClick={() => navigate('/app/products')}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => navigate('/products')}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      navigate('/products');
+                    }
+                  }}
                   className="py-2.5 flex items-center justify-between group cursor-pointer hover:bg-[#FAF6EF]/50 -mx-2 px-2 rounded-xl transition-colors"
+                  aria-label={`${p.name}, SKU ${p.sku || 'N/A'}. ${p.stock} in stock, ${p.sold} sold.`}
                 >
-                  <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex items-center gap-3 min-w-0 pr-2">
                     <ProductIcon name={p.name} type={p.iconType} />
                     <div className="min-w-0">
                       <span className="text-[13px] font-medium text-[#1C1B18] truncate block">
                         {p.name}
                       </span>
                       {p.sku && (
-                        <span className="text-[11px] font-normal text-[#9A948A] block">
+                        <span className="text-[11px] font-normal text-[#9A948A] truncate block">
                           SKU: {p.sku}
                         </span>
                       )}
@@ -194,10 +214,16 @@ export const TopSellingProductsCard: React.FC = () => {
                   </div>
                 </div>
               );
-            })
-          )}
-        </div>
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
 };
+
+function mapGetEither(map: Map<string, number>, key1: string, key2: string): number {
+  if (key1 && map.has(key1)) return map.get(key1) || 0;
+  if (key2 && map.has(key2)) return map.get(key2) || 0;
+  return 0;
+}

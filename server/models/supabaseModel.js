@@ -5,7 +5,8 @@ import { objectIdToUuid, uuidToObjectId } from '../utils/mongoSupabaseMapper.js'
 
 export const TABLE_COLUMNS = {
   users: new Set([
-    'id', 'name', 'email', 'password', 'role', 'business_id',
+    'id', 'name', 'email', 'password', 'role', 'platform_role', 'status',
+    'must_change_password', 'deactivated_at', 'deactivated_by', 'business_id',
     'onboarding', 'token_version', 'failed_login_attempts',
     'lock_until', 'reset_password_token_hash', 'reset_password_expires',
     'created_at', 'updated_at',
@@ -13,7 +14,8 @@ export const TABLE_COLUMNS = {
   businesses: new Set([
     'id', 'name', 'industry', 'business_type', 'phone', 'email',
     'address', 'city', 'state', 'country', 'currency', 'gstin',
-    'enabled_modules', 'owner_id', 'settings', 'created_at', 'updated_at',
+    'enabled_modules', 'owner_id', 'status', 'deactivated_at', 'deactivated_by',
+    'settings', 'created_at', 'updated_at',
   ]),
   roles: new Set([
     'id', 'business_id', 'role_id', 'name', 'description', 'permissions',
@@ -149,7 +151,12 @@ export const TABLE_COLUMNS = {
     'updated_count', 'merged_count', 'skipped_count', 'failed_count',
     'failures', 'created_at', 'updated_at',
   ]),
-}
+  platform_audit_events: new Set([
+    'id', 'actor_user_id', 'action', 'target_type', 'target_id', 'business_id',
+    'metadata', 'request_id', 'ip_address', 'user_agent',
+    'created_at',
+  ]),
+};
 
 function snakeToCamel(str) {
   if (typeof str !== 'string') return str
@@ -170,6 +177,7 @@ function camelToSnake(str) {
   if (str === 'recipient' || str === 'recipientId') return 'recipient_id'
   if (str === 'account' || str === 'accountId') return 'account_id'
   if (str === 'owner' || str === 'ownerId') return 'owner_id'
+  if (str === 'platformRole') return 'platform_role'
   if (str === 'createdAt') return 'created_at'
   if (str === 'updatedAt') return 'updated_at'
   return str.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`)

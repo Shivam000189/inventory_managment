@@ -172,6 +172,9 @@ export interface Account {
   name: string;
   email: string;
   role: string;
+  platformRole?: 'user' | 'super_admin';
+  platform_role?: 'user' | 'super_admin';
+  mustChangePassword?: boolean;
   roleId?: string;
   permissions?: string[];
   avatar?: string;
@@ -186,7 +189,7 @@ export interface Account {
 export interface UserSession {
   user: Account;
   account?: Account;
-  business?: import('../dashboard/types').BusinessProfile;
+  business?: import('../dashboard/types').BusinessProfile | null;
   token?: string;
   [key: string]: unknown;
 }

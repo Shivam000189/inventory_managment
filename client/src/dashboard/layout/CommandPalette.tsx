@@ -65,6 +65,18 @@ export const CommandPalette: React.FC = () => {
       ).slice(0, 3)
     : customers.slice(0, 2);
 
+  const navShortcuts = [
+    { label: 'Batch Management (Lot-wise Ledger)', path: '/batches', keywords: 'batch lot mfg' },
+    { label: 'Expiry Tracking Radar', path: '/expiry', keywords: 'expiry expire shelf life radar' },
+    { label: 'Prescription Management (Doctor Rx)', path: '/prescriptions', keywords: 'prescription doctor rx patient' },
+    { label: 'Medicines Catalog', path: '/products', keywords: 'medicine product catalog drug' },
+    { label: 'POS Billing Counter', path: '/pos', keywords: 'pos billing counter sale bill' },
+  ];
+
+  const matchedShortcuts = q
+    ? navShortcuts.filter((n) => n.label.toLowerCase().includes(q) || n.keywords.includes(q))
+    : [];
+
   const handleSelect = (route: string) => {
     navigate(route);
     setCommandPaletteOpen(false);
@@ -105,6 +117,31 @@ export const CommandPalette: React.FC = () => {
 
         {/* Results List */}
         <div className="max-h-96 overflow-y-auto p-2 space-y-3">
+          {/* Navigation Shortcuts */}
+          {matchedShortcuts.length > 0 && (
+            <div>
+              <div className="px-3 py-1 text-[11px] font-bold text-[#7FAE82] uppercase tracking-wider flex items-center gap-1.5">
+                <ArrowRight size={13} />
+                <span>Jump To Page</span>
+              </div>
+              <div className="space-y-0.5 mt-1">
+                {matchedShortcuts.map((nav) => (
+                  <button
+                    key={nav.path}
+                    type="button"
+                    onClick={() => handleSelect(nav.path)}
+                    className="w-full text-left px-3 py-2 rounded-xl hover:bg-[#FAF6EF] flex items-center justify-between text-xs transition-colors cursor-pointer group"
+                  >
+                    <span className="font-semibold text-[#1C1B18]">{nav.label}</span>
+                    <span className="text-[10px] text-[#7FAE82] group-hover:underline">
+                      Go to {nav.path} →
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Products Group */}
           {filteredProducts.length > 0 && (
             <div>
@@ -117,7 +154,7 @@ export const CommandPalette: React.FC = () => {
                   <button
                     key={p.id}
                     type="button"
-                    onClick={() => handleSelect('/app/products')}
+                    onClick={() => handleSelect('/products')}
                     className="w-full text-left px-3 py-2 rounded-xl hover:bg-[#FAF6EF] flex items-center justify-between text-xs transition-colors cursor-pointer group"
                   >
                     <div>
@@ -157,7 +194,7 @@ export const CommandPalette: React.FC = () => {
                   <button
                     key={s.id}
                     type="button"
-                    onClick={() => handleSelect('/app/suppliers')}
+                    onClick={() => handleSelect('/suppliers')}
                     className="w-full text-left px-3 py-2 rounded-xl hover:bg-[#FAF6EF] flex items-center justify-between text-xs transition-colors cursor-pointer group"
                   >
                     <div>
@@ -187,7 +224,7 @@ export const CommandPalette: React.FC = () => {
                   <button
                     key={po.id}
                     type="button"
-                    onClick={() => handleSelect('/app/purchase-orders')}
+                    onClick={() => handleSelect('/purchase-orders')}
                     className="w-full text-left px-3 py-2 rounded-xl hover:bg-[#FAF6EF] flex items-center justify-between text-xs transition-colors cursor-pointer group"
                   >
                     <div>
@@ -219,7 +256,7 @@ export const CommandPalette: React.FC = () => {
                   <button
                     key={c.id}
                     type="button"
-                    onClick={() => handleSelect('/app/customers')}
+                    onClick={() => handleSelect('/customers')}
                     className="w-full text-left px-3 py-2 rounded-xl hover:bg-[#FAF6EF] flex items-center justify-between text-xs transition-colors cursor-pointer group"
                   >
                     <div>

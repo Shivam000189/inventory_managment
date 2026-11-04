@@ -40,31 +40,12 @@ npm run server       # API at http://localhost:4000
 npm run dev          # Vite at http://localhost:5173
 ```
 
-### Demo Data & Seeding
+### Clean database setup
 
-**1. Comprehensive Multi-Industry Demo (All 11 Industries & 6 Business Types)**
-
-Fills the database with 11 businesses, 33 working login accounts (Owner, Manager, Staff for every business with password `Demo@12345`), and rich domain-specific data (products, batches, variants, orders, receivings, stock movements, and notifications):
-
-```powershell
-# Idempotent seed (safe to run repeatedly without duplicating data)
-npm run seed:demo-all
-
-# Clean fresh reset and reseed of demo accounts (.stockroom.test only)
-npm run seed:demo-all -- --fresh
-```
-
-Flags:
-- `--fresh`: Deletes only businesses and users whose emails end in `.stockroom.test` (excluding `demo@stockroom.test`), along with their associated cascade entities, before reseeding.
-- `--force`: Required if running against `NODE_ENV=production`.
-
-See [`docs/DEMO_ACCOUNTS.md`](docs/DEMO_ACCOUNTS.md) for the full matrix of login credentials and account type selection.
-
-**2. Single Business Base Demo**
-
-```powershell
-npm run seed:supabase    # creates base demo@stockroom.test / demo12345 account (Aflix Pharmacy)
-```
+The application does not include demo seed data or seed scripts. Start with the
+Supabase schema and migrations, then bootstrap the initial Super Admin using
+`INITIAL_SUPER_ADMIN_PASSWORD` and `npm run bootstrap:super-admin`. Create
+businesses and Business Admins through the Super Admin interface.
 
 ## Scripts
 
@@ -74,8 +55,9 @@ npm run seed:supabase    # creates base demo@stockroom.test / demo12345 account 
 | `npm run server` | Express API |
 | `npm run server:dev` | Express API with nodemon reload |
 | `npm run dev:all` | Both, via `concurrently` |
-| `npm run seed:demo-all` | Seed realistic demo data for all 11 industries & 33 accounts (`--fresh`, `--force`) |
-| `npm run seed:supabase` | Seed base Aflix Pharmacy demo account (`demo@stockroom.test`) |
+| `npm run bootstrap:super-admin` | Idempotently bootstrap the initial Super Admin from `INITIAL_SUPER_ADMIN_PASSWORD` |
+| `npm run reset-password -- <email>` | Operator recovery from `ACCOUNT_RECOVERY_PASSWORD`; requires a password change at next sign-in |
+| `npm run test:backend` | Run backend unit and contract tests |
 | `npm run db:check:supabase` | Test Supabase database connection |
 | `npm run build` / `npm run preview` | Production build / preview |
 | `npm run lint` | oxlint |
@@ -116,7 +98,7 @@ IMB/
 ├── server/         Express + Supabase (PostgreSQL) API — see below
 ├── shared/         code needed by both sides
 │   └── industryConfig.js   per-industry module/field config (drives IndustryModule.jsx & backend validation)
-├── docs/           Documentation (DEMO_ACCOUNTS.md, etc.)
+├── docs/           Documentation
 ├── public/         static assets served as-is (favicon.svg)
 ├── index.html      Vite entry HTML
 ├── vite.config.js  Vite config
@@ -235,8 +217,7 @@ server/
 │   ├── cookies.js            session + CSRF cookie handling
 │   ├── ApiError.js           typed HTTP errors
 │   └── asyncHandler.js, respond.js   route helpers
-├── scripts/               one-off ops: seed-demo-all.js, seed-supabase.js,
-                            reset-password.js, db-check.js
+├── scripts/               one-off ops: reset-password.js, db-check.js, bootstrap-super-admin.js
 └── supabase/
     └── schema.sql         PostgreSQL database schema definition
 ```

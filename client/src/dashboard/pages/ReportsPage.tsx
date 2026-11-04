@@ -11,6 +11,7 @@ import {
   ArrowUpRight,
 } from 'lucide-react';
 import { StatCard } from '../components/common/StatCard';
+import { StatGridSkeleton, ChartSkeleton, TableSkeleton } from '../../components/ui/Feedback';
 import { DateRangePicker } from '../components/common/DateRangePicker';
 import { useApp } from '../context/AppContext';
 import { formatINR, downloadCSV } from '../lib/formatters';
@@ -18,6 +19,7 @@ import { formatINR, downloadCSV } from '../lib/formatters';
 export const ReportsPage: React.FC = () => {
   const {
     bills,
+    isLoadingBackend,
     products,
     users,
     selectedDateRange,
@@ -152,7 +154,13 @@ export const ReportsPage: React.FC = () => {
       </div>
 
       {/* Content based on Active Tab */}
-      {activeTab === 'sales' && (
+      {isLoadingBackend && bills.length === 0 ? (
+        <div className="space-y-6" role="status" aria-busy="true">
+          <span className="sr-only">Loading reports analytics...</span>
+          <StatGridSkeleton count={3} />
+          <ChartSkeleton className="min-h-[280px]" />
+        </div>
+      ) : activeTab === 'sales' && (
         <div className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
             <StatCard

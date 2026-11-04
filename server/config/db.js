@@ -1,5 +1,6 @@
 import { env } from './env.js'
 import { isSupabaseConfigured, testSupabaseConnection, getPgPool } from './supabase.js'
+import { ApiError } from '../utils/ApiError.js'
 
 let isSupabaseConnectedState = false
 
@@ -51,25 +52,48 @@ export async function disconnectDatabase() {
 }
 
 /**
- * Runs `work` inside a PostgreSQL transaction using the direct connection pool.
+ * Runs `work` inside an isolated PostgreSQL transaction using the direct connection pool.
+ *
+ * Guarantees:
+ * 1. Connection acquisition and BEGIN happen before `work(client)` is invoked.
+ * 2. If the transaction cannot be opened, throws a 500 ApiError immediately.
+ * 3. Never falls back to nontransactional execution.
+ * 4. Never reruns `work()` after an error has occurred.
+ * 5. Rolls back on any exception inside `work` and releases the connection in all cases.
  */
 export async function withTransaction(work) {
+  let client
   try {
     const pool = getPgPool()
-    const client = await pool.connect()
-    try {
-      await client.query('BEGIN')
-      const result = await work(client)
-      await client.query('COMMIT')
-      return result
-    } catch (err) {
-      await client.query('ROLLBACK')
-      throw err
-    } finally {
-      client.release()
+    client = await pool.connect()
+    await client.query('BEGIN')
+  } catch (setupErr) {
+    if (client) {
+      try {
+        client.release()
+      } catch {
+        // ignore release error
+      }
     }
-  } catch {
-    // If pool or transaction fails to initialize, execute work directly
-    return work(null)
+    throw new ApiError(500, `Database transaction initialization failed: ${setupErr.message}`)
+  }
+
+  try {
+    const result = await work(client)
+    await client.query('COMMIT')
+    return result
+  } catch (workErr) {
+    try {
+      await client.query('ROLLBACK')
+    } catch (rollbackErr) {
+      console.error('[Database] Transaction rollback error:', rollbackErr.message)
+    }
+    throw workErr
+  } finally {
+    try {
+      client.release()
+    } catch {
+      // ignore release error
+    }
   }
 }

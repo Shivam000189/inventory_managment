@@ -25,6 +25,10 @@ import { Badge } from '../components/common/Badge';
 import { useApp } from '../context/AppContext';
 import { Product, PaymentMethod, Bill, BillItem } from '../types';
 import { formatINR } from '../lib/formatters';
+import { batchApi, ProductBatch } from '../../api/batchApi';
+import { prescriptionApi } from '../../api/prescriptionApi';
+import { isPharmacyBusiness } from '../../shared/industryConfig';
+import { Stethoscope, Pill, AlertTriangle } from 'lucide-react';
 
 interface CartItem {
   product: Product;
@@ -59,6 +63,19 @@ export const PosSalesPage: React.FC = () => {
   const [cashTendered, setCashTendered] = useState<number>(0);
   const [billNotes, setBillNotes] = useState('');
   const [discountPercent, setDiscountPercent] = useState<number>(0);
+
+  const isPharmacy = isPharmacyBusiness(businessProfile);
+  const [availableBatches, setAvailableBatches] = useState<ProductBatch[]>([]);
+  const [rxDoctorName, setRxDoctorName] = useState('');
+  const [rxDoctorReg, setRxDoctorReg] = useState('');
+  const [rxNumber, setRxNumber] = useState('');
+  const [isRxOpen, setIsRxOpen] = useState(false);
+
+  useEffect(() => {
+    if (isPharmacy) {
+      batchApi.list().then(setAvailableBatches).catch(() => {});
+    }
+  }, [isPharmacy]);
 
   // Modals & Drawers
   const [receiptBill, setReceiptBill] = useState<Bill | null>(null);
@@ -781,6 +798,19 @@ export const PosSalesPage: React.FC = () => {
               <h3 className="font-bold text-base text-[#1C1B18]">{businessProfile.name}</h3>
               <p className="text-[11px] text-[#6B665E]">{businessProfile.address}</p>
               <p className="text-[10px] text-[#9A948A] mt-0.5">GSTIN: {businessProfile.taxNumber}</p>
+              {(businessProfile.drugLicense20B || businessProfile.drugLicenseNumber) && (
+                <p className="text-[10px] text-[#2E8B57] font-mono mt-0.5">
+                  DL: {businessProfile.drugLicense20B || businessProfile.drugLicenseNumber}
+                </p>
+              )}
+              {receiptBill.doctorName && (
+                <div className="mt-1 text-[10.5px] text-[#1C1B18] bg-[#FAF6EF] px-2 py-1 rounded border border-[#EEE6DA]">
+                  <div>Dr. {receiptBill.doctorName} {receiptBill.doctorRegNumber ? `(${receiptBill.doctorRegNumber})` : ''}</div>
+                  {receiptBill.prescriptionNumber && (
+                    <div className="text-[9.5px] text-[#6B665E] font-mono">Rx: {receiptBill.prescriptionNumber}</div>
+                  )}
+                </div>
+              )}
               <div className="mt-2 text-xs font-bold text-[#1C1B18] bg-[#FAF6EF] py-1 rounded-lg">
                 Bill #{receiptBill.billNumber} · {receiptBill.date}
               </div>

@@ -40,7 +40,8 @@ async function recipientIds(businessId, category) {
 }
 
 export async function notifyEvent(businessId, event) {
-  const recipients = await recipientIds(businessId, event.category)
+  try {
+    const recipients = await recipientIds(businessId, event.category)
   const business = toObjectId(businessId, 'business')
   return Promise.all(recipients.map(async (recipient) => {
     const existing = await Notification.findOne({ business, recipient, dedupeKey: event.dedupeKey })
@@ -79,6 +80,10 @@ export async function notifyEvent(businessId, event) {
     }])
     return created
   }))
+  } catch (err) {
+    console.warn('[Notification] notifyEvent failed non-blocking:', err?.message || err);
+    return [];
+  }
 }
 
 export async function notifyLowStockDecrease(businessId, product, previousStock, newStock, threshold) {

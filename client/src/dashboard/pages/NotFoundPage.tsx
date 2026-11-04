@@ -23,7 +23,7 @@ export const NotFoundPage: React.FC = () => {
         <button
           type="button"
           onClick={() =>
-            navigate(currentUser.role === 'admin' ? '/app/overview' : '/app/pos')
+            navigate(currentUser.role === 'admin' ? '/overview' : '/pos')
           }
           className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#7FAE82] hover:bg-[#6C9C70] text-white text-xs font-semibold shadow-xs cursor-pointer"
         >

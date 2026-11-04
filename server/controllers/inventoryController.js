@@ -9,12 +9,17 @@ export const listTransactionsController = asyncHandler(async (req, res) => {
 
 export const recordOperationController = asyncHandler(async (req, res) => {
   const result = await inventoryService.recordOperation(req.businessId, {
-    section: req.body.section,
-    productId: req.body.productId,
-    quantity: req.body.quantity,
-    reason: req.body.reason,
+    ...req.body,
+    operation: req.normalizedOperation || req.body.section || req.body.type,
     createdBy: req.user.name || req.user.email,
   })
-  await notificationEvents.inventory(req.businessId, result)
-  created(res, result, `${req.body.section} recorded.`)
+
+  // Best-effort notification: failure to persist notification must not fail the committed primary operation
+  try {
+    await notificationEvents.inventory(req.businessId, result)
+  } catch (err) {
+    console.warn('[Notification] Inventory notification dispatch failed:', err.message)
+  }
+
+  created(res, result, 'Inventory operation recorded.')
 })

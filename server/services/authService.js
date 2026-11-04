@@ -1,28 +1,35 @@
 import { User, Business, Member, Role, DEFAULT_PERMISSIONS } from '../models/index.js'
-import crypto from 'node:crypto'
 import bcrypt from 'bcryptjs'
 import { ApiError } from '../utils/ApiError.js'
 import { signToken } from '../utils/token.js'
-import { env, isProduction } from '../config/env.js'
-import { assert, requireFields, isEmail } from '../validators/assert.js'
+import { assert, requireFields } from '../validators/assert.js'
 import { assertStrongPassword } from '../validators/password.js'
 import { resolveBusinessCapabilities } from '../shared/industryConfig.js'
-
-const RESET_TOKEN_TTL_MS = 30 * 60 * 1000
-const hashToken = (token) => crypto.createHash('sha256').update(token).digest('hex')
 
 // A real bcrypt hash to compare against when the account does not exist, so an
 // unknown email costs the same wall-clock time as a wrong password.
 const DUMMY_HASH = bcrypt.hashSync('a-string-no-one-will-guess-0000', 10)
 
 async function buildSession(user) {
+  if ((user.status || 'active') !== 'active') {
+    throw ApiError.unauthorized('Invalid email or password.')
+  }
   const business = user.business ? await Business.findById(user.business) : null
-  const member = user.business ? await Member.findOne({ business: user.business, $or: [{ account: user._id }, { email: user.email }] }) : null
-  if (user.role === 'team' && (!member || member.status !== 'active')) {
-    throw ApiError.forbidden(member?.status === 'inactive' ? 'Your team access has been deactivated.' : 'Your team invitation is not active.')
+  if (user.business && (!business || (business.status || 'active') !== 'active')) {
+    throw ApiError.unauthorized('Invalid email or password.')
+  }
+  const member = user.business ? await Member.findOne({ business: user.business, account: user._id }) : null
+  if (user.business && (!member || member.status !== 'active')) {
+    throw ApiError.unauthorized('Invalid email or password.')
+  }
+  if (user.role === 'owner' && user.business && member.roleId !== 'ROLE-ADMIN') {
+    throw ApiError.unauthorized('Invalid email or password.')
+  }
+  if (user.role === 'team' && member?.roleId === 'ROLE-ADMIN') {
+    throw ApiError.unauthorized('Invalid email or password.')
   }
   const role = member ? await Role.findOne({ business: user.business, roleId: member.roleId }) : null
-  const account = { ...user.toJSON(), roleId: member?.roleId || (user.role === 'owner' ? 'ROLE-ADMIN' : null), roleName: role?.name || (user.role === 'owner' ? 'Admin' : 'Team member'), permissions: user.role === 'owner' ? DEFAULT_PERMISSIONS : role?.permissions || [] }
+  const account = { ...user.toJSON(), roleId: member?.roleId || null, roleName: role?.name || null, permissions: role?.permissions || (user.role === 'owner' && user.platformRole === 'super_admin' ? DEFAULT_PERMISSIONS : []) }
   return {
     token: signToken(user),
     account,
@@ -31,69 +38,31 @@ async function buildSession(user) {
   }
 }
 
-export async function register({ email, password, role = 'owner', name } = {}) {
-  requireFields({ email, password }, ['email', 'password'])
-  const normalizedEmail = String(email).toLowerCase().trim()
-  assert(isEmail(normalizedEmail), 'Enter a valid email address.')
-  assertStrongPassword(password, normalizedEmail)
-  assert(['owner', 'team'].includes(role), 'Invalid account type.')
-
-  const exists = await User.findOne({ email: normalizedEmail })
-  if (exists) throw ApiError.conflict('An account with this email already exists. Please sign in.')
-
-  let invitation = null
-  if (role === 'team') {
-    invitation = await Member.findOne({ email: normalizedEmail, account: null, status: { $in: ['pending', 'active'] } })
-    if (!invitation) throw ApiError.forbidden('Ask your business admin to add this email in Users before creating a team account.')
-  }
-
-  const user = await User.create({
-    email: normalizedEmail,
-    password,
-    role,
-    name: name?.trim() || normalizedEmail.split('@')[0],
-    business: invitation?.business || null,
-    onboarding: role === 'owner' ? { status: 'pending', currentStep: 1, setupVersion: 1, draft: {} } : undefined,
-  })
-  if (invitation) {
-    const claimed = await Member.findOneAndUpdate(
-      { _id: invitation._id, account: null, status: { $in: ['pending', 'active'] } },
-      { $set: { account: user._id, status: 'active' } },
-      { returnDocument: 'after' },
-    )
-    if (!claimed) {
-      await User.deleteOne({ _id: user._id })
-      throw ApiError.conflict('This invitation was already claimed. Please sign in instead.')
-    }
-  }
-  return buildSession(user)
-}
-
-export async function login({ email, password, role } = {}) {
+export async function login({ email, password } = {}) {
   requireFields({ email, password }, ['email', 'password'])
   const user = await User.findOne({ email: String(email).toLowerCase().trim() }).select('+password +failedLoginAttempts +lockUntil')
 
   if (!user) {
     // Keep the timing indistinguishable from a real account with a wrong password.
     await bcrypt.compare(String(password), DUMMY_HASH)
-    throw ApiError.unauthorized('We could not find an account with those details.')
+    throw ApiError.unauthorized('Invalid email or password.')
   }
 
   if (user.isLocked()) {
-    const minutes = Math.max(1, Math.ceil((user.lockUntil.getTime() - Date.now()) / 60000))
-    throw new ApiError(429, `Too many failed attempts. Try again in ${minutes} minute${minutes === 1 ? '' : 's'}.`)
+    throw new ApiError(429, 'Too many attempts. Try again later.')
   }
 
   if (!(await user.comparePassword(String(password)))) {
     const lockedForMinutes = await user.registerFailedLogin()
     if (lockedForMinutes) {
-      throw new ApiError(429, `Too many failed attempts. Your account is locked for ${lockedForMinutes} minutes.`)
+      throw new ApiError(429, 'Too many attempts. Try again later.')
     }
-    throw ApiError.unauthorized('We could not find an account with those details.')
+    throw ApiError.unauthorized('Invalid email or password.')
   }
 
-  if (role && user.role !== role) throw ApiError.unauthorized(`This is a ${user.role === 'owner' ? 'shop owner' : 'team member'} account. Select the correct account type.`)
-
+  if ((user.status || 'active') !== 'active') {
+    throw ApiError.unauthorized('Invalid email or password.')
+  }
   await user.clearLoginLock()
   return buildSession(user)
 }
@@ -109,6 +78,7 @@ export async function revokeAllSessions(user) {
 
 export async function updateOnboarding(user, payload = {}) {
   assert(user.role === 'owner', 'Team members inherit their business setup and do not use owner onboarding.')
+  assert(user.business, 'Only a Super Admin-provisioned business can use onboarding.')
   const onboarding = user.onboarding?.toObject?.() || user.onboarding || { status: 'pending', currentStep: 1, setupVersion: 1, draft: {} }
   if (payload.currentStep !== undefined) onboarding.currentStep = Math.min(7, Math.max(1, Number(payload.currentStep) || 1))
   if (payload.draft && typeof payload.draft === 'object') onboarding.draft = { ...(onboarding.draft || {}), ...payload.draft }
@@ -124,59 +94,18 @@ export async function updateOnboarding(user, payload = {}) {
   return buildSession(user)
 }
 
-/**
- * Starts a password reset. Generates a single-use token (only its hash is
- * stored) valid for 30 minutes. To avoid leaking which emails are registered,
- * the response is always the same shape. Outside production the token is
- * returned directly so the flow works without an email service configured;
- * in production this is where an email would be sent instead.
- */
-export async function requestPasswordReset({ email } = {}) {
-  requireFields({ email }, ['email'])
-  const normalizedEmail = String(email).toLowerCase().trim()
-  const generic = { message: 'If that email has an account, a reset link has been issued.' }
-
-  const user = await User.findOne({ email: normalizedEmail })
-  if (!user) return generic
-
-  const token = crypto.randomBytes(32).toString('hex')
-  user.resetPasswordTokenHash = hashToken(token)
-  user.resetPasswordExpires = new Date(Date.now() + RESET_TOKEN_TTL_MS)
-  await user.save()
-
-  if (isProduction) {
-    // TODO: send `${env.clientUrl}/reset?token=${token}` to user.email via your mail provider.
-    return generic
+export async function changePassword(userIdentity, { currentPassword, newPassword } = {}) {
+  requireFields({ currentPassword, newPassword }, ['currentPassword', 'newPassword'])
+  const user = await User.findById(userIdentity._id || userIdentity.id).select('+password')
+  if (!user || !(await user.comparePassword(String(currentPassword)))) {
+    throw ApiError.unauthorized('Current password is incorrect.')
   }
-  return {
-    ...generic,
-    email: user.email,
-    resetToken: token,
-    resetUrl: `${env.clientUrl}/?reset=${token}`,
-    expiresInMinutes: RESET_TOKEN_TTL_MS / 60000,
-  }
-}
-
-export async function resetPassword({ token, password } = {}) {
-  requireFields({ token, password }, ['token', 'password'])
-
-  const user = await User.findOne({
-    resetPasswordTokenHash: hashToken(String(token)),
-    resetPasswordExpires: { $gt: new Date() },
-  }).select('+password +resetPasswordTokenHash +resetPasswordExpires +failedLoginAttempts +lockUntil')
-
-  if (!user) throw ApiError.badRequest('This reset link is invalid or has expired. Request a new one.')
-
-  assertStrongPassword(password, user.email)
-
-  user.password = String(password)
-  user.resetPasswordTokenHash = null
-  user.resetPasswordExpires = null
-  // Sign every other session out — a reset should lock out whoever prompted it.
+  assertStrongPassword(newPassword, user.email)
+  user.password = String(newPassword)
+  user.mustChangePassword = false
   user.tokenVersion = (user.tokenVersion || 0) + 1
   user.failedLoginAttempts = 0
   user.lockUntil = null
   await user.save()
-
   return buildSession(user)
 }

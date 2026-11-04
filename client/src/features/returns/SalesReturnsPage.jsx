@@ -1,4 +1,17 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState, useEffect } from 'react'
+import {
+  RotateCcw,
+  PackageCheck,
+  DollarSign,
+  Clock,
+  Search,
+  Plus,
+  Eye,
+  Package,
+} from 'lucide-react'
+import { StatCard } from '../../dashboard/components/common/StatCard.tsx'
+import { Badge } from '../../dashboard/components/common/Badge.tsx'
+import { TableSkeleton } from '../../components/ui/Feedback.tsx'
 import { returnApi } from '../../api/returnApi.js'
 import { useResource } from '../../hooks/useResource.js'
 import { PageHeader } from '../../components/ui/PageHeader.jsx'
@@ -6,7 +19,6 @@ import { Card } from '../../components/ui/Card.jsx'
 import { DataTable } from '../../components/ui/DataTable.jsx'
 import { Button } from '../../components/ui/Button.jsx'
 import { Field, Input, Select } from '../../components/ui/FormControls.jsx'
-import { Badge } from '../../components/ui/Badge.jsx'
 import { Modal } from '../../components/ui/Modal.jsx'
 import { Icon } from '../../components/ui/icons.jsx'
 import './ReturnsPage.css'
@@ -117,7 +129,20 @@ export default function SalesReturnsPage({ business = {}, account = {} }) {
       const matchesDateTo =
         !filters.dateTo || new Date(record.createdAt) <= new Date(`${filters.dateTo}T23:59:59`)
 
-      return (
+      const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters]);
+
+  const totalPages = Math.ceil(filteredReturns.length / pageSize) || 1;
+  const paginatedReturns = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredReturns.slice(start, start + pageSize);
+  }, [filteredReturns, currentPage, pageSize]);
+
+  return (
         matchesSearch &&
         matchesStatus &&
         matchesRefund &&
@@ -387,82 +412,90 @@ export default function SalesReturnsPage({ business = {}, account = {} }) {
   ]
 
   return (
-    <div className="returns-page returns-container">
-      <PageHeader
-        kicker="Manage your returns • QA & refund control"
-        title="Returns & Refund Management"
-        badge="Live terminal"
-        description={`Guided customer returns processing, QA inspection, inventory restocking, and refund payout for ${business.name || 'your business'}.`}
-        actions={
-          canCreate ? (
-            <Button
-              variant="primary"
-              onClick={() => document.getElementById('return-order-search')?.focus()}
-              icon="plus"
+    <div className="space-y-6 animate-in fade-in duration-150 pb-10">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-[28px] font-semibold text-[#1C1B18] tracking-tight leading-tight">
+            Sales Returns
+          </h1>
+          <p className="text-[13px] text-[#6B665E] mt-0.5">
+            Process customer returns, QA inspection, inventory restocking, and refund payouts.
+          </p>
+        </div>
+
+        {canCreate && (
+          <div className="flex items-center gap-2.5 py-0.5">
+            <button
+              type="button"
+              onClick={() => {
+                const el = document.getElementById('return-order-search');
+                if (el) {
+                  el.focus();
+                  el.scrollIntoView({ behavior: 'smooth' });
+                }
+              }}
+              className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-[#7FAE82] hover:bg-[#6C9C70] text-white text-xs font-semibold transition-all cursor-pointer shadow-2xs whitespace-nowrap active:scale-95"
             >
-              Create walk-in return
-            </Button>
-          ) : null
-        }
-      />
+              <Plus size={16} />
+              <span>+ Create Return</span>
+            </button>
+          </div>
+        )}
+      </div>
 
       {message && (
-        <div className={`return-alert-box ${message.type === 'error' ? 'return-alert-error' : 'return-alert-success'}`}>
+        <div
+          className={`p-3.5 rounded-xl text-xs font-medium border ${
+            message.type === 'error'
+              ? 'bg-[#FDECEC] text-[#D64545] border-[#F9C2C2]'
+              : 'bg-[#E8F5EC] text-[#2E8B57] border-[#CDEBD5]'
+          }`}
+          role={message.type === 'error' ? 'alert' : 'status'}
+        >
           {message.text}
         </div>
       )}
 
-      {/* 4 Pastel KPI Summary Cards */}
-      <div className="ledger-kpi-grid">
-        <div className="ledger-kpi-card blue">
-          <div className="ledger-kpi-icon-bubble">
-            <Icon name="return" size={20} />
-          </div>
-          <div className="ledger-kpi-content">
-            <span className="ledger-kpi-label">Total Returns</span>
-            <span className="ledger-kpi-value">{returnsToday.length} today</span>
-            <span className="ledger-kpi-subtext">
-              {returns.length} all time
-            </span>
-          </div>
-        </div>
-
-        <div className="ledger-kpi-card slate">
-          <div className="ledger-kpi-icon-bubble">
-            <Icon name="truck" size={20} />
-          </div>
-          <div className="ledger-kpi-content">
-            <span className="ledger-kpi-label">Restocked Units</span>
-            <span className="ledger-kpi-value">{restockedItems} units</span>
-            <span className="ledger-kpi-subtext">Restocked to ledger</span>
-          </div>
-        </div>
-
-        <div className="ledger-kpi-card green">
-          <div className="ledger-kpi-icon-bubble">
-            <Icon name="dollar" size={20} />
-          </div>
-          <div className="ledger-kpi-content">
-            <span className="ledger-kpi-label">Refund Settlement</span>
-            <span className="ledger-kpi-value">
-              {money(business.currency, returnsToday.reduce((sum, r) => sum + Number(r.returnValue || r.refundAmount || 0), 0))}
-            </span>
-            <span className="ledger-kpi-subtext">{upiShare}% refunded · {100 - upiShare}% credit</span>
-          </div>
-        </div>
-
-        <div className="ledger-kpi-card amber">
-          <div className="ledger-kpi-icon-bubble">
-            <Icon name="pending" size={20} />
-          </div>
-          <div className="ledger-kpi-content">
-            <span className="ledger-kpi-label">Pending Inspection</span>
-            <span className="ledger-kpi-value">{pendingInspection} items</span>
-            <span className="ledger-kpi-subtext">Awaiting QA verification</span>
-          </div>
-        </div>
+      {/* 4 Dashboard-style StatCards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <StatCard
+          icon={<RotateCcw size={18} strokeWidth={2} />}
+          iconBgColor="bg-[#EBF2FA] text-[#2563EB]"
+          label="Total Returns"
+          value={returnsToday.length}
+          trend={`${returns.length} all time`}
+          isPositive={true}
+          onClick={() => updateFilter('status', 'all')}
+          className={filters.status === 'all' ? 'ring-2 ring-[#7FAE82]' : ''}
+        />
+        <StatCard
+          icon={<PackageCheck size={18} strokeWidth={2} />}
+          iconBgColor="bg-[#E6F1E6] text-[#2E8B57]"
+          label="Restocked Units"
+          value={`${restockedItems} units`}
+          trend="Restocked to ledger"
+          isPositive={true}
+        />
+        <StatCard
+          icon={<DollarSign size={18} strokeWidth={2} />}
+          iconBgColor="bg-[#E8F5EC] text-[#2E8B57]"
+          label="Refund Settlement"
+          value={money(business.currency, returnsToday.reduce((sum, r) => sum + Number(r.returnValue || r.refundAmount || 0), 0))}
+          trend={`${upiShare}% refunded`}
+          isPositive={true}
+        />
+        <StatCard
+          icon={<Clock size={18} strokeWidth={2} />}
+          iconBgColor="bg-[#FFF4DC] text-[#D98E0B]"
+          label="Pending Inspection"
+          value={`${pendingInspection} items`}
+          trend="Awaiting QA"
+          isPositive={false}
+          onClick={() => updateFilter('status', 'Pending')}
+          className={filters.status === 'Pending' ? 'ring-2 ring-[#7FAE82]' : ''}
+        />
       </div>
-
 
       {/* Progress chips */}
       <div className="ret-progress-bar">
@@ -807,79 +840,233 @@ export default function SalesReturnsPage({ business = {}, account = {} }) {
       )}
 
       {/* Audit History */}
-      <Card title="Sales Returns Audit Log" subtitle="Search and filter through historical sales returns and refund settlements">
-        <div className="ledger-toolbar" style={{ marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.625rem' }}>
-          <div className="ledger-search-box" style={{ flex: '1 1 240px' }}>
-            <span className="ledger-search-icon">
-              <Icon name="search" size={14} />
-            </span>
-            <input
-              type="text"
-              className="ledger-search-input"
-              aria-label="Search returns"
-              value={filters.search}
-              onChange={(e) => updateFilter('search', e.target.value)}
-              placeholder="Search return ID, order, customer, product..."
-            />
+      <div className="space-y-3">
+        {/* Toolbar matching Product Page */}
+        <div className="bg-white rounded-2xl p-3 border border-[#EEE6DA] flex flex-col md:flex-row items-center justify-between gap-3 shadow-2xs">
+          <div className="flex items-center gap-3 flex-1 w-full md:w-auto">
+            {/* Search */}
+            <div className="relative flex-1 max-w-md">
+              <Search size={15} className="absolute left-3 top-2.5 text-[#9A948A]" />
+              <input
+                type="text"
+                value={filters.search}
+                onChange={(e) => updateFilter('search', e.target.value)}
+                placeholder="Search return ID, order, customer, product..."
+                className="w-full pl-9 pr-3 py-1.5 rounded-xl border border-[#EEE6DA] text-xs focus:border-[#7FAE82] outline-none"
+              />
+            </div>
+
+            {/* Refund Status Dropdown */}
+            <select
+              value={filters.refundStatus}
+              onChange={(e) => updateFilter('refundStatus', e.target.value)}
+              className="px-3 py-1.5 rounded-xl border border-[#EEE6DA] text-xs text-[#1C1B18] bg-white cursor-pointer outline-none"
+            >
+              <option value="all">All Refund Statuses</option>
+              <option value="Not Required">Not Required</option>
+              <option value="Pending">Pending</option>
+              <option value="Partially Refunded">Partially Refunded</option>
+              <option value="Refunded">Refunded</option>
+              <option value="Failed">Failed</option>
+            </select>
+
+            {/* Reason Dropdown */}
+            <select
+              value={filters.reason}
+              onChange={(e) => updateFilter('reason', e.target.value)}
+              className="px-3 py-1.5 rounded-xl border border-[#EEE6DA] text-xs text-[#1C1B18] bg-white cursor-pointer outline-none"
+            >
+              <option value="all">All Reasons</option>
+              {reasons.map((r) => (
+                <option key={r} value={r}>{r}</option>
+              ))}
+            </select>
           </div>
-          <select
-            className="ledger-pill-select"
-            aria-label="Return status"
-            value={filters.status}
-            onChange={(e) => updateFilter('status', e.target.value)}
-          >
-            <option value="all">All statuses</option>
-            <option value="Pending">Pending</option>
-            <option value="Completed">Completed</option>
-            <option value="Cancelled">Cancelled</option>
-          </select>
-          <select
-            className="ledger-pill-select"
-            aria-label="Refund status"
-            value={filters.refundStatus}
-            onChange={(e) => updateFilter('refundStatus', e.target.value)}
-          >
-            <option value="all">All refund statuses</option>
-            <option value="Not Required">Not Required</option>
-            <option value="Pending">Pending</option>
-            <option value="Partially Refunded">Partially Refunded</option>
-            <option value="Refunded">Refunded</option>
-            <option value="Failed">Failed</option>
-          </select>
-          <select
-            className="ledger-pill-select"
-            aria-label="Filter reason"
-            value={filters.reason}
-            onChange={(e) => updateFilter('reason', e.target.value)}
-          >
-            <option value="all">All reasons</option>
-            {reasons.map((r) => (
-              <option key={r} value={r}>{r}</option>
+
+          {/* Status Filter Pills */}
+          <div className="flex items-center gap-1 bg-[#FAF6EF] p-1 rounded-xl border border-[#EEE6DA]/80 overflow-x-auto w-full md:w-auto">
+            {['all', 'Pending', 'Completed', 'Cancelled'].map((st) => (
+              <button
+                key={st}
+                type="button"
+                onClick={() => updateFilter('status', st)}
+                className={`px-3 py-1 text-xs font-semibold rounded-lg transition-colors cursor-pointer whitespace-nowrap ${
+                  filters.status === st
+                    ? 'bg-white text-[#1C1B18] shadow-2xs'
+                    : 'text-[#6B665E] hover:text-[#1C1B18]'
+                }`}
+              >
+                {st === 'all' ? 'All Statuses' : st}
+              </button>
             ))}
-          </select>
-          <select
-            className="ledger-pill-select"
-            aria-label="Filter condition"
-            value={filters.condition}
-            onChange={(e) => updateFilter('condition', e.target.value)}
-          >
-            <option value="all">All conditions</option>
-            {conditions.map((c) => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
+          </div>
         </div>
 
-        <DataTable
-          columns={columns}
-          data={filteredReturns}
-          loading={loading}
-          error={error}
-          onRetry={refetch}
-          emptyTitle="No returns found"
-          emptyDescription={returns.length ? 'No returns match these filters.' : 'No sales returns recorded yet.'}
-        />
-      </Card>
+        {/* Table matching Product Page */}
+        {loading && returns.length === 0 ? (
+          <TableSkeleton
+            columns={[
+              { title: 'Return ID', width: '15%' },
+              { title: 'Customer & Order', width: '22%' },
+              { title: 'Product & Units', width: '22%' },
+              { title: 'Return Value', width: '15%', align: 'right' },
+              { title: 'Refund Status', width: '14%', align: 'center' },
+              { title: 'Date', width: '12%', align: 'center' },
+            ]}
+            rows={6}
+          />
+        ) : filteredReturns.length === 0 ? (
+          <div className="bg-white rounded-2xl border border-[#EEE6DA] p-12 text-center shadow-2xs">
+            <Package className="mx-auto text-[#9A948A] mb-3 opacity-60" size={36} />
+            <h3 className="text-sm font-semibold text-[#1C1B18]">No returns found</h3>
+            <p className="text-xs text-[#6B665E] mt-1 max-w-sm mx-auto">
+              {returns.length ? 'No returns match your filter criteria.' : 'No customer returns recorded yet.'}
+            </p>
+          </div>
+        ) : (
+          <div className="bg-white rounded-2xl border border-[#EEE6DA] overflow-hidden shadow-2xs">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs min-w-[800px]">
+                <thead className="sticky top-0 z-10 bg-[#FAF6EF] border-b border-[#EEE6DA] text-[#8C867A] text-[11px] font-semibold uppercase tracking-wider">
+                  <tr>
+                    <th className="py-3 px-4 font-medium">Return ID</th>
+                    <th className="py-3 px-3 font-medium">Customer & Order</th>
+                    <th className="py-3 px-3 font-medium">Product & Units</th>
+                    <th className="py-3 px-3 font-medium text-right">Return Value</th>
+                    <th className="py-3 px-3 font-medium text-center">Refund Status</th>
+                    <th className="py-3 px-3 font-medium text-center">Status</th>
+                    <th className="py-3 px-3 font-medium text-center">Date</th>
+                    <th className="py-3 px-4 text-right font-medium">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#EEE6DA]/80">
+                  {paginatedReturns.map((record) => {
+                    let refundVariant = 'neutral';
+                    if (record.refundStatus === 'Refunded') refundVariant = 'success';
+                    else if (record.refundStatus === 'Failed') refundVariant = 'danger';
+                    else if (
+                      record.refundStatus?.toLowerCase().includes('pending') ||
+                      record.refundStatus?.toLowerCase().includes('partial')
+                    )
+                      refundVariant = 'warning';
+                    else if (record.refundStatus === 'Not Required') refundVariant = 'neutral';
+                    else refundVariant = 'info';
+
+                    const statusVariant =
+                      record.status === 'Completed'
+                        ? 'success'
+                        : record.status === 'Cancelled'
+                          ? 'danger'
+                          : 'warning';
+
+                    return (
+                      <tr
+                        key={record.returnId}
+                        className="hover:bg-[#FAF6EF]/60 transition-colors group cursor-pointer"
+                        onClick={() => setSelectedReturn(record)}
+                      >
+                        <td className="py-3 px-4">
+                          <div className="font-semibold text-[#1C1B18] text-[13px] group-hover:text-[#6C9C70] transition-colors">
+                            #{record.returnId || 'RET'}
+                          </div>
+                        </td>
+
+                        <td className="py-3 px-3">
+                          <div className="font-semibold text-[#1C1B18] text-[13px]">
+                            {record.customerName || 'Walk-in Customer'}
+                          </div>
+                          <div className="text-[11px] text-[#9A948A]">
+                            Order: {record.orderNumber || '—'}
+                          </div>
+                        </td>
+
+                        <td className="py-3 px-3">
+                          <div className="font-semibold text-[#1C1B18] text-[13px]">
+                            {record.productName}
+                          </div>
+                          <div className="text-[11px] text-[#9A948A]">
+                            {record.productSku || 'No SKU'} ·{' '}
+                            <span className="text-[#1C1B18] font-medium">{record.quantity} units</span>
+                          </div>
+                        </td>
+
+                        <td className="py-3 px-3 text-right">
+                          <div className="font-bold text-[#1C1B18] text-sm tabular-nums">
+                            {money(business.currency, record.returnValue || record.refundAmount)}
+                          </div>
+                          <div className="text-[11px] text-[#6B665E]">
+                            {record.reason} · {record.condition || 'Sellable'}
+                          </div>
+                        </td>
+
+                        <td className="py-3 px-3 text-center">
+                          <Badge variant={refundVariant}>{record.refundStatus || 'Not Required'}</Badge>
+                        </td>
+
+                        <td className="py-3 px-3 text-center">
+                          <Badge variant={statusVariant}>{record.status || 'Pending'}</Badge>
+                        </td>
+
+                        <td className="py-3 px-3 text-center text-[#6B665E] whitespace-nowrap">
+                          {new Date(record.createdAt).toLocaleDateString()}
+                        </td>
+
+                        <td
+                          className="py-3 px-4 text-right"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <div className="flex items-center justify-end gap-1">
+                            <button
+                              type="button"
+                              onClick={() => setSelectedReturn(record)}
+                              className="p-1.5 rounded-lg text-[#6B665E] hover:text-[#1C1B18] hover:bg-[#FAF6EF] transition-colors cursor-pointer"
+                              title="View Details"
+                              aria-label="View Details"
+                            >
+                              <Eye size={15} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination Footer */}
+            {totalPages > 1 && (
+              <div className="p-3 border-t border-[#EEE6DA] flex items-center justify-between text-xs text-[#6B665E]">
+                <span>
+                  Showing {Math.min((currentPage - 1) * pageSize + 1, filteredReturns.length)} to{' '}
+                  {Math.min(currentPage * pageSize, filteredReturns.length)} of {filteredReturns.length} returns
+                </span>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    className="px-2.5 py-1 rounded-lg border border-[#EEE6DA] bg-white text-xs font-semibold text-[#1C1B18] hover:bg-[#FAF6EF] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                  >
+                    Previous
+                  </button>
+                  <span className="px-2 font-medium text-[#1C1B18]">
+                    {currentPage} / {totalPages}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    className="px-2.5 py-1 rounded-lg border border-[#EEE6DA] bg-white text-xs font-semibold text-[#1C1B18] hover:bg-[#FAF6EF] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Confirmation Modal */}
       <Modal

@@ -1,12 +1,10 @@
 import { Router } from 'express'
 import rateLimit from 'express-rate-limit'
 import {
-  registerController,
   loginController,
   meController,
-  forgotPasswordController,
-  resetPasswordController,
   onboardingController,
+  changePasswordController,
   logoutController,
   logoutAllController,
 } from '../controllers/authController.js'
@@ -34,11 +32,9 @@ const credentialLimiter = rateLimit({
 
 export const authRoutes = Router()
 
-authRoutes.post('/register', authLimiter, credentialLimiter, registerController)
 authRoutes.post('/login', authLimiter, credentialLimiter, loginController)
-authRoutes.post('/forgot-password', authLimiter, credentialLimiter, forgotPasswordController)
-authRoutes.post('/reset-password', authLimiter, credentialLimiter, resetPasswordController)
 authRoutes.post('/logout', logoutController)
 authRoutes.post('/logout-all', logoutAllController)
 authRoutes.get('/me', authenticate, meController)
+authRoutes.patch('/password', authenticate, changePasswordController)
 authRoutes.patch('/onboarding', authenticate, onboardingController)

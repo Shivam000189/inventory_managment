@@ -1,6 +1,6 @@
 import { User } from '../models/index.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
-import { ok, created } from '../utils/respond.js'
+import { ok } from '../utils/respond.js'
 import { attachSession, clearSessionCookies, newCsrfToken } from '../utils/cookies.js'
 import { env } from '../config/env.js'
 import { verifyToken } from '../utils/token.js'
@@ -11,13 +11,6 @@ function withCookies(res, session) {
   const { csrfToken } = attachSession(res, { token: session.token })
   return { ...session, csrfToken }
 }
-
-export const registerController = asyncHandler(async (req, res) => {
-  const session = await authService.register(req.body)
-  // No session cookie is set here — the browser flow sends the user to sign in.
-  // API callers still receive a token in the body for convenience.
-  created(res, session, 'Account created. Sign in to open your workspace.')
-})
 
 export const loginController = asyncHandler(async (req, res) => {
   const session = await authService.login(req.body);
@@ -39,13 +32,8 @@ export const onboardingController = asyncHandler(async (req, res) => {
   ok(res, withCookies(res, session), req.body.complete ? 'Onboarding completed.' : 'Onboarding progress saved.')
 })
 
-export const forgotPasswordController = asyncHandler(async (req, res) => {
-  const result = await authService.requestPasswordReset(req.body)
-  ok(res, result, result.message)
-})
-
-export const resetPasswordController = asyncHandler(async (req, res) => {
-  const session = await authService.resetPassword(req.body)
+export const changePasswordController = asyncHandler(async (req, res) => {
+  const session = await authService.changePassword(req.user, req.body)
   ok(res, withCookies(res, session), 'Password updated. You are now signed in.')
 })
 

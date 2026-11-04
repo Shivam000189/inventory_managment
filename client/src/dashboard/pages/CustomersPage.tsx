@@ -15,14 +15,17 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { StatCard } from '../components/common/StatCard';
+import { StatGridSkeleton, TableSkeleton } from '../../components/ui/Feedback';
 import { Badge } from '../components/common/Badge';
 import { useApp } from '../context/AppContext';
 import { Customer } from '../types';
 import { formatINR } from '../lib/formatters';
+import { Portal } from '../components/common/Portal';
 
 export const CustomersPage: React.FC = () => {
   const {
     customers,
+    isLoadingBackend,
     addCustomer,
     updateCustomer,
     recordCustomerPayment,
@@ -110,6 +113,9 @@ export const CustomersPage: React.FC = () => {
       </div>
 
       {/* StatCards */}
+      {isLoadingBackend && customers.length === 0 ? (
+        <StatGridSkeleton count={4} />
+      ) : (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         <StatCard
           icon={<UserCheck size={18} strokeWidth={2} />}
@@ -145,6 +151,7 @@ export const CustomersPage: React.FC = () => {
           isPositive={true}
         />
       </div>
+      )}
 
       {/* Sub Tabs: All Customers | Credit / Ledger */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#EEE6DA] pb-2">
@@ -188,6 +195,20 @@ export const CustomersPage: React.FC = () => {
       </div>
 
       {/* Customers Table */}
+      {isLoadingBackend && customers.length === 0 ? (
+        <TableSkeleton
+          columns={[
+            { title: 'Customer Name', width: '22%' },
+            { title: 'Contact Phone', width: '16%' },
+            { title: 'Type', width: '10%', align: 'center' },
+            { title: 'Total Spent', width: '14%', align: 'right' },
+            { title: 'Last Purchase', width: '14%' },
+            { title: 'Outstanding Due', width: '14%', align: 'right' },
+            { title: 'Actions', width: '10%', align: 'right' },
+          ]}
+          rows={6}
+        />
+      ) : (
       <div className="bg-white rounded-2xl border border-[#EEE6DA] overflow-hidden shadow-2xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs min-w-[760px]">
@@ -281,10 +302,12 @@ export const CustomersPage: React.FC = () => {
           </table>
         </div>
       </div>
+      )}
 
       {/* Add Customer Drawer */}
       {isAddDrawerOpen && (
-        <div className="fixed inset-0 z-50 overflow-hidden">
+        <Portal>
+          <div className="fixed inset-0 z-50 overflow-hidden">
           <div
             className="fixed inset-0 bg-black/30 backdrop-blur-xs"
             onClick={() => setIsAddDrawerOpen(false)}
@@ -408,11 +431,13 @@ export const CustomersPage: React.FC = () => {
             </div>
           </div>
         </div>
+        </Portal>
       )}
 
       {/* Record Payment Modal */}
       {recordingPaymentCust && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
+        <Portal>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
           <form
             onSubmit={handleRecordPayment}
             className="bg-white rounded-3xl max-w-sm w-full border border-[#EEE6DA] shadow-2xl p-6 animate-in zoom-in-95 duration-150 space-y-4"
@@ -468,11 +493,13 @@ export const CustomersPage: React.FC = () => {
             </div>
           </form>
         </div>
+        </Portal>
       )}
 
       {/* Customer Detail & Purchase Ledger Drawer */}
       {viewingCustomer && (
-        <div className="fixed inset-0 z-50 overflow-hidden">
+        <Portal>
+          <div className="fixed inset-0 z-50 overflow-hidden">
           <div
             className="fixed inset-0 bg-black/30 backdrop-blur-xs"
             onClick={() => setViewingCustomer(null)}
@@ -566,6 +593,7 @@ export const CustomersPage: React.FC = () => {
             </div>
           </div>
         </div>
+        </Portal>
       )}
     </div>
   );

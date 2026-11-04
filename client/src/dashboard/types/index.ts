@@ -2,13 +2,14 @@ export type UserRole = 'admin' | 'salesperson';
 
 export interface User {
   id: string;
+  accountId?: string;
+  memberId?: string;
   name: string;
   email: string;
   role: UserRole;
   avatarInitials: string;
   status: 'active' | 'suspended';
   lastLogin: string;
-  tempPassword?: string;
 }
 
 export interface BusinessProfile {
@@ -16,6 +17,7 @@ export interface BusinessProfile {
   name: string;
   legalName?: string;
   businessType: string;
+  industry?: string;
   phone: string;
   email: string;
   address: string;
@@ -42,6 +44,10 @@ export interface BusinessProfile {
   receiptPaperSize?: '58mm' | '80mm' | 'A4';
   upiId?: string;
   lowStockThreshold: number;
+  drugLicenseNumber?: string;
+  drugLicense20B?: string;
+  drugLicense21B?: string;
+  pharmacistInCharge?: string;
 }
 
 export interface Product {
@@ -61,6 +67,29 @@ export interface Product {
   description?: string;
   active: boolean;
   iconType?: 'shirt' | 'pill' | 'mouse' | 'shoe' | 'box' | 'coffee' | 'phone' | 'bottle' | 'book';
+
+  // Industry-specific fields
+  genericName?: string;
+  manufacturer?: string;
+  batchNumber?: string;
+  manufacturingDate?: string;
+  expiryDate?: string;
+  mrp?: number;
+  brand?: string;
+  model?: string;
+  serialNumber?: string;
+  imei?: string;
+  warrantyMonths?: number;
+  size?: string;
+  color?: string;
+  dimensions?: string;
+  material?: string;
+  weight?: number;
+  wholesalePrice?: number;
+  wholesaleMinQuantity?: number;
+  dealerPrice?: number;
+  warehouse?: string;
+  rackLocation?: string;
 }
 
 export type MovementType = 'Sale' | 'Purchase' | 'Stock In' | 'Stock Out' | 'Adjustment' | 'Return';
@@ -135,6 +164,9 @@ export interface BillItem {
   discountAmount: number;
   taxRate: number;
   total: number;
+  batchNumber?: string;
+  expiryDate?: string;
+  mrp?: number;
 }
 
 export type PaymentMethod = 'Cash' | 'UPI' | 'Card' | 'Credit';
@@ -160,6 +192,9 @@ export interface Bill {
   cashTendered?: number;
   changeDue?: number;
   notes?: string;
+  doctorName?: string;
+  doctorRegNumber?: string;
+  prescriptionNumber?: string;
 }
 
 export interface Customer {

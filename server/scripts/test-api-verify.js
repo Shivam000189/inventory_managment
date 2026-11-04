@@ -12,7 +12,20 @@ async function runApiVerification() {
 
   const baseUrl = 'http://127.0.0.1:4099/api'
   const industriesToTest = ['pharmacy', 'clothing', 'electronics']
-  const password = 'Demo@12345'
+  let credentials
+  try {
+    credentials = JSON.parse(process.env.API_VERIFY_CREDENTIALS_JSON || '{}')
+  } catch {
+    throw new Error('API_VERIFY_CREDENTIALS_JSON must be a JSON object mapping account emails to passwords.')
+  }
+  const accountEmails = industriesToTest.flatMap((industry) => [
+    `owner@${industry}.stockroom.test`,
+    `staff@${industry}.stockroom.test`,
+  ])
+  if (accountEmails.some((email) => typeof credentials[email] !== 'string' || !credentials[email])) {
+    throw new Error('Set API_VERIFY_CREDENTIALS_JSON with passwords for all six verification accounts. Passwords are never printed.')
+  }
+  const passwordFor = (email) => credentials[email]
 
   const results = {
     logins: [],
@@ -28,16 +41,19 @@ async function runApiVerification() {
       console.log(`======================================================`)
 
       const ownerEmail = `owner@${ind}.stockroom.test`
-            const staffEmail = `staff@${ind}.stockroom.test`
+      const staffEmail = `staff@${ind}.stockroom.test`
 
       // 1. Owner Login (Correct account type: owner)
       const ownerRes = await fetch(`${baseUrl}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: ownerEmail, password, role: 'owner' }),
+        body: JSON.stringify({ email: ownerEmail, password: passwordFor(ownerEmail), role: 'owner' }),
       })
       const ownerData = await ownerRes.json()
       if (!ownerRes.ok) throw new Error(`Owner login failed for ${ownerEmail}: ${JSON.stringify(ownerData)}`)
+      if (ownerData.data.user.mustChangePassword) {
+        throw new Error(`Owner account ${ownerEmail} must complete its required password change before API verification.`)
+      }
       const ownerToken = ownerData.data.token
       const ownerBiz = ownerData.data.business
       const ownerModules = ownerData.data.business?.enabledModules || ownerData.data.modules || []
@@ -49,7 +65,7 @@ async function runApiVerification() {
       const wrongRoleRes = await fetch(`${baseUrl}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: ownerEmail, password, role: 'team' }),
+        body: JSON.stringify({ email: ownerEmail, password: passwordFor(ownerEmail), role: 'team' }),
       })
       console.log(`✓ Owner login with wrong account type correctly rejected: HTTP ${wrongRoleRes.status}`)
 
@@ -57,10 +73,13 @@ async function runApiVerification() {
       const staffRes = await fetch(`${baseUrl}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: staffEmail, password, role: 'team' }),
+        body: JSON.stringify({ email: staffEmail, password: passwordFor(staffEmail), role: 'team' }),
       })
       const staffData = await staffRes.json()
       if (!staffRes.ok) throw new Error(`Staff login failed for ${staffEmail}: ${JSON.stringify(staffData)}`)
+      if (staffData.data.user.mustChangePassword) {
+        throw new Error(`Salesperson account ${staffEmail} must complete its required password change before API verification.`)
+      }
       const staffToken = staffData.data.token
       results.logins.push({ email: staffEmail, role: 'team (staff)', status: 'SUCCESS', httpStatus: staffRes.status })
       console.log(`✓ Staff login succeeded: ${staffEmail} (HTTP ${staffRes.status})`)

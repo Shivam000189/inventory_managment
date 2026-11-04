@@ -7,17 +7,21 @@ export const listMembersController = asyncHandler(async (req, res) => {
   ok(res, await userService.listMembers(req.businessId))
 })
 export const createMemberController = asyncHandler(async (req, res) => {
-  const member = await userService.createMember(req.businessId, req.body)
+  const member = await userService.createMember(req.businessId, req.body, req.user, req)
   await notificationEvents.member(req.businessId, member, 'created')
-  created(res, member, 'Team member added.')
+  created(res, member, 'Team member added. Save the temporary password; it is shown only once.')
 })
 export const updateMemberController = asyncHandler(async (req, res) => {
-  const member = await userService.updateMember(req.businessId, req.params.id, req.body)
+  const member = await userService.updateMember(req.businessId, req.params.id, req.body, req.user, req)
   await notificationEvents.member(req.businessId, member, 'updated')
   ok(res, member, 'User updated.')
 })
+export const setMemberStatusController = asyncHandler(async (req, res) => {
+  const result = await userService.setSalespersonStatus(req.businessId, req.params.userId, req.body, req.user, req)
+  ok(res, result, 'Salesperson status updated.')
+})
 export const deleteMemberController = asyncHandler(async (req, res) => {
-  await userService.deleteMember(req.businessId, req.params.id)
+  await userService.deleteMember(req.businessId, req.params.id, req.user, req)
   ok(res, { deleted: true }, 'Team member removed.')
 })
 

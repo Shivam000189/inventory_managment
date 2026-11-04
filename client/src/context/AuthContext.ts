@@ -6,8 +6,7 @@ export interface AuthContextValue {
   account: Account | null;
   business: BusinessProfile | null;
   loading: boolean;
-  login: (identifier: string, password?: string) => Promise<any>;
-  register: (payload: any) => Promise<any>;
+  login: (identifier: string, password: string) => Promise<any>;
   logout: () => Promise<void>;
   updateBusiness: (updatedBusiness: any) => void;
   updateSession: (newSession: any) => void;

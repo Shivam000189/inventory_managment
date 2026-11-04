@@ -152,7 +152,7 @@ export const SuppliersPage: React.FC = () => {
           value={openPOCount}
           trend="Pending delivery"
           isPositive={true}
-          onClick={() => navigate('/app/purchase-orders')}
+          onClick={() => navigate('/purchase-orders')}
         />
       </div>
 
@@ -542,7 +542,7 @@ export const SuppliersPage: React.FC = () => {
                   type="button"
                   onClick={() => {
                     setViewingSupplier(null);
-                    navigate('/app/purchase-orders');
+                    navigate('/purchase-orders');
                   }}
                   className="px-4 py-2 rounded-xl bg-[#7FAE82] text-white text-xs font-semibold hover:bg-[#6C9C70]"
                 >

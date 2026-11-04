@@ -50,15 +50,6 @@ export function getCsrfToken(): string | null {
   return readCookie(CSRF_COOKIE);
 }
 
-export function getAuthToken(): string | null {
-  try {
-    if (typeof localStorage === 'undefined') return null;
-    return localStorage.getItem('sr_token') || localStorage.getItem('token');
-  } catch {
-    return null;
-  }
-}
-
 export function clearSession(): void {
   window.dispatchEvent(new CustomEvent("stockroom:unauthorized"));
 }
@@ -96,11 +87,6 @@ export async function request<T = any>(
     const csrf = getCsrfToken();
     if (csrf) headers["X-CSRF-Token"] = csrf;
   }
-  const token = getAuthToken();
-  if (token && !headers["Authorization"]) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
-
   let response: Response;
   try {
     response = await fetch(url, {
@@ -136,11 +122,10 @@ export async function request<T = any>(
   if (response.status === 401 && getCsrfToken()) clearSession();
 
   if (!response.ok || (payload && payload.success === false)) {
-    const fallback =
-      response.status >= 500
-        ? "Server error. Please try again."
-        : `Request failed (${response.status}).`;
-    throw new ApiError(payload?.message || fallback, response.status, payload);
+    const message = response.status >= 500
+      ? "Server error. Please try again."
+      : payload?.message || `Request failed (${response.status}).`;
+    throw new ApiError(message, response.status, payload);
   }
 
   // Any successful write may change dashboard notifications - let listeners refetch.

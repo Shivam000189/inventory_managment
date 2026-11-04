@@ -1,7 +1,6 @@
-import { Business, Product, Customer, SalesOrder, Payment, Promotion, Coupon, GiftCard, LoyaltyTransaction, StoreCreditTransaction, StockTransaction } from '../models/index.js'
+import { Business, Product, Customer, SalesOrder, Payment, Promotion, Coupon, GiftCard, LoyaltyTransaction, StoreCreditTransaction } from '../models/index.js'
 import { withTransaction } from '../config/db.js'
 import { applyStockChange } from './inventoryService.js'
-import { notifyLowStockDecrease } from './notificationService.js'
 import { ApiError } from '../utils/ApiError.js'
 import { toObjectId, toNumber, assert, isEmail } from '../validators/assert.js'
 
@@ -21,8 +20,26 @@ function getVariant(product, variantId) {
 export async function listCustomers(businessId, query = {}) {
   const filter = scoped(businessId, { status: 'active' })
   if (query.search) filter.$or = ['name', 'phone', 'email', 'gstin'].map((field) => ({ [field]: { $regex: String(query.search).slice(0, 100), $options: 'i' } }))
-  const customers = await Customer.find(filter).sort('name').limit(Math.min(500, Number(query.limit) || 250))
-  return customers.map((customer) => customer.toJSON())
+
+  const page = Math.max(1, Number(query.page) || 1)
+  const limit = Math.min(100, Math.max(1, Number(query.limit) || 50))
+  const skip = (page - 1) * limit
+
+  const [customers, total] = await Promise.all([
+    Customer.find(filter).sort('name').skip(skip).limit(limit),
+    Customer.countDocuments(filter),
+  ])
+
+  const items = customers.map((customer) => customer.toJSON())
+  return {
+    items,
+    meta: {
+      page,
+      limit,
+      total,
+      pages: Math.ceil(total / limit) || 1,
+    },
+  }
 }
 
 async function resolveCustomer(businessId, payload, session) {
@@ -234,42 +251,19 @@ export async function checkout(businessId, payload, actor, permissions = []) {
     }], { session })
 
     for (const item of items) {
-      if (!item.variantId) {
-        await applyStockChange({ businessId, productId: item.productId, type: 'stock_out', quantity: item.quantity, reason: 'POS Sale', referenceId: String(order._id), createdBy: actor.name }, session)
-      } else {
-        const product = byId.get(String(item.productId))
-        const variant = getVariant(product, item.variantId)
-        if (variant) {
-          const previousStock = variant.currentStock
-          variant.currentStock = Math.max(0, variant.currentStock - item.quantity)
-          const prevProductStock = product.currentStock
-          product.currentStock = product.variants.reduce((n, v) => n + (Number(v.currentStock) || 0), 0)
-          await product.save({ session })
-          await StockTransaction.create([{
-            business: business._id,
-            productId: product._id,
-            variantId: variant._id || variant.id,
-            variantSku: variant.sku || '',
-            variantSize: variant.size || '',
-            variantColor: variant.color || '',
-            type: 'stock_out',
-            quantity: item.quantity,
-            previousStock,
-            newStock: variant.currentStock,
-            reason: 'POS Sale',
-            referenceId: String(order._id),
-            createdBy: actor.name,
-          }], { session })
-          const threshold = product.minimumStock || product.reorderPoint || product.reorderLevel || 10
-          if (product.currentStock < prevProductStock && product.currentStock <= threshold) {
-            try {
-              await notifyLowStockDecrease(businessId, product, prevProductStock, product.currentStock, threshold)
-            } catch (err) {
-              console.warn('Failed to dispatch variant low stock notification:', err)
-            }
-          }
-        }
-      }
+      await applyStockChange(
+        {
+          businessId,
+          productId: item.productId,
+          variantId: item.variantId,
+          type: 'stock_out',
+          quantity: item.quantity,
+          reason: 'POS Sale',
+          referenceId: String(order._id),
+          createdBy: actor.name,
+        },
+        session,
+      )
     }
     const actualPayments = payments.filter((payment) => payment.amount > 0 && !['Credit', 'Pay Later'].includes(payment.method))
     if (actualPayments.length) await Payment.create(actualPayments.map((payment) => ({ business: business._id, type: 'sale', referenceId: order._id, referenceModel: 'SalesOrder', amount: payment.amount, paymentMethod: payment.method, paymentDate: new Date().toISOString().slice(0, 10), notes: `POS ${number}`, recordedBy: actor.name, transactionReference: payment.reference, offerCode: offer?.code || '' })), { session, ordered: true })
@@ -295,8 +289,26 @@ export async function listInvoices(businessId, query = {}) {
     const term = String(query.search).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
     filter.$or = [{ invoiceNumber: new RegExp(term, 'i') }, { customerName: new RegExp(term, 'i') }]
   }
-  const docs = await SalesOrder.find(filter).sort('-createdAt').limit(Math.min(200, Number(query.limit) || 100))
-  return docs.map((doc) => doc.toJSON())
+
+  const page = Math.max(1, Number(query.page) || 1)
+  const limit = Math.min(100, Math.max(1, Number(query.limit) || 20))
+  const skip = (page - 1) * limit
+
+  const [docs, total] = await Promise.all([
+    SalesOrder.find(filter).sort('-createdAt').skip(skip).limit(limit),
+    SalesOrder.countDocuments(filter),
+  ])
+
+  const items = docs.map((doc) => doc.toJSON())
+  return {
+    items,
+    meta: {
+      page,
+      limit,
+      total,
+      pages: Math.ceil(total / limit) || 1,
+    },
+  }
 }
 
 export async function listCatalog(businessId, query = {}) {
@@ -306,8 +318,17 @@ export async function listCatalog(businessId, query = {}) {
     const rx = new RegExp(term, 'i')
     filter.$or = [{ name: rx }, { sku: rx }, { barcode: rx }, { 'variants.sku': rx }, { 'variants.barcode': rx }, { 'variants.size': rx }, { 'variants.color': rx }]
   }
-  const docs = await Product.find(filter).sort('name').limit(500)
-  return docs.flatMap((doc) => {
+
+  const page = Math.max(1, Number(query.page) || 1)
+  const limit = Math.min(100, Math.max(1, Number(query.limit) || 50))
+  const skip = (page - 1) * limit
+
+  const [docs, total] = await Promise.all([
+    Product.find(filter).sort('name').skip(skip).limit(limit),
+    Product.countDocuments(filter),
+  ])
+
+  const items = docs.flatMap((doc) => {
     const product = doc.toJSON ? doc.toJSON() : doc
     const variants = Array.isArray(product.variants) ? product.variants : []
     if (!variants.some((variant) => variant.active !== false)) return [product]
@@ -323,6 +344,16 @@ export async function listCatalog(businessId, query = {}) {
       purchasePrice: variant.purchasePrice ?? product.purchasePrice,
     }))
   })
+
+  return {
+    items,
+    meta: {
+      page,
+      limit,
+      total,
+      pages: Math.ceil(total / limit) || 1,
+    },
+  }
 }
 
 export async function getInvoice(businessId, id) {

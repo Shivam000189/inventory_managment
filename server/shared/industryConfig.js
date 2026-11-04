@@ -134,8 +134,17 @@ const pagePermissions = {
 }
 
 export function normalizeConfigValue(value, fallback = 'other') {
-  const normalized = String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '')
-  return normalized || fallback
+  const s = String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '')
+  if (!s) return fallback
+  if (s.includes('pharma') || s.includes('pharam') || s.includes('medic') || s.includes('chemist') || s.includes('drug') || s.includes('health')) return 'pharmacy'
+  if (s.includes('cloth') || s.includes('apparel') || s.includes('garment') || s.includes('fashion') || s.includes('textile')) return 'clothing'
+  if (s.includes('electr') || s.includes('gadget') || s.includes('mobile') || s.includes('tech')) return 'electronics'
+  if (s.includes('groc') || s.includes('supermarket') || s.includes('food') || s.includes('kirana') || s.includes('beverage')) return 'grocery'
+  if (s.includes('hardw') || s.includes('tool') || s.includes('sanitary') || s.includes('paint')) return 'hardware'
+  if (s.includes('auto') || s.includes('motor') || s.includes('vehicle') || s.includes('car')) return 'automobile'
+  if (s.includes('manufactur') || s.includes('factory') || s.includes('product')) return 'manufacturing'
+  if (s.includes('whole') || s.includes('distribut') || s.includes('b2b')) return 'wholesale'
+  return s
 }
 
 const unique = (items) => [...new Set(items)]

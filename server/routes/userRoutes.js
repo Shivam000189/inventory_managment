@@ -7,6 +7,7 @@ userRoutes.use(requirePermission('manage_users'))
 
 userRoutes.get('/', controller.listMembersController)
 userRoutes.post('/', controller.createMemberController)
+userRoutes.patch('/:userId/status', controller.setMemberStatusController)
 userRoutes.put('/:id', controller.updateMemberController)
 userRoutes.patch('/:id', controller.updateMemberController)
 userRoutes.delete('/:id', controller.deleteMemberController)

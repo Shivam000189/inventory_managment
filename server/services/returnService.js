@@ -65,8 +65,24 @@ export async function listReturns(businessId, query = {}) {
     filter.$or = [{ orderNumber: rx }, { productName: rx }, { productSku: rx }, { customerName: rx }, { processedBy: rx }]
     if (/^[0-9a-f]{24}$/i.test(term) || /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(term)) filter[''].push({ _id: toObjectId(term, 'return id') })
   }
-  const docs = await Return.find(filter).sort('-createdAt').limit(Math.min(500, Number(query.limit) || 200))
-  return decorateReturns(businessId, docs)
+  const page = Math.max(1, Number(query.page) || 1)
+  const limit = Math.min(100, Math.max(1, Number(query.limit) || 20))
+  const skip = (page - 1) * limit
+
+  const [docs, total] = await Promise.all([
+    Return.find(filter).sort('-createdAt').skip(skip).limit(limit),
+    Return.countDocuments(filter),
+  ])
+  const items = await decorateReturns(businessId, docs)
+  return {
+    items,
+    meta: {
+      page,
+      limit,
+      total,
+      pages: Math.ceil(total / limit) || 1,
+    },
+  }
 }
 
 export async function getReturn(businessId, id) {
@@ -82,7 +98,14 @@ export async function listEligibleOrders(businessId, query = {}) {
     const rx = new RegExp(String(query.search).trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i')
     filter.$or = [{ orderNumber: rx }, { invoiceNumber: rx }, { customerName: rx }]
   }
-  const orders = await SalesOrder.find(filter).sort('-createdAt').limit(250)
+  const page = Math.max(1, Number(query.page) || 1)
+  const limit = Math.min(100, Math.max(1, Number(query.limit) || 20))
+  const skip = (page - 1) * limit
+
+  const [orders, total] = await Promise.all([
+    SalesOrder.find(filter).sort('-createdAt').skip(skip).limit(limit),
+    SalesOrder.countDocuments(filter),
+  ])
   const orderIds = orders.map((order) => order._id)
   const productIds = [...new Set(orders.flatMap((order) => order.items.map((item) => String(item.productId))))]
   const [payments, previousReturns, products] = await Promise.all([
@@ -91,7 +114,7 @@ export async function listEligibleOrders(businessId, query = {}) {
     Product.find({ business, _id: { $in: productIds } }),
   ])
   const productMap = new Map(products.map((product) => [String(product._id), product]))
-  return orders.map((order) => {
+  const items = orders.map((order) => {
     const orderPayments = payments.filter((payment) => String(payment.referenceId) === String(order._id))
     const amountPaidActual = round2(orderPayments.reduce((sum, payment) => sum + payment.amount, 0))
     const outstandingActual = round2(Math.max(0, order.totalAmount - amountPaidActual - (order.returnAdjustmentAmount || 0)))
@@ -105,6 +128,16 @@ export async function listEligibleOrders(businessId, query = {}) {
       }),
     }
   }).filter((order) => order.items.some((item) => item.returnableQuantity > 0))
+
+  return {
+    items,
+    meta: {
+      page,
+      limit,
+      total,
+      pages: Math.ceil(total / limit) || 1,
+    },
+  }
 }
 
 async function createPurchaseReturn(businessId, payload, processedBy, session) {

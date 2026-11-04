@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, type ReactNode } from "react";
 import { authApi } from "../api/authApi";
-import { getCsrfToken, getAuthToken } from "../api/client";
+import { getCsrfToken } from "../api/client";
 import { AuthContext } from "./AuthContext";
 import type { UserSession } from "../types";
 
@@ -10,7 +10,7 @@ export interface AuthProviderProps {
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const [session, setSession] = useState<UserSession | null>(null);
-  const [loading, setLoading] = useState<boolean>(Boolean(getCsrfToken() || getAuthToken()));
+  const [loading, setLoading] = useState<boolean>(Boolean(getCsrfToken()));
 
   const loadSession = useCallback(async (isMounted: () => boolean = () => true) => {
     try {
@@ -34,8 +34,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     let active = true;
 
-    // Only probe /api/auth/me if a CSRF cookie or auth token exists, indicating an active session.
-    if (!getCsrfToken() && !getAuthToken()) {
+    // The session cookie is HTTP-only; the readable CSRF cookie signals a session.
+    if (!getCsrfToken()) {
       setLoading(false);
       return;
     }
@@ -58,14 +58,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return () => window.removeEventListener("stockroom:unauthorized", handleUnauthorized);
   }, []);
 
-  const login = async (identifier: string, password?: string) => {
-    const result = await authApi.login({ email: identifier, identifier, password });
-    setSession({ user: result.user, business: result.business });
-    return result;
-  };
-
-  const register = async (payload: any) => {
-    const result = await authApi.register(payload);
+  const login = async (identifier: string, password: string) => {
+    const result = await authApi.login({ email: identifier, password });
     setSession({ user: result.user, business: result.business });
     return result;
   };
@@ -103,7 +97,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
         business: session?.business || null,
         loading,
         login,
-        register,
         logout,
         updateBusiness,
         updateSession,

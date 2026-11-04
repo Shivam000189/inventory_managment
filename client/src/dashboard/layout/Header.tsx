@@ -125,7 +125,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
                   <button
                     type="button"
                     onClick={() => {
-                      navigate('/app/settings');
+                      navigate('/settings');
                       setIsUserMenuOpen(false);
                     }}
                     className="w-full text-left px-3 py-2 text-xs text-[#6B665E] hover:text-[#1C1B18] hover:bg-[#FAF6EF] rounded-xl flex items-center gap-2 cursor-pointer transition-colors"

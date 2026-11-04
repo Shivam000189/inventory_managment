@@ -51,7 +51,21 @@ const startOfToday = () => {
 function Receiving({ business, account, onNavigate }) {
   const load = useCallback(() => Promise.all([receivingApi.pendingOrders(), receivingApi.list()]), [])
   const { data, loading, error, setData } = useResource(load, [], [[], []])
-  const [pendingOrders, receivings] = data
+  const [pendingOrdersRaw, receivingsRaw] = Array.isArray(data) ? data : [[], []]
+  const pendingOrders = Array.isArray(pendingOrdersRaw)
+    ? pendingOrdersRaw
+    : Array.isArray(pendingOrdersRaw?.data)
+      ? pendingOrdersRaw.data
+      : Array.isArray(pendingOrdersRaw?.orders)
+        ? pendingOrdersRaw.orders
+        : []
+  const receivings = Array.isArray(receivingsRaw)
+    ? receivingsRaw
+    : Array.isArray(receivingsRaw?.data)
+      ? receivingsRaw.data
+      : Array.isArray(receivingsRaw?.receivings)
+        ? receivingsRaw.receivings
+        : []
 
   const [selectedOrderId, setSelectedOrderId] = useState('')
   const [lines, setLines] = useState([])

@@ -1,9 +1,8 @@
 import { Router } from 'express'
 import * as controller from '../controllers/paymentController.js'
-import { requirePermission } from '../middleware/auth.js'
+import { requireAnyPermission } from '../middleware/auth.js'
 
 export const paymentRoutes = Router()
-paymentRoutes.use(requirePermission('view_reports'))
 
-paymentRoutes.get('/', controller.listController)
-paymentRoutes.post('/', controller.createController)
+paymentRoutes.get('/', requireAnyPermission('view_reports', 'create_order', 'manage_payments'), controller.listController)
+paymentRoutes.post('/', requireAnyPermission('manage_payments', 'create_order', 'process_pos_sale'), controller.createController)

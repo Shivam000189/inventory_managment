@@ -1,32 +1,74 @@
 import React, { useState } from 'react';
-import { Users, Plus, Shield, UserCheck, X, CheckCircle2, Lock, Mail, Clock } from 'lucide-react';
+import { Plus, Shield, UserCheck, X, Mail, Clock, Copy, CheckCircle2 } from 'lucide-react';
 import { Badge } from '../components/common/Badge';
 import { useApp } from '../context/AppContext';
-import { UserRole } from '../types';
+import { Portal } from '../components/common/Portal';
+import { isPharmacyBusiness } from '../../shared/industryConfig';
 
 export const TeamPage: React.FC = () => {
-  const { users, addUser, updateUserStatus } = useApp();
+  const { users, addUser, updateUserStatus, businessProfile } = useApp();
+  const isPharmacy = isPharmacyBusiness(businessProfile);
   const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
-
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState<UserRole>('salesperson');
-  const [tempPassword, setTempPassword] = useState('Pass@1234');
+  const [creating, setCreating] = useState(false);
+  const [formError, setFormError] = useState('');
+  const [statusError, setStatusError] = useState('');
+  const [updatingId, setUpdatingId] = useState('');
+  const [createdCredentials, setCreatedCredentials] = useState<{ name: string; email: string; password: string } | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [copyError, setCopyError] = useState('');
 
-  const handleAddMember = (e: React.FormEvent) => {
+  const handleAddMember = async (e: React.FormEvent) => {
     e.preventDefault();
-    addUser({
-      name,
-      email,
-      role,
-      tempPassword,
-      avatarInitials: name.slice(0, 2).toUpperCase(),
-      status: 'active',
-    });
-    setName('');
-    setEmail('');
-    setTempPassword('Pass@1234');
-    setIsAddDrawerOpen(false);
+    if (creating) return;
+    setCreating(true);
+    setFormError('');
+    try {
+      const created = await addUser({
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        role: 'salesperson',
+        avatarInitials: name.slice(0, 2).toUpperCase(),
+        status: 'active',
+      });
+      setCreatedCredentials({
+        name: created.user.name,
+        email: created.user.email,
+        password: created.temporaryPassword,
+      });
+      setName('');
+      setEmail('');
+      setIsAddDrawerOpen(false);
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : 'Unable to create salesperson.');
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleStatusChange = async (userId: string, status: 'active' | 'suspended') => {
+    setUpdatingId(userId);
+    setStatusError('');
+    try {
+      await updateUserStatus(userId, status);
+    } catch (error) {
+      setStatusError(error instanceof Error ? error.message : 'Unable to update salesperson status.');
+    } finally {
+      setUpdatingId('');
+    }
+  };
+
+  const copyTemporaryPassword = async () => {
+    if (!createdCredentials) return;
+    setCopyError('');
+    try {
+      await navigator.clipboard.writeText(createdCredentials.password);
+      setCopied(true);
+    } catch {
+      setCopied(false);
+      setCopyError('Clipboard access failed. Select and copy the password manually.');
+    }
   };
 
   return (
@@ -53,27 +95,45 @@ export const TeamPage: React.FC = () => {
       </div>
 
       {/* Role explanation banner */}
-      <div className="bg-[#FAF6EF] border border-[#EEE6DA] rounded-2xl p-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+      <div className={`bg-[#FAF6EF] border border-[#EEE6DA] rounded-2xl p-4 grid grid-cols-1 ${isPharmacy ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-4 text-xs`}>
         <div className="flex items-start gap-3">
           <div className="w-8 h-8 rounded-xl bg-white border border-[#EEE6DA] flex items-center justify-center text-[#7FAE82] shrink-0">
             <Shield size={16} />
           </div>
           <div>
-            <div className="font-bold text-[#1C1B18]">Admin (Owner)</div>
+            <div className="font-bold text-[#1C1B18]">{isPharmacy ? 'Pharmacy Owner' : 'Admin (Owner)'}</div>
             <p className="text-[#6B665E] mt-0.5 leading-relaxed">
-              Full unconstrained access to dashboard, products, stock adjustments, suppliers, purchase orders, financial reports, team, and settings.
+              {isPharmacy
+                ? 'Full administrative control, drug license compliance, distributor purchasing, profit margin reports, and store settings.'
+                : 'Full unconstrained access to dashboard, products, stock adjustments, suppliers, purchase orders, financial reports, team, and settings.'}
             </p>
           </div>
         </div>
 
+        {isPharmacy && (
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 rounded-xl bg-white border border-[#EEE6DA] flex items-center justify-center text-[#2563EB] shrink-0">
+              <UserCheck size={16} />
+            </div>
+            <div>
+              <div className="font-bold text-[#1C1B18]">Pharmacist</div>
+              <p className="text-[#6B665E] mt-0.5 leading-relaxed">
+                Licensed drug dispensing, doctor prescription review, lot-wise batch management, and 30/60-day expiry radar.
+              </p>
+            </div>
+          </div>
+        )}
+
         <div className="flex items-start gap-3">
           <div className="w-8 h-8 rounded-xl bg-white border border-[#EEE6DA] flex items-center justify-center text-[#E8772E] shrink-0">
-            <UserCheck size={16} />
+            <Clock size={16} />
           </div>
           <div>
-            <div className="font-bold text-[#1C1B18]">Salesperson</div>
+            <div className="font-bold text-[#1C1B18]">{isPharmacy ? 'Cashier' : 'Salesperson'}</div>
             <p className="text-[#6B665E] mt-0.5 leading-relaxed">
-              Restricted exclusively to POS terminal and own billing records. All back-office pages are hidden and blocked by security guards.
+              {isPharmacy
+                ? 'Rapid counter checkout, MRP-compliant billing, payment settlement (Cash, UPI, Card), and customer receipts.'
+                : 'Restricted exclusively to POS terminal and own billing records. All back-office pages are hidden and blocked by security guards.'}
             </p>
           </div>
         </div>
@@ -127,19 +187,18 @@ export const TeamPage: React.FC = () => {
               {u.role !== 'admin' ? (
                 <button
                   type="button"
-                  onClick={() =>
-                    updateUserStatus(
-                      u.id,
-                      u.status === 'active' ? 'suspended' : 'active'
-                    )
-                  }
+                  onClick={() => void handleStatusChange(
+                    u.id,
+                    u.status === 'active' ? 'suspended' : 'active'
+                  )}
+                  disabled={updatingId === u.id}
                   className={`w-full py-1.5 px-3 text-xs font-semibold rounded-xl border transition-all cursor-pointer ${
                     u.status === 'active'
                       ? 'border-[#FDECEC] bg-[#FDECEC]/60 text-[#D64545] hover:bg-[#FDECEC]'
                       : 'border-[#EEE6DA] bg-[#FAF6EF] text-[#6B665E] hover:text-[#1C1B18] hover:bg-[#FAF6EF]/80'
                   }`}
                 >
-                  {u.status === 'active' ? 'Suspend Account' : 'Activate Account'}
+                  {updatingId === u.id ? 'Saving…' : u.status === 'active' ? 'Suspend Account' : 'Activate Account'}
                 </button>
               ) : (
                 <div className="w-full py-1.5 px-3 text-center text-xs text-[#9A948A] bg-[#FAF6EF]/70 rounded-xl border border-[#EEE6DA]/70 font-medium">
@@ -152,8 +211,10 @@ export const TeamPage: React.FC = () => {
       </div>
 
       {/* Add Member Drawer */}
+      {statusError && <p className="text-sm text-red-700" role="alert">{statusError}</p>}
       {isAddDrawerOpen && (
-        <div className="fixed inset-0 z-50 overflow-hidden">
+        <Portal>
+          <div className="fixed inset-0 z-50 overflow-hidden">
           <div
             className="fixed inset-0 bg-black/30 backdrop-blur-xs"
             onClick={() => setIsAddDrawerOpen(false)}
@@ -197,27 +258,10 @@ export const TeamPage: React.FC = () => {
                     />
                   </div>
 
-                  <div>
-                    <label className="block font-semibold text-[#1C1B18] mb-1">Temporary Password</label>
-                    <input
-                      type="text"
-                      value={tempPassword}
-                      onChange={(e) => setTempPassword(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs outline-none font-mono"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block font-semibold text-[#1C1B18] mb-1">Designated Role *</label>
-                    <select
-                      value={role}
-                      onChange={(e) => setRole(e.target.value as UserRole)}
-                      className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs bg-white outline-none"
-                    >
-                      <option value="salesperson">Salesperson (POS & Bills Only)</option>
-                      <option value="admin">Admin (Full System Access)</option>
-                    </select>
-                  </div>
+                  <p className="text-[#6B665E] leading-relaxed">
+                    A secure temporary password will be generated automatically and shown once after creation.
+                  </p>
+                  {formError && <p className="text-red-700" role="alert">{formError}</p>}
                 </form>
               </div>
 
@@ -232,14 +276,68 @@ export const TeamPage: React.FC = () => {
                 <button
                   type="submit"
                   form="team-form"
+                  disabled={creating}
                   className="px-5 py-2 rounded-xl bg-[#7FAE82] hover:bg-[#6C9C70] text-white text-xs font-semibold"
                 >
-                  Create Member
+                  {creating ? 'Creating…' : 'Create Salesperson'}
                 </button>
               </div>
             </div>
           </div>
         </div>
+        </Portal>
+      )}
+      {createdCredentials && (
+        <Portal>
+          <div className="fixed inset-0 z-[60] grid place-items-center overflow-y-auto bg-black/55 p-5">
+          <section className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="team-credential-title">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 id="team-credential-title" className="text-lg font-bold text-[#1C1B18]">Salesperson created</h2>
+                <p className="mt-2 text-sm leading-relaxed text-[#6B665E]">
+                  Share this temporary password securely with {createdCredentials.name}. It will not be available again and must be changed at first sign-in.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setCreatedCredentials(null);
+                  setCopied(false);
+                  setCopyError('');
+                }}
+                aria-label="Dismiss temporary password"
+                className="rounded-lg p-1 text-[#6B665E] hover:bg-[#FAF6EF]"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <p className="mt-4 text-sm font-medium text-[#1C1B18]">{createdCredentials.email}</p>
+            <div className="mt-2 flex items-center gap-2">
+              <code className="min-w-0 flex-1 break-all rounded-lg bg-[#F6F4F0] p-3 font-mono text-sm text-[#1C1B18]">
+                {createdCredentials.password}
+              </code>
+              <button type="button" onClick={() => void copyTemporaryPassword()} className="rounded-lg border border-[#EEE6DA] p-3" aria-label="Copy temporary password">
+                {copied ? <CheckCircle2 size={17} /> : <Copy size={17} />}
+              </button>
+            </div>
+            {copied && <p className="mt-2 text-xs text-green-700" role="status">Temporary password copied.</p>}
+            {copyError && <p className="mt-2 text-xs text-red-700" role="alert">{copyError}</p>}
+            <div className="mt-5 flex justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  setCreatedCredentials(null);
+                  setCopied(false);
+                  setCopyError('');
+                }}
+                className="rounded-xl bg-[#7FAE82] px-4 py-2 text-xs font-semibold text-white"
+              >
+                Done and dismiss
+              </button>
+            </div>
+          </section>
+        </div>
+        </Portal>
       )}
     </div>
   );

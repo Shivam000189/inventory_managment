@@ -1,14 +1,14 @@
 import { Router } from 'express'
 import * as controller from '../controllers/purchaseOrderController.js'
-import { requirePermission } from '../middleware/auth.js'
+import { requireAnyPermission } from '../middleware/auth.js'
 
 export const purchaseOrderRoutes = Router()
-purchaseOrderRoutes.use(requirePermission('view_inventory'))
 
-purchaseOrderRoutes.get('/', controller.listController)
-purchaseOrderRoutes.post('/', controller.createController)
-purchaseOrderRoutes.get('/:id', controller.getController)
-purchaseOrderRoutes.put('/:id', controller.updateController)
-purchaseOrderRoutes.patch('/:id', controller.updateController)
-purchaseOrderRoutes.patch('/:id/status', controller.statusController)
-purchaseOrderRoutes.post('/:id/status', controller.statusController)
+purchaseOrderRoutes.get('/', requireAnyPermission('view_inventory', 'manage_replenishment', 'manage_purchase_orders'), controller.listController)
+purchaseOrderRoutes.post('/', requireAnyPermission('manage_purchase_orders', 'manage_replenishment'), controller.createController)
+purchaseOrderRoutes.get('/:id', requireAnyPermission('view_inventory', 'manage_replenishment', 'manage_purchase_orders'), controller.getController)
+purchaseOrderRoutes.put('/:id', requireAnyPermission('manage_purchase_orders', 'manage_replenishment'), controller.updateController)
+purchaseOrderRoutes.patch('/:id', requireAnyPermission('manage_purchase_orders', 'manage_replenishment'), controller.updateController)
+purchaseOrderRoutes.patch('/:id/status', requireAnyPermission('manage_purchase_orders', 'manage_replenishment'), controller.statusController)
+// Deprecated alias preserved for backward compatibility
+purchaseOrderRoutes.post('/:id/status', requireAnyPermission('manage_purchase_orders', 'manage_replenishment'), controller.statusController)

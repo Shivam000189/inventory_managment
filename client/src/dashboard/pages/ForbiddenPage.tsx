@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShieldAlert, ArrowLeft, ShoppingCart } from 'lucide-react';
+import { ShieldAlert, ShoppingCart } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 export const ForbiddenPage: React.FC = () => {
@@ -12,17 +12,17 @@ export const ForbiddenPage: React.FC = () => {
       </div>
 
       <h1 className="text-2xl font-bold text-[#1C1B18] tracking-tight">
-        Access Restricted (403)
+        Access Denied / Forbidden (403)
       </h1>
 
       <p className="text-sm text-[#6B665E] max-w-md mt-2 leading-relaxed">
-        You are currently logged in as a <span className="font-semibold text-[#1C1B18] capitalize">{currentUser.role}</span>. Salesperson accounts are restricted exclusively to the POS terminal and sales records.
+        You are currently logged in as a <span className="font-semibold text-[#1C1B18] capitalize">{currentUser?.role || 'team'}</span>. Salesperson accounts are restricted exclusively to the POS terminal and sales records.
       </p>
 
       <div className="flex items-center gap-3 mt-6">
         <button
           type="button"
-          onClick={() => navigate('/app/pos')}
+          onClick={() => navigate('/pos')}
           className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#7FAE82] hover:bg-[#6C9C70] text-white text-xs font-semibold shadow-xs cursor-pointer"
         >
           <ShoppingCart size={15} />

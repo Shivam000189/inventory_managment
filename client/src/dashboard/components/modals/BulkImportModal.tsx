@@ -16,6 +16,7 @@ import {
 import { useApp } from '../../context/AppContext';
 import { productImportsApi } from '../../lib/api';
 import { formatINR } from '../../lib/formatters';
+import { Portal } from '../common/Portal';
 
 interface BulkImportModalProps {
   isOpen: boolean;
@@ -93,17 +94,20 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClos
       .split(',')
       .map((h) => h.trim().replace(/^["']|["']$/g, '').toLowerCase());
 
-    const findIndex = (aliases: string[]) =>
-      headers.findIndex((h) => aliases.some((a) => h.includes(a)));
+    const findIndex = (aliases: string[]) => {
+      const exact = headers.findIndex((h) => aliases.some((a) => h === a));
+      if (exact !== -1) return exact;
+      return headers.findIndex((h) => aliases.some((a) => h.includes(a)));
+    };
 
-    const skuIdx = findIndex(['sku', 'code', 'item_code']);
-    const nameIdx = findIndex(['name', 'title', 'product_name', 'item_name']);
-    const catIdx = findIndex(['category', 'type', 'dept']);
-    const stockIdx = findIndex(['stock', 'qty', 'quantity', 'count']);
-    const unitIdx = findIndex(['unit', 'uom']);
-    const buyIdx = findIndex(['purchase', 'cost', 'buy', 'costprice']);
-    const sellIdx = findIndex(['sell', 'retail', 'price', 'mrp', 'rate']);
-    const barcodeIdx = findIndex(['barcode', 'upc', 'ean']);
+    const skuIdx = findIndex(['sku', 'productcode', 'product_code', 'itemcode', 'item_code', 'code']);
+    const nameIdx = findIndex(['name', 'productname', 'product_name', 'product', 'itemname', 'item_name', 'item', 'title']);
+    const catIdx = findIndex(['category', 'productcategory', 'product_category', 'type', 'dept', 'department']);
+    const stockIdx = findIndex(['quantity', 'qty', 'stock', 'count', 'units']);
+    const unitIdx = findIndex(['unit', 'uom', 'measurement']);
+    const buyIdx = findIndex(['purchaseprice', 'purchase_price', 'purchase', 'costprice', 'cost_price', 'cost', 'buyprice', 'buy']);
+    const sellIdx = findIndex(['sellingprice', 'selling_price', 'selling', 'retailprice', 'retail_price', 'retail', 'saleprice', 'sale_price', 'sale', 'mrp', 'price', 'rate']);
+    const barcodeIdx = findIndex(['barcode', 'bar_code', 'ean', 'upc', 'gtin']);
 
     if (nameIdx === -1) {
       throw new Error('CSV must contain a column for Product Name ("Name", "Product Name", or "Title").');
@@ -337,7 +341,8 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClos
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150">
+    <Portal>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150">
       <div className="bg-white rounded-3xl max-w-3xl w-full border border-[#EEE6DA] shadow-2xl flex flex-col max-h-[92vh] overflow-hidden animate-in zoom-in-95 duration-150">
         {/* Header */}
         <div className="p-5 sm:p-6 border-b border-[#EEE6DA] flex items-start justify-between bg-[#FAF6EF]/50 shrink-0">
@@ -664,6 +669,7 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClos
         </div>
       </div>
     </div>
+    </Portal>
   );
 };
 

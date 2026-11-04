@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   User,
   UserRole,
@@ -30,7 +31,16 @@ import {
   notificationsApi,
   clearAuthSession,
 } from '../lib/api';
-import { initialNotifications } from '../lib/mockData';
+import {
+  initialProducts,
+  initialSuppliers,
+  initialPurchaseOrders,
+  initialBills,
+  initialCustomers,
+  initialRecentTransactions,
+} from '../lib/mockData';
+
+const UUID_PATTERN = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 
 const defaultBusinessProfile: BusinessProfile = {
   id: '00000000-6ade-f06e-2068-a3fe86739d2c',
@@ -56,6 +66,7 @@ const defaultBusinessProfile: BusinessProfile = {
   enableSerialTracking: false,
   lowStockThreshold: 12,
   businessType: 'Wholesale',
+  industry: 'pharmacy',
   taxEnabled: true,
   defaultGstRate: 12,
   upiId: 'aflixpharma@icici',
@@ -91,6 +102,59 @@ function mapBackendProduct(p: any): Product {
     supplierName: p.supplier || p.supplierName || '',
     description: p.description || '',
     active: true,
+
+    genericName: p.genericName || p.generic_name || '',
+    manufacturer: p.manufacturer || '',
+    batchNumber: p.batchNumber || p.batch_number || '',
+    manufacturingDate: p.manufacturingDate || p.manufacturing_date || undefined,
+    expiryDate: p.expiryDate || p.expiry_date || undefined,
+    mrp: p.mrp != null ? Number(p.mrp) : undefined,
+    brand: p.brand || '',
+    model: p.model || '',
+    serialNumber: p.serialNumber || p.serial_number || '',
+    imei: p.imei || '',
+    warrantyMonths: p.warrantyMonths != null ? Number(p.warrantyMonths) : (p.warranty_months != null ? Number(p.warranty_months) : undefined),
+    size: p.size || '',
+    color: p.color || '',
+    dimensions: p.dimensions || '',
+    material: p.material || '',
+    weight: p.weight != null ? Number(p.weight) : undefined,
+    wholesalePrice: p.wholesalePrice != null ? Number(p.wholesalePrice) : (p.wholesale_price != null ? Number(p.wholesale_price) : undefined),
+    wholesaleMinQuantity: p.wholesaleMinQuantity != null ? Number(p.wholesaleMinQuantity) : (p.wholesale_min_quantity != null ? Number(p.wholesale_min_quantity) : undefined),
+    dealerPrice: p.dealerPrice != null ? Number(p.dealerPrice) : (p.dealer_price != null ? Number(p.dealer_price) : undefined),
+    warehouse: p.warehouse || '',
+    rackLocation: p.rackLocation || p.rack_location || '',
+  };
+}
+
+function mapBusinessProfileFromBackend(b: any, prev: BusinessProfile): BusinessProfile {
+  if (!b) return prev;
+  const settings = b.settings || {};
+  return {
+    ...prev,
+    id: b.businessId || b.id || prev.id,
+    name: b.name || prev.name,
+    legalName: b.legalName || b.name || prev.legalName,
+    currency: b.currency || prev.currency || 'INR',
+    currencySymbol: b.currency === 'USD' ? '$' : '₹',
+    businessType: b.businessType || prev.businessType,
+    industry: b.industry || prev.industry || '',
+    address: b.address || (b.city ? `${b.city}, India` : prev.address),
+    city: b.city || prev.city,
+    state: b.state || prev.state,
+    phone: b.phone || prev.phone,
+    email: b.email || prev.email,
+    taxNumber: b.gstin || b.taxNumber || settings.taxNumber || prev.taxNumber,
+    gstin: b.gstin || settings.gstin || prev.gstin,
+    upiId: b.upiId || settings.upiId || prev.upiId,
+    drugLicenseNumber: b.drugLicenseNumber || settings.drugLicenseNumber || prev.drugLicenseNumber,
+    drugLicense20B: b.drugLicense20B || settings.drugLicense20B || prev.drugLicense20B,
+    drugLicense21B: b.drugLicense21B || settings.drugLicense21B || prev.drugLicense21B,
+    pharmacistInCharge: b.pharmacistInCharge || settings.pharmacistInCharge || prev.pharmacistInCharge,
+    taxEnabled: settings.taxEnabled !== undefined ? settings.taxEnabled : prev.taxEnabled,
+    defaultGstRate: settings.defaultGstRate !== undefined ? settings.defaultGstRate : prev.defaultGstRate,
+    allowNegativeStock: settings.allowNegativeStock !== undefined ? settings.allowNegativeStock : prev.allowNegativeStock,
+    lowStockThreshold: settings.lowStockLimit !== undefined ? settings.lowStockLimit : prev.lowStockThreshold,
   };
 }
 
@@ -108,6 +172,28 @@ function mapProductToBackend(p: Partial<Product>) {
     gstRate: p.taxRate,
     supplierId: p.supplierId,
     description: p.description,
+
+    genericName: p.genericName,
+    manufacturer: p.manufacturer,
+    batchNumber: p.batchNumber,
+    manufacturingDate: p.manufacturingDate,
+    expiryDate: p.expiryDate,
+    mrp: p.mrp,
+    brand: p.brand,
+    model: p.model,
+    serialNumber: p.serialNumber,
+    imei: p.imei,
+    warrantyMonths: p.warrantyMonths,
+    size: p.size,
+    color: p.color,
+    dimensions: p.dimensions,
+    material: p.material,
+    weight: p.weight,
+    wholesalePrice: p.wholesalePrice,
+    wholesaleMinQuantity: p.wholesaleMinQuantity,
+    dealerPrice: p.dealerPrice,
+    warehouse: p.warehouse,
+    rackLocation: p.rackLocation,
   };
 }
 
@@ -193,12 +279,12 @@ function mapBackendSalesOrder(so: any): Bill {
   const isValidDate = !isNaN(parsed.getTime());
   const dateStr = isValidDate
     ? parsed.toLocaleString('en-GB', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      })
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
     : (so.date || 'Today');
 
   const total = Number(
@@ -269,6 +355,8 @@ function mapBackendNotification(item: any): AppNotification {
   const typeMap: Record<string, AppNotification['type']> = {
     LOW_STOCK: 'low_stock',
     OUT_OF_STOCK: 'low_stock',
+    PRODUCT_EXPIRED: 'low_stock',
+    PRODUCT_NEAR_EXPIRY: 'low_stock',
     low_stock: 'low_stock',
     PURCHASE_DELIVERY_OVERDUE: 'po_due',
     PURCHASE_ORDER_CREATED: 'po_due',
@@ -279,19 +367,34 @@ function mapBackendNotification(item: any): AppNotification {
     sale: 'sale',
   };
 
-  const type = typeMap[item.type] || (item.category === 'inventory' ? 'low_stock' : 'sale');
+  const categoryType: Partial<Record<string, AppNotification['type']>> = {
+    inventory: 'low_stock',
+    purchases: 'po_due',
+    suppliers: 'po_due',
+    payments: 'payment',
+    sales: 'sale',
+  };
+  const navigationLinks: Record<string, string> = {
+    Products: '/products',
+    Payments: '/reports',
+    'Purchase Orders': '/purchase-orders',
+    Receiving: '/purchase-orders',
+    Orders: '/pos',
+  };
+
+  const type = typeMap[item.type] || categoryType[item.category] || 'sale';
   const d = item.createdAt ? new Date(item.createdAt) : new Date();
   const isToday = !isNaN(d.getTime()) && new Date().toDateString() === d.toDateString();
 
   return {
-    id: String(item.id || item.notificationId || item._id || `notif-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`),
+    id: String(item.id || item.notificationId || item._id),
     title: item.title || (type === 'low_stock' ? 'Low Stock Alert' : 'Notification'),
     message: item.message || item.secondary || '',
     type,
     time: isToday ? 'Today' : (d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) || 'Earlier'),
     dateGroup: isToday ? 'Today' : 'Earlier',
     unread: item.readAt ? false : true,
-    link: type === 'low_stock' ? '/app/inventory' : item.navigationTarget === 'Orders' ? '/app/pos' : '/app/inventory',
+    link: navigationLinks[item.navigationTarget] || '/inventory',
   };
 }
 
@@ -334,9 +437,16 @@ interface AppContextType {
   // Backend status & Authentication
   isBackendConnected: boolean;
   isLoadingBackend: boolean;
+  loadingStates: {
+    products: boolean;
+    suppliers: boolean;
+    customers: boolean;
+    purchaseOrders: boolean;
+    salesOrders: boolean;
+    inventory: boolean;
+  };
   refreshBackendData: () => Promise<void>;
   isAuthenticated: boolean;
-  loginWithSession: (session: { user: any; business?: any }) => void;
   logout: () => Promise<void>;
 
   // Navigation & Role
@@ -347,7 +457,7 @@ interface AppContextType {
   setCurrentUser: (user: User) => void;
   switchRole: (role: UserRole) => void;
   users: User[];
-  addUser: (user: Omit<User, 'id' | 'lastLogin'>) => void;
+  addUser: (user: Omit<User, 'id' | 'lastLogin' | 'accountId' | 'memberId'>) => Promise<{ user: User; temporaryPassword: string }>;
   updateUserStatus: (id: string, status: 'active' | 'suspended') => void;
   deleteUser: (id: string) => void;
 
@@ -443,54 +553,26 @@ export const AppProvider: React.FC<AppProviderProps> = ({
   const [bills, setBills] = useState<Bill[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [stockMovements, setStockMovements] = useState<StockMovement[]>([]);
-  const [notifications, setNotifications] = useState<AppNotification[]>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem('stockroom_notifications');
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-        }
-      } catch {
-        /* ignore */
-      }
-    }
-    return initialNotifications;
-  });
-
-  useEffect(() => {
-    if (typeof window !== 'undefined' && notifications.length > 0) {
-      try {
-        localStorage.setItem('stockroom_notifications', JSON.stringify(notifications));
-      } catch {
-        /* ignore */
-      }
-    }
-  }, [notifications]);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
 
   // Backend live state
   const [isBackendConnected, setIsBackendConnected] = useState(false);
   const [isLoadingBackend, setIsLoadingBackend] = useState(true);
-
-  // Navigation
-  const [activeRoute, setActiveRoute] = useState<string>(() => {
-    if (typeof window !== 'undefined' && window.location.pathname) {
-      return window.location.pathname;
-    }
-    return '/';
+  const [loadingStates, setLoadingStates] = useState({
+    products: true,
+    suppliers: true,
+    customers: true,
+    purchaseOrders: true,
+    salesOrders: true,
+    inventory: true,
   });
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false;
-    return Boolean(localStorage.getItem('sr_token') || sessionStorage.getItem('sr_auth'));
-  });
+  const hasInitializedRef = React.useRef(false);
 
-  useEffect(() => {
-    const handlePopState = () => {
-      setActiveRoute(window.location.pathname || '/');
-    };
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
+  // Navigation (React Router as single source of truth)
+  const location = useLocation();
+  const routerNavigate = useNavigate();
+  const activeRoute = location.pathname || '/';
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => Boolean(initialUser));
   useEffect(() => {
     if (initialUser) {
       const u = initialUser;
@@ -515,15 +597,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({
 
   useEffect(() => {
     if (initialBusiness) {
-      const b = initialBusiness;
-      setBusinessProfile((prev) => ({
-        ...prev,
-        id: b.businessId || b.id || prev.id,
-        name: b.name || prev.name,
-        currency: b.currency || 'INR',
-        businessType: b.businessType || prev.businessType,
-        address: b.address || (b.city ? `${b.city}, India` : prev.address),
-      }));
+      setBusinessProfile((prev) => mapBusinessProfileFromBackend(initialBusiness, prev));
     }
   }, [initialBusiness]);
 
@@ -541,22 +615,21 @@ export const AppProvider: React.FC<AppProviderProps> = ({
   // Connect to backend and fetch live database records
   const refreshBackendData = async () => {
     setIsLoadingBackend(true);
+    setLoadingStates({
+      products: true,
+      suppliers: true,
+      customers: true,
+      purchaseOrders: true,
+      salesOrders: true,
+      inventory: true,
+    });
+    let session: any = null;
     try {
-      // 1. Check existing session or authenticate with the live database account
-      let session: any = null;
+      // 1. Check existing session without hard-coded credentials
       try {
         session = await authApi.me();
       } catch {
-        if (!initialUser) {
-          try {
-            session = await authApi.login({
-              email: 'shivam12@gmail.com',
-              password: 'admin12345',
-            });
-          } catch (loginErr) {
-            console.warn('Backend session fallback note:', loginErr);
-          }
-        }
+        // Me failed; proceed without silent authentication
       }
 
       if (session?.user) {
@@ -578,14 +651,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({
       }
 
       if (session?.business) {
-        setBusinessProfile((prev) => ({
-          ...prev,
-          id: session.business.businessId || session.business.id || prev.id,
-          name: session.business.name || prev.name,
-          currency: session.business.currency || 'INR',
-          businessType: session.business.businessType || prev.businessType,
-          address: session.business.address || (session.business.city ? `${session.business.city}, India` : prev.address),
-        }));
+        setBusinessProfile((prev) => mapBusinessProfileFromBackend(session.business, prev));
       }
 
       // Helper to cleanly unwrap backend arrays from various wrapper shapes
@@ -625,17 +691,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({
       ]);
 
       if (bizRes.status === 'fulfilled' && bizRes.value) {
-        const b = bizRes.value;
-        setBusinessProfile((prev) => ({
-          ...prev,
-          id: b.businessId || b.id || prev.id,
-          name: b.name || prev.name,
-          currency: b.currency || 'INR',
-          businessType: b.businessType || prev.businessType,
-          address: b.address || (b.city ? `${b.city}, India` : prev.address),
-          phone: b.phone || prev.phone,
-          email: b.email || prev.email,
-        }));
+        setBusinessProfile((prev) => mapBusinessProfileFromBackend(bizRes.value, prev));
       }
 
       let loadedProducts: Product[] = [];
@@ -689,7 +745,9 @@ export const AppProvider: React.FC<AppProviderProps> = ({
               .slice(0, 2)
               .toUpperCase();
             return {
-              id: String(m.id || m._id || m.userId || m.accountId || `user-${Date.now()}`),
+              id: String(m.id || m.memberId || m._id || m.userId || m.accountId || `user-${Date.now()}`),
+              memberId: String(m.memberId || m.id || m._id || ''),
+              accountId: String(m.accountId || m.userId || m.account_id || ''),
               name: m.name || m.email,
               email: m.email,
               role: (m.roleId === 'ROLE-ADMIN' || m.role === 'admin' || m.role === 'owner') ? 'admin' : 'salesperson',
@@ -702,30 +760,40 @@ export const AppProvider: React.FC<AppProviderProps> = ({
         }
       }
 
-      if (notifsRes.status === 'fulfilled' && notifsRes.value) {
+      if (notifsRes.status === 'fulfilled') {
         const notifList = extractArray(notifsRes.value);
-        if (notifList.length > 0) {
-          const mapped = notifList.map(mapBackendNotification);
-          setNotifications((prev) => {
-            const existingKeys = new Set(prev.map((n) => n.id));
-            const fresh = mapped.filter((n) => !existingKeys.has(n.id));
-            return [...fresh, ...prev];
-          });
+        const validNotifications = notifList.filter((item) =>
+          UUID_PATTERN.test(String(item.id || item.notificationId || item._id || '')),
+        );
+        if (validNotifications.length !== notifList.length) {
+          console.warn('Ignoring notifications without valid database IDs.');
         }
+        setNotifications(validNotifications.map(mapBackendNotification));
+      } else {
+        setNotifications([]);
+        console.warn('Failed to load notifications from the backend:', notifsRes.reason);
       }
 
-      if (loadedProducts.length > 0) {
-        syncExistingLowStockNotifications(loadedProducts);
-      }
     } catch (err) {
       console.warn('Backend live sync notice:', err);
     } finally {
+      setLoadingStates({
+        products: false,
+        suppliers: false,
+        customers: false,
+        purchaseOrders: false,
+        salesOrders: false,
+        inventory: false,
+      });
       setIsLoadingBackend(false);
     }
   };
 
   useEffect(() => {
-    refreshBackendData();
+    if (!hasInitializedRef.current) {
+      hasInitializedRef.current = true;
+      refreshBackendData();
+    }
   }, []);
 
   // Global keyboard shortcuts (⌘K or / to open search)
@@ -759,63 +827,23 @@ export const AppProvider: React.FC<AppProviderProps> = ({
     setCurrentUser(targetUser);
 
     if (role === 'salesperson') {
-      setActiveRoute('/app/pos');
+      setActiveRoute('/pos');
     }
   };
 
-  const navigate = (route: string) => {
-    setActiveRoute(route);
+  const navigate = useCallback((route: string) => {
     if (onNavigate) {
       onNavigate(route);
     }
-    if (typeof window !== 'undefined' && window.location.pathname !== route) {
-      try {
-        window.history.pushState({}, '', route);
-      } catch {
-        // non-fatal in restricted iframes
-      }
+    routerNavigate(route);
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+  }, [onNavigate, routerNavigate]);
 
-  const loginWithSession = (session: { user: any; business?: any }) => {
-    setIsAuthenticated(true);
-    if (typeof sessionStorage !== 'undefined') {
-      sessionStorage.setItem('sr_auth', '1');
-    }
-    if (session?.user) {
-      const u = session.user;
-      const initials = (u.name || u.email || 'US')
-        .split(' ')
-        .map((n: string) => n[0])
-        .join('')
-        .slice(0, 2)
-        .toUpperCase();
-      setCurrentUser({
-        id: u.id || u.accountId || 'user-01',
-        name: u.name || u.email || 'Demo User',
-        email: u.email || 'demo@stockroom.test',
-        role: u.role === 'owner' || u.role === 'admin' ? 'admin' : 'salesperson',
-        avatarInitials: initials,
-        status: 'active',
-        lastLogin: 'Just now',
-      });
-    }
-    if (session?.business) {
-      const b = session.business;
-      setBusinessProfile((prev) => ({
-        ...prev,
-        id: b.businessId || b.id || prev.id,
-        name: b.name || prev.name,
-        currency: b.currency || 'INR',
-        businessType: b.businessType || prev.businessType,
-        address: b.address || (b.city ? `${b.city}, India` : prev.address),
-      }));
-    }
-    setIsBackendConnected(true);
-    refreshBackendData();
-    navigate('/app/overview');
-  };
+  const setActiveRoute = useCallback((route: string) => {
+    routerNavigate(route);
+  }, [routerNavigate]);
 
   const logout = async () => {
     try {
@@ -824,9 +852,6 @@ export const AppProvider: React.FC<AppProviderProps> = ({
       // non-fatal
     }
     clearAuthSession();
-    if (typeof sessionStorage !== 'undefined') {
-      sessionStorage.removeItem('sr_auth');
-    }
     setIsAuthenticated(false);
     if (onLogout) {
       onLogout();
@@ -881,13 +906,6 @@ export const AppProvider: React.FC<AppProviderProps> = ({
   };
 
   const updateProduct = (id: string, updated: Partial<Product>) => {
-    const target = products.find((p) => p.id === id);
-    if (target && updated.stock !== undefined && updated.stock < target.stock) {
-      const threshold = updated.reorderLevel !== undefined ? updated.reorderLevel : (target.reorderLevel || 10);
-      if (updated.stock <= threshold) {
-        triggerLowStockNotification(target, target.stock, updated.stock, threshold);
-      }
-    }
     setProducts((prev) => prev.map((p) => (p.id === id ? { ...p, ...updated } : p)));
     productsApi.update(id, mapProductToBackend(updated)).catch((err) =>
       console.warn('Failed to update product on backend:', err)
@@ -899,64 +917,6 @@ export const AppProvider: React.FC<AppProviderProps> = ({
     productsApi.delete(id).catch((err) => console.warn('Failed to delete product on backend:', err));
   };
 
-  
-  const triggerLowStockNotification = (
-    product: Product,
-    previousStock: number,
-    newStock: number,
-    threshold: number
-  ) => {
-    if (newStock < previousStock && newStock <= threshold) {
-      const isOut = newStock <= 0;
-      const title = isOut ? 'Out of Stock Alert' : 'Low Stock Alert';
-      const message = isOut
-        ? `${product.name} (${product.sku}) is out of stock (0 units remaining).`
-        : `${product.name} (${product.sku}) stock decreased from ${previousStock} to ${newStock} units (low stock threshold: ${threshold}).`;
-
-      const newNotif: AppNotification = {
-        id: `notif-lowstock-${Date.now()}-${product.id}-${newStock}`,
-        title,
-        message,
-        type: 'low_stock',
-        time: 'Just now',
-        dateGroup: 'Today',
-        unread: true,
-        link: '/app/inventory',
-      };
-
-      setNotifications((prev) => [newNotif, ...prev]);
-    }
-  };
-
-  const syncExistingLowStockNotifications = (productList: Product[]) => {
-    setNotifications((prev) => {
-      const newAlerts: AppNotification[] = [];
-      for (const prod of productList) {
-        const threshold = prod.reorderLevel || 10;
-        if (prod.stock <= threshold) {
-          const alreadyNotified = prev.some(
-            (n) => n.type === 'low_stock' && (n.message.includes(prod.sku) || n.message.includes(prod.name))
-          );
-          if (!alreadyNotified) {
-            const isOut = prod.stock <= 0;
-            newAlerts.push({
-              id: `notif-init-${prod.id}-${prod.stock}`,
-              title: isOut ? 'Out of Stock Alert' : 'Low Stock Alert',
-              message: isOut
-                ? `${prod.name} (${prod.sku}) is out of stock (0 units remaining).`
-                : `${prod.name} (${prod.sku}) is below low stock level: only ${prod.stock} left (reorder level: ${threshold}).`,
-              type: 'low_stock',
-              time: 'Today',
-              dateGroup: 'Today',
-              unread: true,
-              link: '/app/inventory',
-            });
-          }
-        }
-      }
-      return newAlerts.length > 0 ? [...newAlerts, ...prev] : prev;
-    });
-  };
 
   // Stock operations
   const adjustStock = (productId: string, newStock: number, reason: string, note?: string) => {
@@ -965,15 +925,9 @@ export const AppProvider: React.FC<AppProviderProps> = ({
     const prevStock = target.stock;
     const diff = newStock - target.stock;
     if (diff === 0) return;
-    const threshold = target.reorderLevel || 10;
-
     setProducts((prev) =>
       prev.map((p) => (p.id === productId ? { ...p, stock: newStock } : p))
     );
-
-    if (newStock < prevStock && newStock <= threshold) {
-      triggerLowStockNotification(target, prevStock, newStock, threshold);
-    }
 
     const movement: StockMovement = {
       id: `tx-${Date.now()}`,
@@ -1038,17 +992,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({
   const stockOut = (productId: string, quantity: number, reason: string, note?: string) => {
     const target = products.find((p) => p.id === productId);
     if (!target) return;
-    const prevStock = target.stock;
     const newStock = Math.max(0, target.stock - quantity);
-    const threshold = target.reorderLevel || 10;
 
     setProducts((prev) =>
       prev.map((p) => (p.id === productId ? { ...p, stock: newStock } : p))
     );
-
-    if (newStock < prevStock && newStock <= threshold) {
-      triggerLowStockNotification(target, prevStock, newStock, threshold);
-    }
 
     const movement: StockMovement = {
       id: `tx-${Date.now()}`,
@@ -1215,17 +1163,6 @@ export const AppProvider: React.FC<AppProviderProps> = ({
     );
     purchaseOrdersApi.updateStatus(poId, newStatus).catch(() => { });
 
-    const newNotif: AppNotification = {
-      id: `notif-${Date.now()}`,
-      title: 'PO Received',
-      message: `${po.poNumber} items received from ${po.supplierName}. Inventory updated.`,
-      type: 'po_due',
-      time: 'Just now',
-      dateGroup: 'Today',
-      unread: true,
-      link: '/app/inventory',
-    };
-    setNotifications((prev) => [newNotif, ...prev]);
   };
 
   // POS & Billing
@@ -1254,10 +1191,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({
       salespersonId: currentUser.id,
     };
 
-        newBill.items.forEach((item) => {
-      const prod = products.find((p) => p.id === item.productId);
-      const prevStock = prod ? prod.stock : 0;
-      const threshold = prod ? (prod.reorderLevel || 10) : 10;
+    newBill.items.forEach((item) => {
+      const prevStock = products.find((p) => p.id === item.productId)?.stock || 0;
       const newStock = businessProfile.allowNegativeStock
         ? prevStock - item.quantity
         : Math.max(0, prevStock - item.quantity);
@@ -1273,10 +1208,6 @@ export const AppProvider: React.FC<AppProviderProps> = ({
           return p;
         })
       );
-
-      if (prod && newStock < prevStock && newStock <= threshold) {
-        triggerLowStockNotification(prod, prevStock, newStock, threshold);
-      }
 
       const movement: StockMovement = {
         id: `tx-${Date.now()}-${item.productId}`,
@@ -1338,9 +1269,9 @@ export const AppProvider: React.FC<AppProviderProps> = ({
         newCustomer:
           newBill.customerName && newBill.customerName.toLowerCase() !== 'walk-in customer'
             ? {
-                name: newBill.customerName,
-                phone: newBill.customerPhone || '',
-              }
+              name: newBill.customerName,
+              phone: newBill.customerPhone || '',
+            }
             : undefined,
         billingType: 'retail',
         payments: [
@@ -1365,20 +1296,6 @@ export const AppProvider: React.FC<AppProviderProps> = ({
         refreshBackendData();
       })
       .catch((err) => console.warn('Failed to record checkout on backend:', err));
-
-    const newNotif: AppNotification = {
-      id: `notif-${Date.now()}`,
-      title: 'New Bill Created',
-      message: `${billNumber} created for ₹ ${newBill.total.toLocaleString(
-        'en-IN'
-      )} by ${currentUser.name}.`,
-      type: 'sale',
-      time: 'Just now',
-      dateGroup: 'Today',
-      unread: true,
-      link: '/app/pos',
-    };
-    setNotifications((prev) => [newNotif, ...prev]);
 
     return newBill;
   };
@@ -1486,71 +1403,55 @@ export const AppProvider: React.FC<AppProviderProps> = ({
       })
       .catch((err) => console.warn('Failed to record payment on backend:', err));
 
-    const newNotif: AppNotification = {
-      id: `notif-${Date.now()}`,
-      title: 'Customer Payment',
-      message: `Received ₹ ${amount.toLocaleString('en-IN')} from ${target?.name || 'Customer'
-        } via ${method}.`,
-      type: 'payment',
-      time: 'Just now',
-      dateGroup: 'Today',
-      unread: true,
-      link: '/app/customers',
-    };
-    setNotifications((prev) => [newNotif, ...prev]);
   };
 
   // Users & Team
-  const addUser = (userData: Omit<User, 'id' | 'lastLogin'>) => {
+  const addUser = async (
+    userData: Omit<User, 'id' | 'lastLogin' | 'accountId' | 'memberId'>,
+  ): Promise<{ user: User; temporaryPassword: string }> => {
     const initials = userData.name
       .split(' ')
       .map((n) => n[0])
       .join('')
       .toUpperCase()
       .slice(0, 2);
-    const tempId = `user-${Date.now()}`;
+    const saved = await usersApi.invite({
+      name: userData.name,
+      email: userData.email,
+      roleId: 'ROLE-SALESPERSON',
+    });
+    if (!saved || typeof saved.id !== 'string' || typeof saved.accountId !== 'string' ||
+      typeof saved.temporaryPassword !== 'string' || !saved.temporaryPassword) {
+      throw new Error('The server returned an invalid account-creation response. Contact support before signing in.');
+    }
+
     const newUser: User = {
       ...userData,
-      id: tempId,
+      id: saved.id,
+      memberId: saved.id,
+      accountId: saved.accountId,
       avatarInitials: initials,
       lastLogin: 'Never',
+      status: 'active',
     };
     setUsers((prev) => [...prev, newUser]);
-
-    // Persist to database via API
-    usersApi
-      .invite({
-        name: userData.name,
-        email: userData.email,
-        role: userData.role === 'admin' ? 'ROLE-ADMIN' : 'ROLE-SALESPERSON',
-        password: userData.tempPassword || 'Pass@1234',
-        tempPassword: userData.tempPassword || 'Pass@1234',
-        status: 'active',
-      })
-      .then((res: any) => {
-        const saved = res?.data || res;
-        if (saved) {
-          setUsers((prev) =>
-            prev.map((u) =>
-              u.id === tempId
-                ? {
-                    ...u,
-                    id: String(saved.id || saved.userId || saved._id || saved.accountId || u.id),
-                    status: 'active',
-                  }
-                : u
-            )
-          );
-        }
-      })
-      .catch((err) => console.warn('Failed to add user to database:', err));
+    return { user: newUser, temporaryPassword: saved.temporaryPassword };
   };
 
-  const updateUserStatus = (id: string, status: 'active' | 'suspended') => {
+  const updateUserStatus = async (id: string, status: 'active' | 'suspended') => {
+    const currentUser = users.find((user) => user.id === id);
+    if (!currentUser?.accountId) {
+      throw new Error('Unable to identify this salesperson account. Refresh the page and try again.');
+    }
     setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, status } : u)));
-    usersApi
-      .update(id, { status: status === 'suspended' ? 'inactive' : 'active' })
-      .catch((err) => console.warn('Failed to update user status on backend:', err));
+    try {
+      await usersApi.setStatus(currentUser.accountId, status === 'suspended' ? 'inactive' : 'active');
+    } catch (error) {
+      setUsers((prev) => prev.map((user) => (
+        user.id === id ? { ...user, status: currentUser.status } : user
+      )));
+      throw error;
+    }
   };
 
   const deleteUser = (id: string) => {
@@ -1560,13 +1461,19 @@ export const AppProvider: React.FC<AppProviderProps> = ({
 
   // Notifications
   const markAllNotificationsAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
-    notificationsApi.markAllRead().catch(() => {});
+    notificationsApi.markAllRead()
+      .then(() => setNotifications((prev) => prev.map((n) => ({ ...n, unread: false }))))
+      .catch((err) => console.warn('Failed to mark notifications as read:', err));
   };
 
   const markNotificationAsRead = (id: string) => {
-    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, unread: false } : n)));
-    notificationsApi.markRead(id).catch(() => {});
+    if (!UUID_PATTERN.test(id)) {
+      console.warn('Ignoring mark-read request for an invalid notification ID.');
+      return;
+    }
+    notificationsApi.markRead(id)
+      .then(() => setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, unread: false } : n))))
+      .catch((err) => console.warn('Failed to mark notification as read:', err));
   };
 
   // Helper to determine if a bill was created on today's date
@@ -1614,72 +1521,97 @@ export const AppProvider: React.FC<AppProviderProps> = ({
     (p) => p.status === 'Ordered' || p.status === 'Partially received'
   ).length;
 
+  const contextValue = useMemo(() => ({
+    isBackendConnected,
+    isLoadingBackend,
+    loadingStates,
+    refreshBackendData,
+    isAuthenticated,
+    logout,
+    activeRoute,
+    setActiveRoute,
+    navigate,
+    currentUser,
+    setCurrentUser,
+    switchRole,
+    users,
+    addUser,
+    updateUserStatus,
+    deleteUser,
+    businessProfile,
+    updateBusinessProfile,
+    products,
+    addProduct,
+    updateProduct,
+    deleteProduct,
+    stockMovements,
+    adjustStock,
+    stockIn,
+    stockOut,
+    suppliers,
+    addSupplier,
+    updateSupplier,
+    deleteSupplier,
+    purchaseOrders,
+    createPurchaseOrder,
+    updatePOStatus,
+    receivePOItems,
+    bills,
+    createBill,
+    cancelBill,
+    posActiveTab,
+    setPosActiveTab,
+    customers,
+    addCustomer,
+    updateCustomer,
+    deleteCustomer,
+    recordCustomerPayment,
+    customersActiveTab,
+    setCustomersActiveTab,
+    isCommandPaletteOpen,
+    setCommandPaletteOpen,
+    isNotificationDrawerOpen,
+    setNotificationDrawerOpen,
+    notifications,
+    markAllNotificationsAsRead,
+    markNotificationAsRead,
+    selectedDateRange,
+    setSelectedDateRange,
+    metrics: {
+      totalStockValue,
+      todaySales,
+      lowStockCount,
+      openPOCount,
+    },
+  }), [
+    isBackendConnected,
+    isLoadingBackend,
+    loadingStates,
+    isAuthenticated,
+    activeRoute,
+    currentUser,
+    users,
+    businessProfile,
+    products,
+    stockMovements,
+    suppliers,
+    purchaseOrders,
+    bills,
+    posActiveTab,
+    customers,
+    customersActiveTab,
+    isCommandPaletteOpen,
+    isNotificationDrawerOpen,
+    notifications,
+    selectedDateRange,
+    totalStockValue,
+    todaySales,
+    lowStockCount,
+    openPOCount,
+  ]);
+
   return (
-    <AppContext.Provider
-      value={{
-        isBackendConnected,
-        isLoadingBackend,
-        refreshBackendData,
-        isAuthenticated,
-        loginWithSession,
-        logout,
-        activeRoute,
-        setActiveRoute,
-        navigate,
-        currentUser,
-        setCurrentUser,
-        switchRole,
-        users,
-        addUser,
-        updateUserStatus,
-        deleteUser,
-        businessProfile,
-        updateBusinessProfile,
-        products,
-        addProduct,
-        updateProduct,
-        deleteProduct,
-        stockMovements,
-        adjustStock,
-        stockIn,
-        stockOut,
-        suppliers,
-        addSupplier,
-        updateSupplier,
-        deleteSupplier,
-        purchaseOrders,
-        createPurchaseOrder,
-        updatePOStatus,
-        receivePOItems,
-        bills,
-        createBill,
-        cancelBill,
-        posActiveTab,
-        setPosActiveTab,
-        customers,
-        addCustomer,
-        updateCustomer,
-        deleteCustomer,
-        recordCustomerPayment,
-        customersActiveTab,
-        setCustomersActiveTab,
-        isCommandPaletteOpen,
-        setCommandPaletteOpen,
-        isNotificationDrawerOpen,
-        setNotificationDrawerOpen,
-        notifications,
-        markAllNotificationsAsRead,
-        markNotificationAsRead,
-        selectedDateRange,
-        setSelectedDateRange,
-        metrics: {
-          totalStockValue,
-          todaySales,
-          lowStockCount,
-          openPOCount,
-        },
-      }}
-    >
+    <AppContext.Provider value={contextValue}>
       {children}
     </AppContext.Provider>
   );

@@ -20,10 +20,19 @@ export function errorHandler(error, _req, res, _next) {
     message = `Invalid ${error.path}: ${error.value}`
   } else if (error.code === 11000 || error.code === '23505') {
     statusCode = 409
-    message = error.detail || `Duplicate entry for a unique field.`
+    message = isProduction ? 'A record with this unique identifier already exists.' : (error.detail || 'Duplicate entry for a unique field.')
   } else if (error.code === '23503') {
     statusCode = 400
-    message = `Referenced record does not exist (${error.detail || ''}).`
+    message = isProduction ? 'Referenced record does not exist or has associated data.' : `Referenced record does not exist (${error.detail || ''}).`
+  } else if (error.code === '23502') {
+    statusCode = 400
+    message = isProduction ? 'A required field was not provided.' : `Required column cannot be null (${error.column || ''}).`
+  } else if (error.code === '23514') {
+    statusCode = 400
+    message = 'Operation violates validation constraints.'
+  } else if (error.code === '22P02') {
+    statusCode = 400
+    message = 'Invalid data format or identifier provided.'
   } else if (error.name === 'MulterError') {
     statusCode = error.code === 'LIMIT_FILE_SIZE' ? 413 : 400
     message = error.code === 'LIMIT_FILE_SIZE' ? 'The upload exceeds the 15 MB file limit.' : `Invalid upload: ${error.message}`

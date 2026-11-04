@@ -607,6 +607,48 @@ CREATE TABLE IF NOT EXISTS product_imports (
 );
 
 -- ----------------------------------------------------------------------------
+
+-- PRODUCT BATCHES TABLE (Pharmacy & Batch-tracked lots)
+CREATE TABLE IF NOT EXISTS product_batches (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+    product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    batch_number TEXT NOT NULL,
+    manufacturing_date TIMESTAMPTZ DEFAULT NULL,
+    expiry_date TIMESTAMPTZ NOT NULL,
+    mrp NUMERIC(15, 2) NOT NULL DEFAULT 0,
+    purchase_price NUMERIC(15, 2) NOT NULL DEFAULT 0,
+    selling_price NUMERIC(15, 2) NOT NULL DEFAULT 0,
+    current_stock NUMERIC(15, 3) NOT NULL DEFAULT 0,
+    supplier_id UUID REFERENCES suppliers(id) ON DELETE SET NULL,
+    notes TEXT DEFAULT '',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_product_batches_batch UNIQUE (business_id, product_id, batch_number)
+);
+
+-- PRESCRIPTIONS TABLE (Pharmacy Doctor & Patient Rx tracking)
+CREATE TABLE IF NOT EXISTS prescriptions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+    prescription_number TEXT NOT NULL,
+    doctor_name TEXT NOT NULL,
+    doctor_reg_number TEXT DEFAULT '',
+    hospital_name TEXT DEFAULT '',
+    patient_name TEXT NOT NULL,
+    patient_phone TEXT DEFAULT '',
+    patient_age INT DEFAULT NULL,
+    patient_gender TEXT DEFAULT '',
+    prescription_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    diagnosis TEXT DEFAULT '',
+    notes TEXT DEFAULT '',
+    sales_order_id UUID REFERENCES sales_orders(id) ON DELETE SET NULL,
+    items JSONB NOT NULL DEFAULT '[]'::jsonb,
+    status TEXT NOT NULL DEFAULT 'Active' CHECK (status IN ('Active', 'Dispensed', 'Expired', 'Cancelled')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 -- 7. PERFORMANCE INDEXES
 -- ----------------------------------------------------------------------------
 CREATE INDEX IF NOT EXISTS idx_users_business ON users(business_id);

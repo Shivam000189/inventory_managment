@@ -51,44 +51,433 @@ export interface SkeletonProps {
   width?: string | number;
   height?: string | number;
   borderRadius?: string | number;
+  circle?: boolean;
   className?: string;
   style?: React.CSSProperties;
 }
 
-export function Skeleton({ width = '100%', height = 20, borderRadius = 'var(--radius-xs)', className = '', style = {} }: SkeletonProps) {
+export function Skeleton({
+  width = '100%',
+  height = 20,
+  borderRadius,
+  circle = false,
+  className = '',
+  style = {},
+}: SkeletonProps) {
+  const actualRadius = circle ? '50%' : borderRadius !== undefined ? borderRadius : 'var(--radius-xs, 6px)';
+  const actualWidth = circle && height ? height : width;
   return (
     <div
       className={`ui-skeleton-pulse ${className}`}
-      style={{ width, height, borderRadius, ...style }}
+      style={{ width: actualWidth, height, borderRadius: actualRadius, ...style }}
       aria-hidden="true"
     />
   )
 }
 
-export function PageSkeleton() {
+export interface StatCardSkeletonProps {
+  className?: string;
+}
+
+export function StatCardSkeleton({ className = '' }: StatCardSkeletonProps) {
   return (
     <div
-      className="ui-page-skeleton"
-      style={{ padding: '24px 0', display: 'flex', flexDirection: 'column', gap: '20px' }}
-      aria-busy="true"
-      aria-label="Loading page"
+      className={`bg-white rounded-[20px] p-5 border border-[#EEE6DA] shadow-2xs space-y-3 ${className}`}
+      aria-hidden="true"
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <Skeleton width={180} height={28} borderRadius="8px" />
-          <Skeleton width={300} height={16} borderRadius="6px" />
-        </div>
-        <Skeleton width={130} height={38} borderRadius="10px" />
+      <div className="flex items-center justify-between">
+        <Skeleton width={36} height={36} borderRadius={12} />
+        <Skeleton width={48} height={20} borderRadius={10} />
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
-        <Skeleton height={90} borderRadius="16px" />
-        <Skeleton height={90} borderRadius="16px" />
-        <Skeleton height={90} borderRadius="16px" />
-        <Skeleton height={90} borderRadius="16px" />
+      <div className="space-y-1.5 pt-1">
+        <Skeleton width="45%" height={26} borderRadius={6} />
+        <Skeleton width="60%" height={14} borderRadius={4} />
       </div>
-      <Skeleton height={320} borderRadius="16px" />
     </div>
   )
+}
+
+export interface StatGridSkeletonProps {
+  count?: number;
+  className?: string;
+}
+
+export function StatGridSkeleton({ count = 4, className = '' }: StatGridSkeletonProps) {
+  return (
+    <div
+      className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 ${className}`}
+      role="status"
+      aria-busy="true"
+    >
+      <span className="sr-only">Loading metrics...</span>
+      {Array.from({ length: count }).map((_, i) => (
+        <StatCardSkeleton key={i} />
+      ))}
+    </div>
+  )
+}
+
+export interface TableColumnSkeleton {
+  title?: string;
+  width?: string | number;
+  align?: 'left' | 'center' | 'right';
+}
+
+export interface TableSkeletonProps {
+  columns?: TableColumnSkeleton[] | number;
+  rows?: number;
+  showHeader?: boolean;
+  className?: string;
+}
+
+export function TableSkeleton({
+  columns = 5,
+  rows = 5,
+  showHeader = true,
+  className = '',
+}: TableSkeletonProps) {
+  const cols: TableColumnSkeleton[] = Array.isArray(columns)
+    ? columns
+    : Array.from({ length: columns }, (_, i) => ({
+        width: i === 0 ? '30%' : i === columns - 1 ? '15%' : '20%',
+        align: i === columns - 1 ? 'right' : 'left',
+      }));
+
+  return (
+    <div
+      className={`bg-white rounded-2xl border border-[#EEE6DA] overflow-hidden shadow-2xs ${className}`}
+      role="status"
+      aria-busy="true"
+    >
+      <span className="sr-only">Loading table data...</span>
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-xs min-w-[700px]">
+          {showHeader && (
+            <thead className="bg-[#FAF6EF] border-b border-[#EEE6DA]">
+              <tr>
+                {cols.map((col, idx) => (
+                  <th
+                    key={idx}
+                    className="py-3.5 px-4"
+                    style={{
+                      width: col.width,
+                      textAlign: col.align || 'left',
+                    }}
+                  >
+                    <Skeleton
+                      width={typeof col.title === 'string' ? Math.max(40, col.title.length * 8) : '60%'}
+                      height={14}
+                      borderRadius={4}
+                      style={{
+                        margin: col.align === 'center' ? '0 auto' : col.align === 'right' ? '0 0 0 auto' : undefined,
+                      }}
+                    />
+                  </th>
+                ))}
+              </tr>
+            </thead>
+          )}
+          <tbody className="divide-y divide-[#EEE6DA]/80">
+            {Array.from({ length: rows }).map((_, rIdx) => (
+              <tr key={rIdx}>
+                {cols.map((col, cIdx) => (
+                  <td
+                    key={cIdx}
+                    className="py-3 px-4"
+                    style={{ textAlign: col.align || 'left' }}
+                  >
+                    <Skeleton
+                      width={
+                        cIdx === 0
+                          ? '75%'
+                          : col.align === 'center'
+                          ? '40%'
+                          : col.align === 'right'
+                          ? '50%'
+                          : '60%'
+                      }
+                      height={16}
+                      borderRadius={4}
+                      style={{
+                        margin: col.align === 'center' ? '0 auto' : col.align === 'right' ? '0 0 0 auto' : undefined,
+                      }}
+                    />
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+export interface ChartSkeletonProps {
+  className?: string;
+}
+
+export function ChartSkeleton({ className = '' }: ChartSkeletonProps) {
+  const barHeights = [45, 60, 75, 90, 80, 85];
+  return (
+    <div
+      className={`bg-white rounded-[20px] p-5 border border-[#EEE6DA] shadow-2xs h-full flex flex-col justify-between ${className}`}
+      role="status"
+      aria-busy="true"
+    >
+      <span className="sr-only">Loading chart data...</span>
+      <div className="flex items-center justify-between mb-4">
+        <Skeleton width={140} height={20} borderRadius={6} />
+        <Skeleton width={110} height={26} borderRadius={20} />
+      </div>
+      <div className="flex items-end justify-between px-6 pt-8 pb-4 h-[180px] border-b border-[#EEE6DA]/70">
+        {barHeights.map((h, i) => (
+          <div key={i} className="flex-1 flex flex-col items-center gap-2">
+            <Skeleton width={24} height={`${h}%`} borderRadius="6px 6px 0 0" />
+            <Skeleton width={28} height={12} borderRadius={4} />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+export interface CardListSkeletonProps {
+  title?: string;
+  items?: number;
+  className?: string;
+}
+
+export function CardListSkeleton({ title, items = 4, className = '' }: CardListSkeletonProps) {
+  return (
+    <div
+      className={`bg-white rounded-[20px] p-5 border border-[#EEE6DA] shadow-2xs h-full flex flex-col justify-between ${className}`}
+      role="status"
+      aria-busy="true"
+    >
+      <span className="sr-only">Loading ${title || 'items'}...</span>
+      <div className="flex items-center justify-between mb-4">
+        {title ? (
+          <h3 className="text-[15px] font-semibold text-[#1C1B18]">{title}</h3>
+        ) : (
+          <Skeleton width={120} height={18} borderRadius={6} />
+        )}
+        <Skeleton width={60} height={16} borderRadius={4} />
+      </div>
+      <div className="divide-y divide-[#EEE6DA] flex-1 flex flex-col justify-around">
+        {Array.from({ length: items }).map((_, i) => (
+          <div key={i} className="py-2.5 flex items-center justify-between">
+            <div className="flex items-center gap-3 flex-1 min-w-0 pr-3">
+              <Skeleton width={36} height={36} borderRadius={10} />
+              <div className="space-y-1.5 flex-1">
+                <Skeleton width="70%" height={14} borderRadius={4} />
+                <Skeleton width="40%" height={12} borderRadius={4} />
+              </div>
+            </div>
+            <Skeleton width={32} height={16} borderRadius={4} />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+export interface PageHeaderSkeletonProps {
+  className?: string;
+  withAction?: boolean;
+}
+
+export function PageHeaderSkeleton({ className = '', withAction = true }: PageHeaderSkeletonProps) {
+  return (
+    <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${className}`} aria-hidden="true">
+      <div className="space-y-1.5">
+        <Skeleton width={180} height={28} borderRadius={8} />
+        <Skeleton width={260} height={14} borderRadius={4} />
+      </div>
+      {withAction && <Skeleton width={130} height={38} borderRadius={12} />}
+    </div>
+  )
+}
+
+export function TablePageSkeleton({ className = '' }: { className?: string }) {
+  return (
+    <div className={`space-y-6 ${className}`} role="status" aria-busy="true">
+      <span className="sr-only">Loading page...</span>
+      <PageHeaderSkeleton withAction={true} />
+      <div className="flex items-center justify-between gap-3">
+        <Skeleton width={240} height={36} borderRadius={10} />
+        <Skeleton width={110} height={36} borderRadius={10} />
+      </div>
+      <TableSkeleton rows={6} />
+    </div>
+  )
+}
+
+export function InventoryTrendSkeleton({ className = '' }: { className?: string }) {
+  return (
+    <div
+      className={`bg-white rounded-[20px] p-5 border border-[#EEE6DA] shadow-2xs h-full flex flex-col justify-between min-h-[280px] ${className}`.trim()}
+      role="status"
+      aria-busy="true"
+    >
+      <span className="sr-only">Loading inventory trend...</span>
+      <div className="flex items-center justify-between mb-4">
+        <Skeleton width={140} height={20} borderRadius={6} />
+        <Skeleton width={110} height={28} borderRadius={20} />
+      </div>
+      <div className="relative pt-6 pb-2 flex-1 flex flex-col justify-end">
+        <div className="flex items-end justify-between px-2 sm:px-6 pb-4 h-[160px] sm:h-[180px] border-b border-[#EEE6DA]/70 gap-1.5 sm:gap-3">
+          {[45, 55, 65, 80, 70, 75].map((h, i) => (
+            <div key={i} className="flex-1 flex flex-col items-center gap-2 max-w-[40px]">
+              <Skeleton width="100%" height={`${h}%`} borderRadius="6px 6px 0 0" />
+              <Skeleton width={28} height={12} borderRadius={4} />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function StockAlertsSkeleton({ className = '' }: { className?: string }) {
+  return (
+    <div
+      className={`bg-white rounded-[20px] p-5 border border-[#EEE6DA] shadow-2xs h-full flex flex-col justify-between min-h-[280px] ${className}`.trim()}
+      role="status"
+      aria-busy="true"
+    >
+      <span className="sr-only">Loading stock alerts...</span>
+      <div className="flex items-center justify-between mb-3">
+        <Skeleton width={110} height={20} borderRadius={6} />
+        <Skeleton width={60} height={14} borderRadius={4} />
+      </div>
+      <div className="divide-y divide-[#EEE6DA] flex-1 flex flex-col justify-around">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="py-3 flex items-center justify-between">
+            <div className="flex items-center gap-3 flex-1 min-w-0 pr-3">
+              <Skeleton width={36} height={36} borderRadius={12} />
+              <div className="space-y-1.5 flex-1 min-w-0">
+                <Skeleton width="80%" height={14} borderRadius={4} />
+                <Skeleton width="45%" height={12} borderRadius={4} />
+              </div>
+            </div>
+            <Skeleton width={14} height={14} borderRadius={4} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function RecentTransactionsSkeleton({ className = '' }: { className?: string }) {
+  return (
+    <div
+      className={`bg-white rounded-[20px] p-5 border border-[#EEE6DA] shadow-2xs h-full flex flex-col justify-between min-h-[300px] ${className}`.trim()}
+      role="status"
+      aria-busy="true"
+    >
+      <span className="sr-only">Loading recent transactions...</span>
+      <div className="flex items-center justify-between mb-4">
+        <Skeleton width={160} height={20} borderRadius={6} />
+        <Skeleton width={60} height={14} borderRadius={4} />
+      </div>
+      <div className="overflow-x-auto min-w-0">
+        <table className="w-full text-left text-xs min-w-[320px]">
+          <thead>
+            <tr className="border-b border-[#EEE6DA] pb-2">
+              <th className="py-2"><Skeleton width={40} height={12} borderRadius={4} /></th>
+              <th className="py-2"><Skeleton width={45} height={12} borderRadius={4} /></th>
+              <th className="py-2"><Skeleton width={50} height={12} borderRadius={4} /></th>
+              <th className="py-2 text-center"><Skeleton width={30} height={12} borderRadius={4} style={{ margin: '0 auto' }} /></th>
+              <th className="py-2 text-right"><Skeleton width={45} height={12} borderRadius={4} style={{ marginLeft: 'auto' }} /></th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-[#EEE6DA]/70">
+            {[1, 2, 3, 4].map((i) => (
+              <tr key={i}>
+                <td className="py-3"><Skeleton width={70} height={13} borderRadius={4} /></td>
+                <td className="py-3"><Skeleton width={60} height={13} borderRadius={4} /></td>
+                <td className="py-3"><Skeleton width="90%" height={13} borderRadius={4} /></td>
+                <td className="py-3 text-center"><Skeleton width={20} height={13} borderRadius={4} style={{ margin: '0 auto' }} /></td>
+                <td className="py-3 text-right"><Skeleton width={35} height={13} borderRadius={4} style={{ marginLeft: 'auto' }} /></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+export function TopStockSkeleton({ className = '' }: { className?: string }) {
+  return (
+    <div
+      className={`bg-white rounded-[20px] p-5 border border-[#EEE6DA] shadow-2xs h-full flex flex-col justify-between min-h-[300px] ${className}`.trim()}
+      role="status"
+      aria-busy="true"
+    >
+      <span className="sr-only">Loading top stock items...</span>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <Skeleton width={90} height={20} borderRadius={6} />
+          <Skeleton width={95} height={24} borderRadius={8} />
+        </div>
+        <Skeleton width={60} height={14} borderRadius={4} />
+      </div>
+      <div className="divide-y divide-[#EEE6DA] flex-1 flex flex-col justify-around">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="py-2.5 flex items-center justify-between">
+            <div className="flex items-center gap-3 flex-1 min-w-0 pr-3">
+              <Skeleton width={36} height={36} borderRadius={12} />
+              <div className="space-y-1.5 flex-1 min-w-0">
+                <Skeleton width="75%" height={14} borderRadius={4} />
+                <Skeleton width="45%" height={12} borderRadius={4} />
+              </div>
+            </div>
+            <Skeleton width={60} height={16} borderRadius={4} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function DashboardOverviewSkeleton({ className = '' }: { className?: string }) {
+  return (
+    <div className={`space-y-6 ${className}`.trim()} role="status" aria-busy="true">
+      <span className="sr-only">Loading overview dashboard...</span>
+
+      {/* Top Metric Cards Skeleton */}
+      <StatGridSkeleton count={4} />
+
+      {/* Bento Grid — 4 Core Cards */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+        {/* 1. Inventory Trend Skeleton (Top-Left) */}
+        <div className="lg:col-span-7 xl:col-span-8 h-full flex flex-col">
+          <InventoryTrendSkeleton />
+        </div>
+
+        {/* 2. Stock Alerts Skeleton (Top-Right) */}
+        <div className="lg:col-span-5 xl:col-span-4 h-full flex flex-col">
+          <StockAlertsSkeleton />
+        </div>
+
+        {/* 3. Recent Transactions Skeleton (Bottom-Left) */}
+        <div className="lg:col-span-7 xl:col-span-8 h-full flex flex-col">
+          <RecentTransactionsSkeleton />
+        </div>
+
+        {/* 4. Top Stock Skeleton (Bottom-Right) */}
+        <div className="lg:col-span-5 xl:col-span-4 h-full flex flex-col">
+          <TopStockSkeleton />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function PageSkeleton() {
+  return <DashboardOverviewSkeleton />;
 }
 
 export interface FormStatusProps {

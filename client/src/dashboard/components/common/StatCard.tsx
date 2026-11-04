@@ -24,9 +24,23 @@ export const StatCard: React.FC<StatCardProps> = ({
 }) => {
   return (
     <div
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
       onClick={onClick}
+      onKeyDown={
+        onClick
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onClick();
+              }
+            }
+          : undefined
+      }
       className={`bg-white rounded-[20px] p-5 border border-[#EEE6DA] transition-all duration-150 ${
-        onClick ? 'cursor-pointer hover:border-[#DDD3C4] hover:shadow-xs' : ''
+        onClick
+          ? 'cursor-pointer hover:border-[#DDD3C4] hover:shadow-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7FAE82]'
+          : ''
       } ${className}`}
     >
       <div className="flex items-center gap-3 mb-3">

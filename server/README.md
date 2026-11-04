@@ -1,6 +1,6 @@
 # Stockroom API
 
-Express + Mongoose REST API. MongoDB is the source of truth.
+Express REST API backed by Supabase PostgreSQL. Business data access is scoped to the authenticated user's current business and permissions.
 
 ## Layout
 
@@ -8,69 +8,64 @@ Express + Mongoose REST API. MongoDB is the source of truth.
 server/
 ├── server.js          bootstrap: connect DB, start HTTP
 ├── app.js             express app (helmet, cors, json, routes, errors)
-├── config/
-│   ├── env.js          loads server/.env (+ root .env fallback)
-│   └── db.js           Supabase PostgreSQL connection + withTransaction() helper
-├── models/            User, Business, Member, Role, Product, Supplier, Customer,
-│                      PurchaseOrder, Receiving, SalesOrder, Payment,
-│                      StockTransaction, Return
-├── routes/            one router per resource, mounted in routes/index.js
+├── config/            environment, Supabase clients, PostgreSQL transactions
+├── models/            Supabase-backed models and serialization
+├── routes/            route mounts and access gates
 ├── controllers/       parse request -> call service -> send envelope
-├── services/          business logic, validation, inventory transactions
-├── middleware/        auth.js (JWT), errorHandler.js
-├── validators/        assert.js (shared input checks)
-└── scripts/seed.js    db.json migration + optional demo data
+├── services/          business logic and transactional operations
+├── repositories/      parameterized PostgreSQL queries
+├── middleware/        database, authentication, business, permission, and platform guards
+├── scripts/           bootstrap, recovery, and migration tools
+└── tests/              backend unit and contract tests
 ```
 
-Request flow: `route → auth middleware → controller → service → Mongoose model → MongoDB`.
+Request flow: `route → auth/access middleware → controller → service → repository/model → PostgreSQL`.
 
-## Auth
+## Account and access model
 
-- `POST /api/auth/register` `{ email, password, role }` → `{ token, user, business }`
-- `POST /api/auth/login` `{ email, password }` → `{ token, user, business }`
-- `GET  /api/auth/me` (Bearer) → `{ token, user, business }`
+- **Super Admin**: provisions Business Admins and businesses through `/api/platform`.
+- **Business Admin**: owns one provisioned business and manages only that business's salespeople.
+- **Salesperson**: has one business membership and tenant-scoped permissions.
+- Public account registration, password-reset links, and self-service business creation are not exposed.
+- New provisioned users get random temporary passwords returned only in the creation response. They must change the password before using other protected API routes.
+- Account and business status are reloaded from PostgreSQL during authentication. Inactive users and suspended/deactivated businesses are denied access; status changes revoke existing sessions.
+- Platform and team-account mutations are transactional and produce sanitized audit events.
+- Subscription and billing are not part of this account-management implementation.
 
-Passwords are hashed with bcrypt. Protected routes need `Authorization: Bearer <token>`.
-The business id is taken from the token — never from the request body — so every
-query is isolated to the caller's business.
+## Authentication
 
-## Resources (all require Bearer token + a created business)
+- `POST /api/auth/login` `{ email, password }` → session and account details
+- `GET /api/auth/me` (Bearer or cookie) → current session
+- `PATCH /api/auth/password` `{ currentPassword, newPassword }` → changes password and revokes older sessions
+- `POST /api/auth/logout` and `POST /api/auth/logout-all` clear/revoke sessions
 
-| Method | Path | Notes |
-| --- | --- | --- |
-| POST | `/api/businesses` | create workspace (also seeds default roles) |
-| GET/PATCH | `/api/businesses/me` | current business + `settings` |
-| CRUD | `/api/products` | `?search=&page=&limit=` |
-| CRUD | `/api/suppliers` | `PATCH /:id/archive` |
-| CRUD | `/api/customers` | `PATCH /:id/archive` |
-| GET/POST/PUT | `/api/purchase-orders` | `PATCH /:id/status`; totals computed server-side |
-| GET/POST/PUT | `/api/sales-orders` | `PATCH /:id/complete` (stock-out), `/:id/cancel` |
-| GET | `/api/receiving/pending-orders` | open POs + already-received per line |
-| POST | `/api/receiving` | adds accepted stock, closes PO when complete |
-| GET/POST | `/api/payments` | updates order `paymentStatus` |
-| GET | `/api/inventory/transactions` | stock history |
-| POST | `/api/inventory/operations` | Stock In / Out / Adjustment |
-| GET/POST | `/api/returns` | adjusts inventory by return type |
-| GET/POST/PUT | `/api/users` | team members; `/users/roles/*` for roles |
-| GET | `/api/reports/summary` | dashboard/report figures |
+There are no public register, forgot-password, or reset-password routes. Business profile routes live under `/api/businesses/me`; only Super Admins can create businesses.
 
-## Responses
+## Platform and team provisioning
+
+- `POST /api/platform/businesses`: Super Admin-only; atomically creates a business, Business Admin, default roles, and admin membership. The response includes a one-time temporary password.
+- `PATCH /api/platform/businesses/:businessId/status`: Super Admin-only; `active`, `suspended`, or `deactivated`.
+- `PATCH /api/platform/business-admins/:userId/status`: Super Admin-only; `active` or `inactive`.
+- `POST /api/users`: Business Admin-only; creates a salesperson inside the caller's business and returns a one-time temporary password.
+- `PATCH /api/users/:userId/status`: Business Admin-only; `active` or `inactive`.
+
+See [the API reference](../docs/BACKEND_API_REFERENCE.md) for all endpoints, fields, and permission gates.
+
+## Database setup
+
+1. Configure Supabase URL, service-role key, and direct PostgreSQL connection settings in `server/.env`.
+2. Apply the base schema and existing migrations, then apply `supabase/migrations/20261102000000_controlled_account_provisioning.sql`.
+3. Configure `INITIAL_SUPER_ADMIN_PASSWORD` in the process environment and run `npm run bootstrap:super-admin` from the repository root. The script creates `aflix@gmail.com` only if no account with that email exists; it never resets an existing account.
+4. Operator recovery uses `ACCOUNT_RECOVERY_PASSWORD` plus `npm run reset-password -- <account-email>`. Recovery invalidates old sessions and forces a password change. Keep secrets out of command history, logs, source control, and seed data.
+
+The repository contains no demo seed scripts. After applying the schema and migrations,
+bootstrap the first Super Admin and provision businesses through the platform interface.
+
+## Responses and transactions
 
 ```jsonc
-{ "success": true, "data": {} , "message": "..." }   // 2xx
-{ "success": false, "message": "...", "errors": {} }  // 4xx / 5xx
+{ "success": true, "data": {}, "message": "..." }   // 2xx
+{ "success": false, "message": "...", "errors": {} } // 4xx / 5xx
 ```
 
-## Inventory integrity
-
-Stock is only ever changed by backend services (`inventoryService.applyStockChange`),
-which write the product and a `StockTransaction` together. Multi-write flows
-(sale completion, receiving, returns) run inside `withTransaction()` — a real
-MongoDB transaction on a replica set / Atlas, falling back to sequential writes
-on a standalone `mongod`.
-
-## Migration
-
-`server/data/db.json` is no longer used at runtime. `npm run seed` imports any
-records it still contains into MongoDB; `npm run seed -- --demo` adds a sample
-workspace; `-- --fresh` wipes collections first.
+Provisioning and other multi-write flows use `withTransaction()` and fail rather than falling back to non-transactional writes. Run PostgreSQL against a supported transaction-capable instance.

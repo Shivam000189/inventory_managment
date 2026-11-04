@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Building2,
   Receipt,
@@ -10,6 +10,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { isPharmacyBusiness } from '../../shared/industryConfig';
 
 export const SettingsPage: React.FC = () => {
   const { businessProfile, updateBusinessProfile, currentUser } = useApp();
@@ -24,6 +25,13 @@ export const SettingsPage: React.FC = () => {
 
   // Local copy of profile state
   const [profileData, setProfileData] = useState(businessProfile);
+
+  // Sync profile data when businessProfile updates from backend
+  useEffect(() => {
+    if (businessProfile) {
+      setProfileData(businessProfile);
+    }
+  }, [businessProfile]);
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -163,6 +171,67 @@ export const SettingsPage: React.FC = () => {
                     className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs outline-none resize-none focus:border-[#7FAE82]"
                   />
                 </div>
+
+                {/* Pharmacy Drug License Details */}
+                {isPharmacyBusiness(profileData) && (
+                  <div className="pt-3 border-t border-[#EEE6DA] space-y-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-[#1C1B18] uppercase tracking-wider">
+                        Pharmacy Regulatory & Drug License
+                      </span>
+                      <span className="text-[10px] text-[#2E8B57] bg-[#E6F1E6] font-semibold px-2 py-0.5 rounded-full">
+                        Compliance
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-xs font-semibold text-[#1C1B18] mb-1">
+                          Drug License 20B (Retail)
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. 20B/UP/AGR/2024/9182"
+                          value={profileData.drugLicense20B || ''}
+                          onChange={(e) =>
+                            setProfileData({ ...profileData, drugLicense20B: e.target.value })
+                          }
+                          className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs font-mono outline-none focus:border-[#7FAE82]"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-[#1C1B18] mb-1">
+                          Drug License 21B (Wholesale / Schedule C)
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. 21B/UP/AGR/2024/9183"
+                          value={profileData.drugLicense21B || ''}
+                          onChange={(e) =>
+                            setProfileData({ ...profileData, drugLicense21B: e.target.value })
+                          }
+                          className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs font-mono outline-none focus:border-[#7FAE82]"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-[#1C1B18] mb-1">
+                          Pharmacist In-Charge
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Shivam (Reg # UP-PH-49102)"
+                          value={profileData.pharmacistInCharge || ''}
+                          onChange={(e) =>
+                            setProfileData({ ...profileData, pharmacistInCharge: e.target.value })
+                          }
+                          className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs outline-none focus:border-[#7FAE82]"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

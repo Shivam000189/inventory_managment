@@ -15,13 +15,30 @@ function receivedForItem(receivings, productId, variantId = null) {
 }
 
 export async function listReceivings(businessId, query = {}) {
-  const docs = await Receiving.find(scoped(businessId)).sort('-createdAt')
+  const filter = scoped(businessId)
+  const page = Math.max(1, Number(query.page) || 1)
+  const limit = Math.min(100, Math.max(1, Number(query.limit) || 20))
+  const skip = (page - 1) * limit
+
+  const [docs, total] = await Promise.all([
+    Receiving.find(filter).sort('-createdAt').skip(skip).limit(limit),
+    Receiving.countDocuments(filter),
+  ])
+
   let items = docs.map((doc) => doc.toJSON())
   if (query.search) {
     const term = String(query.search).toLowerCase()
-    items = items.filter((item) => `${item.receivingId} ${item.purchaseOrderId} ${item.supplierId}`.toLowerCase().includes(term))
+    items = items.filter((item) => (item.receivingId + ' ' + item.purchaseOrderId + ' ' + item.supplierId).toLowerCase().includes(term))
   }
-  return items
+  return {
+    items,
+    meta: {
+      page,
+      limit,
+      total,
+      pages: Math.ceil(total / limit) || 1,
+    },
+  }
 }
 
 /** Pending purchase orders plus each line's already-received quantity. */

@@ -1,4 +1,19 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState, useEffect } from 'react'
+import {
+  CreditCard,
+  Receipt,
+  ArrowUpRight,
+  Clock,
+  Search,
+  Download,
+  Printer,
+  Plus,
+  RotateCcw,
+  Package,
+} from 'lucide-react'
+import { StatCard } from '../../dashboard/components/common/StatCard.tsx'
+import { Badge } from '../../dashboard/components/common/Badge.tsx'
+import { TableSkeleton } from '../../components/ui/Feedback.tsx'
 import { paymentApi } from '../../api/paymentApi.js'
 import { salesOrderApi } from '../../api/salesOrderApi.js'
 import { purchaseOrderApi } from '../../api/purchaseOrderApi.js'
@@ -36,6 +51,7 @@ function Payments({ business = {}, account = {} }) {
 
   const [type, setType] = useState('sale')
   const [amount, setAmount] = useState('')
+  const [selectedReferenceId, setSelectedReferenceId] = useState('')
   const [mode, setMode] = useState('all')
   const [message, setMessage] = useState(null)
   const [saving, setSaving] = useState(false)
@@ -67,6 +83,46 @@ function Payments({ business = {}, account = {} }) {
         .reduce((sum, payment) => sum + Number(payment.amount || 0), 0),
     [payments]
   )
+
+  const selectedOrder = useMemo(() => {
+    if (!selectedReferenceId) return null
+    return (
+      orders.find(
+        (item) => (item.orderId || item.purchaseOrderId) === selectedReferenceId
+      ) || null
+    )
+  }, [orders, selectedReferenceId])
+
+  const selectedPaid = useMemo(() => {
+    if (!selectedReferenceId) return 0
+    return getPaid(selectedReferenceId)
+  }, [selectedReferenceId, getPaid])
+
+  const selectedTotal = useMemo(() => {
+    if (!selectedOrder) return 0
+    return Number(selectedOrder.totalAmount || 0)
+  }, [selectedOrder])
+
+  const selectedOutstanding = useMemo(() => {
+    return Math.max(0, selectedTotal - selectedPaid)
+  }, [selectedTotal, selectedPaid])
+
+  const handleOrderChange = (refId) => {
+    setSelectedReferenceId(refId)
+    const ord = orders.find((o) => (o.orderId || o.purchaseOrderId) === refId)
+    if (ord) {
+      const out = Math.max(0, Number(ord.totalAmount || 0) - getPaid(refId))
+      if (out > 0) {
+        setAmount(String(out))
+      }
+    }
+  }
+
+  const handleTypeSwitch = (newType) => {
+    setType(newType)
+    setSelectedReferenceId('')
+    setAmount('')
+  }
 
   const orderName = (referenceId) => {
     const sale = salesOrders.find((order) => order.orderId === referenceId)
@@ -179,6 +235,14 @@ function Payments({ business = {}, account = {} }) {
       cashDrawer: cashToday,
     }
   }, [payments, salesOrders, getPaid])
+
+  const [search, setSearch] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [mode, type, search]);
 
   const visiblePayments = useMemo(() => {
     const matchMode =
@@ -341,308 +405,515 @@ function Payments({ business = {}, account = {} }) {
   const vendorCount = payments.filter((payment) => payment.type === 'purchase').length
 
   return (
-    <section className="pay-page" aria-labelledby="pay-title">
-      <PageHeader
-        kicker="Terminal • Payments &amp; Settlement Control"
-        title="Payments Management"
-        description="Record customer sales inflows, manage vendor disbursements, and track real-time settlements."
-        scope="Counter #01 Online"
-        actions={
-          <div className="pay-type-switch">
-            <button
-              type="button"
-              className={type === 'sale' ? 'active' : ''}
-              onClick={() => setType('sale')}
-            >
-              Sales payments <b>{salesCount}</b>
-            </button>
-            <button
-              type="button"
-              className={type === 'purchase' ? 'active' : ''}
-              onClick={() => setType('purchase')}
-            >
-              Vendor outflow <b>{vendorCount}</b>
-            </button>
-          </div>
-        }
-      />
+    <div className="space-y-6 animate-in fade-in duration-150 pb-10" aria-labelledby="pay-title">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 id="pay-title" className="text-[28px] font-semibold text-[#1C1B18] tracking-tight leading-tight">
+            Payments
+          </h1>
+          <p className="text-[13px] text-[#6B665E] mt-0.5">
+            Record customer sales inflows, manage vendor disbursements, and track real-time settlements.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2.5 py-0.5">
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-[#EEE6DA] bg-white text-xs font-semibold text-[#1C1B18] hover:bg-[#FAF6EF] transition-all cursor-pointer shadow-2xs whitespace-nowrap active:scale-95"
+          >
+            <Printer size={15} />
+            <span>Print</span>
+          </button>
+          <button
+            type="button"
+            onClick={exportCsv}
+            disabled={!payments.length}
+            className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl border border-[#EEE6DA] bg-white text-xs font-semibold text-[#1C1B18] hover:bg-[#FAF6EF] transition-all cursor-pointer shadow-2xs whitespace-nowrap active:scale-95 disabled:opacity-50"
+          >
+            <Download size={15} />
+            <span>Export</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const el = document.getElementById('pay-order-ref');
+              if (el) {
+                el.focus();
+                el.scrollIntoView({ behavior: 'smooth' });
+              }
+            }}
+            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-[#7FAE82] hover:bg-[#6C9C70] text-white text-xs font-semibold transition-all cursor-pointer shadow-2xs whitespace-nowrap active:scale-95"
+          >
+            <Plus size={16} />
+            <span>+ Record Payment</span>
+          </button>
+        </div>
+      </div>
 
       {message && (
         <div
-          className={`form-status ${message.type}`}
+          className={`p-3.5 rounded-xl text-xs font-medium border ${
+            message.type === 'error'
+              ? 'bg-[#FDECEC] text-[#D64545] border-[#F9C2C2]'
+              : 'bg-[#E8F5EC] text-[#2E8B57] border-[#CDEBD5]'
+          }`}
           role={message.type === 'error' ? 'alert' : 'status'}
         >
           {message.text}
         </div>
       )}
 
-      {/* 4 Pastel KPI Summary Cards */}
-      <div className="ledger-kpi-grid">
-        <div
-          className={`ledger-kpi-card theme-blue ${type === 'sale' ? 'is-active' : ''}`}
-          onClick={() => setType('sale')}
-          role="button"
-          tabIndex={0}
-        >
-          <div className="ledger-kpi-bubble">
-            <Icon name="list" size={20} />
-          </div>
-          <div className="ledger-kpi-content">
-            <span className="ledger-kpi-label">Total</span>
-            <span className="ledger-kpi-val">{payments.length} Invoices</span>
-          </div>
-        </div>
-
-        <div
-          className={`ledger-kpi-card theme-slate ${type === 'purchase' ? 'is-active' : ''}`}
+      {/* 4 Dashboard-style StatCards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <StatCard
+          icon={<Receipt size={18} strokeWidth={2} />}
+          iconBgColor="bg-[#E6F1E6] text-[#2E8B57]"
+          label="Today's Collections"
+          value={money(stats.salesToday)}
+          trend={`${stats.salesTxns} txns today`}
+          isPositive={true}
+        />
+        <StatCard
+          icon={<CreditCard size={18} strokeWidth={2} />}
+          iconBgColor="bg-[#EBF2FA] text-[#2563EB]"
+          label="Total Receipts"
+          value={payments.length}
+          trend={`${salesCount} sales · ${vendorCount} vendors`}
+          isPositive={true}
+        />
+        <StatCard
+          icon={<ArrowUpRight size={18} strokeWidth={2} />}
+          iconBgColor="bg-[#FAF6EF] text-[#6B665E]"
+          label="Vendor Outflows"
+          value={money(stats.purchasesOut)}
+          trend={`${stats.vendorCount} vendors paid`}
+          isPositive={true}
           onClick={() => setType('purchase')}
-          role="button"
-          tabIndex={0}
-        >
-          <div className="ledger-kpi-bubble">
-            <Icon name="credit-card" size={20} />
-          </div>
-          <div className="ledger-kpi-content">
-            <span className="ledger-kpi-label">Shipped</span>
-            <span className="ledger-kpi-val">{stats.vendorCount} Vendors</span>
-          </div>
-        </div>
-
-        <div
-          className="ledger-kpi-card theme-green"
-          role="button"
-          tabIndex={0}
-        >
-          <div className="ledger-kpi-bubble">
-            <Icon name="dollar" size={20} />
-          </div>
-          <div className="ledger-kpi-content">
-            <span className="ledger-kpi-label">Delivered</span>
-            <span className="ledger-kpi-val">{money(stats.salesToday)}</span>
-          </div>
-        </div>
-
-        <div
-          className={`ledger-kpi-card theme-amber ${stats.duesTotal > 0 ? 'is-active' : ''}`}
-          role="button"
-          tabIndex={0}
-        >
-          <div className="ledger-kpi-bubble">
-            <Icon name="pending" size={20} />
-          </div>
-          <div className="ledger-kpi-content">
-            <span className="ledger-kpi-label">Pending</span>
-            <span className="ledger-kpi-val">{money(stats.duesTotal)}</span>
-          </div>
-        </div>
+          className={type === 'purchase' ? 'ring-2 ring-[#7FAE82]' : ''}
+        />
+        <StatCard
+          icon={<Clock size={18} strokeWidth={2} />}
+          iconBgColor="bg-[#FFF4DC] text-[#D98E0B]"
+          label="Outstanding Dues"
+          value={money(stats.duesTotal)}
+          trend={`${stats.duesCount} open invoices`}
+          isPositive={false}
+          onClick={() => setType('sale')}
+          className={type === 'sale' ? 'ring-2 ring-[#7FAE82]' : ''}
+        />
       </div>
 
-      {/* Record Payment Entry Card */}
-      <div className="pay-form-card">
-        <div className="pay-form-head">
-          <div className="pay-form-title-wrap">
-            <span className="pay-form-dot" />
-            <strong>Record Payment &amp; Settle Invoice</strong>
-            <em>Quick terminal entry</em>
+      {/* Record Payment Form Card */}
+      <div className="bg-white rounded-2xl border border-[#EEE6DA] p-5 sm:p-6 shadow-2xs space-y-4">
+        {/* Header with Icon, Title, and Segmented Toggle */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-[#EEE6DA]/60">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#E6F1E6] text-[#2E8B57] flex items-center justify-center shrink-0">
+              <CreditCard size={20} strokeWidth={2} />
+            </div>
+            <div>
+              <h2 className="text-base font-semibold text-[#1C1B18]">Record Payment & Settle Invoice</h2>
+              <p className="text-xs text-[#6B665E] mt-0.5">Entries immediately update financial ledgers and clear open invoice balances.</p>
+            </div>
           </div>
-          <span className="pay-form-note">
-            Entries instantly update ledgers and release inventory holds.
-          </span>
+
+          {/* Toggle Type Switcher */}
+          <div className="flex items-center gap-1 bg-[#FAF6EF] p-1 rounded-xl border border-[#EEE6DA] shrink-0">
+            <button
+              type="button"
+              onClick={() => handleTypeSwitch('sale')}
+              className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+                type === 'sale'
+                  ? 'bg-white text-[#1C1B18] shadow-2xs border border-[#EEE6DA]'
+                  : 'text-[#6B665E] hover:text-[#1C1B18]'
+              }`}
+            >
+              Customer Inflow ({salesCount})
+            </button>
+            <button
+              type="button"
+              onClick={() => handleTypeSwitch('purchase')}
+              className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+                type === 'purchase'
+                  ? 'bg-white text-[#1C1B18] shadow-2xs border border-[#EEE6DA]'
+                  : 'text-[#6B665E] hover:text-[#1C1B18]'
+              }`}
+            >
+              Vendor Outflow ({vendorCount})
+            </button>
+          </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="pay-form-body">
-          <Field
-            label={`Select ${type === 'sale' ? 'Sale Order / Invoice' : 'Purchase Order'} *`}
-            htmlFor="pay-order-ref"
-            required
-            hint="Only orders with an open balance can accept a payment."
-          >
-            <Select id="pay-order-ref" name="referenceId" defaultValue="" required>
-              <option value="" disabled>
-                Select {type} order…
-              </option>
-              {orders.map((order) => {
-                const id = order.orderId || order.purchaseOrderId
-                const outstanding = Number(order.totalAmount || 0) - getPaid(id)
-                return (
-                  <option key={id} value={id}>
-                    {order.orderNumber || id} ·{' '}
-                    {type === 'sale' ? order.customerName : order.supplierName} · due{' '}
-                    {money(outstanding, 0)}
-                  </option>
-                )
-              })}
-            </Select>
-          </Field>
+        {/* Selected Order Insight Bar */}
+        {selectedOrder && (
+          <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-xl bg-[#FAF6EF] border border-[#EEE6DA] text-xs">
+            <div className="flex flex-wrap items-center gap-4">
+              <div>
+                <span className="text-[#6B665E] font-medium">Selected: </span>
+                <span className="font-semibold text-[#1C1B18]">{selectedOrder.orderNumber || selectedReferenceId}</span>
+              </div>
+              <div className="h-3 w-px bg-[#DDD5C7] hidden sm:block" />
+              <div>
+                <span className="text-[#6B665E] font-medium">{type === 'sale' ? 'Customer' : 'Vendor'}: </span>
+                <span className="font-semibold text-[#1C1B18]">
+                  {type === 'sale' ? (selectedOrder.customerName || 'Walk-in') : (selectedOrder.supplierName || 'Vendor')}
+                </span>
+              </div>
+              <div className="h-3 w-px bg-[#DDD5C7] hidden sm:block" />
+              <div>
+                <span className="text-[#6B665E] font-medium">Invoice Total: </span>
+                <span className="font-semibold text-[#1C1B18]">{money(selectedTotal)}</span>
+              </div>
+              <div className="h-3 w-px bg-[#DDD5C7] hidden sm:block" />
+              <div>
+                <span className="text-[#6B665E] font-medium">Already Settled: </span>
+                <span className="font-semibold text-[#2E8B57]">{money(selectedPaid)}</span>
+              </div>
+              <div className="h-3 w-px bg-[#DDD5C7] hidden sm:block" />
+              <div>
+                <span className="text-[#6B665E] font-medium">Remaining Due: </span>
+                <span className="font-bold text-[#C84B31]">{money(selectedOutstanding)}</span>
+              </div>
+            </div>
 
-          <Field
-            label="Amount Received *"
-            htmlFor="pay-amount"
-            required
-          >
-            <Input
-              id="pay-amount"
-              name="amount"
-              type="number"
-              min="0.01"
-              step="0.01"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="0.00"
-              required
-            />
-            <div className="pay-quick-chips">
+            {selectedOutstanding > 0 && Number(amount) !== selectedOutstanding && (
+              <button
+                type="button"
+                onClick={() => setAmount(String(selectedOutstanding))}
+                className="text-xs font-semibold text-[#2E8B57] hover:underline cursor-pointer flex items-center gap-1 shrink-0"
+              >
+                Auto-fill full due ({money(selectedOutstanding, 0)})
+              </button>
+            )}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* 4 Perfectly Aligned Input Columns */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4 items-start">
+            {/* Col 1: Order Select */}
+            <div className="lg:col-span-5">
+              <label htmlFor="pay-order-ref" className="block text-xs font-semibold text-[#1C1B18] mb-1.5">
+                Select {type === 'sale' ? 'Sale Order / Invoice' : 'Purchase Order'} <span className="text-red-500">*</span>
+              </label>
+              <select
+                id="pay-order-ref"
+                name="referenceId"
+                value={selectedReferenceId}
+                onChange={(e) => handleOrderChange(e.target.value)}
+                required
+                className="w-full h-10 px-3 rounded-xl border border-[#EEE6DA] text-xs bg-white text-[#1C1B18] outline-none focus:border-[#7FAE82] transition-colors cursor-pointer"
+              >
+                <option value="" disabled>
+                  Select {type} order…
+                </option>
+                {orders.map((order) => {
+                  const id = order.orderId || order.purchaseOrderId;
+                  const outstanding = Math.max(0, Number(order.totalAmount || 0) - getPaid(id));
+                  return (
+                    <option key={id} value={id}>
+                      {order.orderNumber || id} · {type === 'sale' ? (order.customerName || 'Walk-in') : (order.supplierName || 'Vendor')} · due {money(outstanding, 0)}
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+
+            {/* Col 2: Amount Received */}
+            <div className="lg:col-span-3">
+              <label htmlFor="pay-amount" className="block text-xs font-semibold text-[#1C1B18] mb-1.5">
+                Amount Received <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-[#6B665E]">₹</span>
+                <input
+                  id="pay-amount"
+                  name="amount"
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="0.00"
+                  required
+                  className="w-full h-10 pl-7 pr-3 rounded-xl border border-[#EEE6DA] text-xs font-bold text-[#1C1B18] outline-none focus:border-[#7FAE82] transition-colors"
+                />
+              </div>
+            </div>
+
+            {/* Col 3: Payment Method */}
+            <div className="lg:col-span-2">
+              <label htmlFor="pay-method" className="block text-xs font-semibold text-[#1C1B18] mb-1.5">
+                Payment Method <span className="text-red-500">*</span>
+              </label>
+              <select
+                id="pay-method"
+                name="paymentMethod"
+                defaultValue="UPI"
+                className="w-full h-10 px-3 rounded-xl border border-[#EEE6DA] text-xs bg-white text-[#1C1B18] outline-none focus:border-[#7FAE82] transition-colors cursor-pointer"
+              >
+                {METHODS.map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Col 4: Payment Date */}
+            <div className="lg:col-span-2">
+              <label htmlFor="pay-date" className="block text-xs font-semibold text-[#1C1B18] mb-1.5">
+                Payment Date <span className="text-red-500">*</span>
+              </label>
+              <input
+                id="pay-date"
+                name="paymentDate"
+                type="date"
+                defaultValue={new Date().toISOString().slice(0, 10)}
+                required
+                className="w-full h-10 px-3 rounded-xl border border-[#EEE6DA] text-xs text-[#1C1B18] bg-white outline-none focus:border-[#7FAE82] transition-colors"
+              />
+            </div>
+          </div>
+
+          {/* Bottom Action Row: Reference Notes + Quick Presets + Submit Button */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pt-1">
+            <div className="flex-1 min-w-[240px]">
+              <input
+                id="pay-notes"
+                name="notes"
+                placeholder="Reference / Transaction notes (e.g. UPI-HDFC-9940291482 or Cheque #49201)"
+                className="w-full h-10 px-3.5 rounded-xl border border-[#EEE6DA] text-xs text-[#1C1B18] placeholder:text-[#A39E93] bg-white outline-none focus:border-[#7FAE82] transition-colors"
+              />
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap shrink-0">
+              <span className="text-[11px] font-semibold text-[#6B665E]">Quick:</span>
               {[1000, 2000, 5000].map((quick) => (
                 <button
                   type="button"
                   key={quick}
-                  className="pay-quick-chip"
                   onClick={() => setAmount(String(quick))}
+                  className="h-10 px-3 rounded-xl border border-[#EEE6DA] bg-[#FAF6EF] hover:bg-[#F2ECE1] text-xs font-semibold text-[#1C1B18] transition-all cursor-pointer active:scale-95"
                 >
-                  {money(quick, 0)}
+                  +{money(quick, 0)}
                 </button>
               ))}
+
+              <button
+                type="submit"
+                disabled={saving}
+                className="h-10 inline-flex items-center justify-center gap-1.5 px-5 rounded-xl bg-[#7FAE82] hover:bg-[#6C9C70] text-white text-xs font-semibold transition-all cursor-pointer shadow-2xs whitespace-nowrap active:scale-95 disabled:opacity-50 ml-1"
+              >
+                <Plus size={16} strokeWidth={2.5} />
+                <span>{saving ? 'Recording…' : 'Record Payment →'}</span>
+              </button>
             </div>
-          </Field>
-
-          <Field
-            label="Payment Method *"
-            htmlFor="pay-method"
-            required
-            hint="UPI & bank transfers settle instantly with zero fee."
-          >
-            <Select id="pay-method" name="paymentMethod" defaultValue="UPI">
-              {METHODS.map((m) => (
-                <option key={m} value={m}>
-                  {m}
-                </option>
-              ))}
-            </Select>
-          </Field>
-
-          <Field
-            label="Payment Date *"
-            htmlFor="pay-date"
-            required
-            hint="Defaults to the active register timestamp."
-          >
-            <Input
-              id="pay-date"
-              name="paymentDate"
-              type="date"
-              defaultValue={new Date().toISOString().slice(0, 10)}
-              required
-            />
-          </Field>
-
-          <Field
-            label="Payment Reference / Notes"
-            htmlFor="pay-notes"
-            className="pay-field-full"
-          >
-            <Input
-              id="pay-notes"
-              name="notes"
-              placeholder="e.g. UPI-HDFC-9940291482 or Cheque #49201"
-            />
-          </Field>
-
-          <div className="pay-form-submit-row">
-            <Button
-              variant="primary"
-              size="md"
-              type="submit"
-              disabled={saving}
-              loading={saving}
-            >
-              {saving ? 'Recording…' : 'Record Payment →'}
-            </Button>
           </div>
         </form>
       </div>
 
-      {/* Payment Ledger / History */}
-      {/* Pill Search & Action Toolbar */}
-      <div className="ledger-toolbar">
-        <div className="ledger-toolbar-left">
-          <select
-            className="ledger-pill-select"
-            value={mode}
-            onChange={(e) => setMode(e.target.value)}
-          >
-            {MODE_TABS.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.label} ({payments.filter(m.match).length})
-              </option>
-            ))}
-          </select>
+      {/* Toolbar matching Product Page */}
+      <div className="bg-white rounded-2xl p-3 border border-[#EEE6DA] flex flex-col md:flex-row items-center justify-between gap-3 shadow-2xs">
+        <div className="flex items-center gap-3 flex-1 w-full md:w-auto">
+          {/* Search */}
+          <div className="relative flex-1 max-w-md">
+            <Search size={15} className="absolute left-3 top-2.5 text-[#9A948A]" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search receipts, party/customer, or notes..."
+              className="w-full pl-9 pr-3 py-1.5 rounded-xl border border-[#EEE6DA] text-xs focus:border-[#7FAE82] outline-none"
+            />
+          </div>
 
+          {/* Type Dropdown */}
           <select
-            className="ledger-pill-select"
             value={type}
             onChange={(e) => setType(e.target.value)}
+            className="px-3 py-1.5 rounded-xl border border-[#EEE6DA] text-xs text-[#1C1B18] bg-white cursor-pointer outline-none"
           >
             <option value="sale">Customer Inflows</option>
             <option value="purchase">Vendor Outflows</option>
           </select>
         </div>
 
-        <div className="ledger-toolbar-right">
-          <button
-            type="button"
-            className="ledger-btn-secondary"
-            onClick={exportCsv}
-            disabled={!payments.length}
-          >
-            <Icon name="download" size={15} />
-            <span>Export</span>
-          </button>
-          <button
-            type="button"
-            className="ledger-btn-secondary"
-            onClick={() => window.print()}
-          >
-            <Icon name="print" size={15} />
-            <span>Print Slips</span>
-          </button>
-          <button
-            type="button"
-            className="ledger-btn-secondary"
-            onClick={refetch}
-            disabled={loading}
-          >
-            <Icon name="refresh" size={15} />
-            <span>Refresh</span>
-          </button>
+        {/* Mode Pills */}
+        <div className="flex items-center gap-1 bg-[#FAF6EF] p-1 rounded-xl border border-[#EEE6DA]/80 overflow-x-auto w-full md:w-auto">
+          {MODE_TABS.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => setMode(m.id)}
+              className={`px-3 py-1 text-xs font-semibold rounded-lg transition-colors cursor-pointer whitespace-nowrap ${
+                mode === m.id
+                  ? 'bg-white text-[#1C1B18] shadow-2xs'
+                  : 'text-[#6B665E] hover:text-[#1C1B18]'
+              }`}
+            >
+              {m.label} ({payments.filter(m.match).length})
+            </button>
+          ))}
         </div>
       </div>
 
-      <DataTable
-        columns={columns}
-        data={visiblePayments}
-        keyField="paymentId"
-        loading={loading}
-        error={error}
-        onRetry={refetch}
-        emptyMessage={
-          payments.length
-            ? 'No payments found for this payment mode.'
-            : 'No payments recorded yet. Settle an invoice above to start the ledger.'
-        }
-        pagination
-        pageSize={10}
-      />
+      {/* Table matching Product Page */}
+      {loading && payments.length === 0 ? (
+        <TableSkeleton
+          columns={[
+            { title: 'Receipt ID', width: '15%' },
+            { title: 'Party / Customer', width: '25%' },
+            { title: 'Date & Mode', width: '15%' },
+            { title: 'Reference / Notes', width: '20%' },
+            { title: 'Amount', width: '15%', align: 'right' },
+            { title: 'Status', width: '10%', align: 'center' },
+          ]}
+          rows={6}
+        />
+      ) : visiblePayments.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-[#EEE6DA] p-12 text-center shadow-2xs">
+          <Package className="mx-auto text-[#9A948A] mb-3 opacity-60" size={36} />
+          <h3 className="text-sm font-semibold text-[#1C1B18]">No payments found</h3>
+          <p className="text-xs text-[#6B665E] mt-1 max-w-sm mx-auto">
+            {payments.length ? 'No payments match your search filter.' : 'No payments recorded yet. Settle an invoice above to start the ledger.'}
+          </p>
+        </div>
+      ) : (
+        <div className="bg-white rounded-2xl border border-[#EEE6DA] overflow-hidden shadow-2xs">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs min-w-[760px]">
+              <thead className="sticky top-0 z-10 bg-[#FAF6EF] border-b border-[#EEE6DA] text-[#8C867A] text-[11px] font-semibold uppercase tracking-wider">
+                <tr>
+                  <th className="py-3 px-4 font-medium">Receipt ID</th>
+                  <th className="py-3 px-3 font-medium">Party / Customer</th>
+                  <th className="py-3 px-3 font-medium">Date & Mode</th>
+                  <th className="py-3 px-3 font-medium">Notes / Ref</th>
+                  <th className="py-3 px-3 font-medium text-right">Amount</th>
+                  <th className="py-3 px-3 font-medium text-center">Status</th>
+                  <th className="py-3 px-4 text-right font-medium">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#EEE6DA]/80">
+                {paginatedPayments.map((payment) => {
+                  const info = orderName(payment.referenceId);
+                  const isSale = payment.type === 'sale';
 
-      <footer className="pay-statusbar">
-        <span><i />Stockroom OS · Settlement Control</span>
-        <span>Cashier: {account?.name || account?.email || 'Operator'}</span>
-        <span>
-          {visiblePayments.length} of {payments.length} ledger entries
-        </span>
-        <span className="pay-statusbar-suite">Enterprise Retail OS</span>
-      </footer>
-    </section>
-  )
+                  return (
+                    <tr
+                      key={payment.paymentId || Math.random()}
+                      className="hover:bg-[#FAF6EF]/60 transition-colors group cursor-pointer"
+                      onClick={() => window.print()}
+                    >
+                      <td className="py-3 px-4">
+                        <div className="font-semibold text-[#1C1B18] text-[13px] group-hover:text-[#6C9C70] transition-colors">
+                          #RCP-{payment.paymentId?.slice(-6).toUpperCase() || 'PAY'}
+                        </div>
+                      </td>
+
+                      <td className="py-3 px-3">
+                        <div className="font-semibold text-[#1C1B18] text-[13px]">{info.entity}</div>
+                        <div className="text-[11px] text-[#9A948A]">
+                          Ref: {info.ref || 'Direct'} {info.gstin ? `· GSTIN ${info.gstin}` : ''}
+                        </div>
+                      </td>
+
+                      <td className="py-3 px-3">
+                        <div className="text-[#1C1B18] text-xs">
+                          {new Date(payment.paymentDate || payment.createdAt).toLocaleDateString('en-GB', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                          })}
+                        </div>
+                        <div className="text-[11px] font-medium text-[#2563EB]">
+                          {payment.paymentMethod}
+                        </div>
+                      </td>
+
+                      <td className="py-3 px-3 text-[#6B665E]">
+                        {payment.transactionReference || payment.notes || '—'}
+                      </td>
+
+                      <td className="py-3 px-3 text-right">
+                        <div
+                          className={`font-bold text-sm tabular-nums ${
+                            isSale ? 'text-[#2E8B57]' : 'text-[#D64545]'
+                          }`}
+                        >
+                          {isSale ? '+ ' : '− '}
+                          {money(payment.amount)}
+                        </div>
+                        <div className="text-[11px] text-[#9A948A]">
+                          {isSale ? 'Customer Inflow' : 'Vendor Outflow'}
+                        </div>
+                      </td>
+
+                      <td className="py-3 px-3 text-center">
+                        <Badge variant={isSale ? 'success' : 'info'}>
+                          {isSale ? 'Paid' : 'Vendor Paid'}
+                        </Badge>
+                      </td>
+
+                      <td
+                        className="py-3 px-4 text-right"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            type="button"
+                            onClick={() => window.print()}
+                            className="p-1.5 rounded-lg text-[#6B665E] hover:text-[#1C1B18] hover:bg-[#FAF6EF] transition-colors cursor-pointer"
+                            title="Print Receipt"
+                            aria-label="Print Receipt"
+                          >
+                            <Printer size={15} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination Footer */}
+          {totalPages > 1 && (
+            <div className="p-3 border-t border-[#EEE6DA] flex items-center justify-between text-xs text-[#6B665E]">
+              <span>
+                Showing {Math.min((currentPage - 1) * pageSize + 1, visiblePayments.length)} to{' '}
+                {Math.min(currentPage * pageSize, visiblePayments.length)} of {visiblePayments.length} payments
+              </span>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  className="px-2.5 py-1 rounded-lg border border-[#EEE6DA] bg-white text-xs font-semibold text-[#1C1B18] hover:bg-[#FAF6EF] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                >
+                  Previous
+                </button>
+                <span className="px-2 font-medium text-[#1C1B18]">
+                  {currentPage} / {totalPages}
+                </span>
+                <button
+                  type="button"
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  className="px-2.5 py-1 rounded-lg border border-[#EEE6DA] bg-white text-xs font-semibold text-[#1C1B18] hover:bg-[#FAF6EF] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
-export default Payments
+export default Payments;

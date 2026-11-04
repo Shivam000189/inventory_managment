@@ -422,22 +422,198 @@ export default function IndustryModule({ section, business, onNavigate }) {
           <div className="var-table-scroll" tabIndex={0} role="region" aria-label={section}>
             <table className="var-table">
               <thead>
-                <tr>
-                  <th>Category</th>
-                  <th>{isVariants ? 'Product variant' : 'Product'}</th>
-                  <th className="num">Stock</th>
-                  <th>SKU code</th>
-                  <th className="num">Price</th>
-                  <th className="num">Actions</th>
-                </tr>
+                {section === 'Expiry Tracking' ? (
+                  <tr>
+                    <th>Product & Molecule</th>
+                    <th>Batch No</th>
+                    <th>Expiry Date</th>
+                    <th>Days Left / Status</th>
+                    <th className="num">Stock</th>
+                    <th className="num">Selling / MRP</th>
+                    <th className="num">Actions</th>
+                  </tr>
+                ) : section === 'Batch Management' ? (
+                  <tr>
+                    <th>Product & Molecule</th>
+                    <th>Batch No</th>
+                    <th>Mfg Date</th>
+                    <th>Expiry Date</th>
+                    <th className="num">Stock</th>
+                    <th className="num">Selling / MRP</th>
+                    <th className="num">Actions</th>
+                  </tr>
+                ) : (
+                  <tr>
+                    <th>Category</th>
+                    <th>{isVariants ? 'Product variant' : 'Product'}</th>
+                    <th className="num">Stock</th>
+                    <th>SKU code</th>
+                    <th className="num">Price</th>
+                    <th className="num">Actions</th>
+                  </tr>
+                )}
               </thead>
               <tbody>
                 {pageRows.map((product) => {
-                  const stock = Number(product.currentStock || 0)
-                  const state = stock === 0 ? 'out' : stock <= Number(product.minimumStock || 10) ? 'low' : 'in'
+                  const stock = Number(product.currentStock ?? product.stock ?? 0)
+                  const state = stock === 0 ? 'out' : stock <= Number(product.minimumStock ?? product.reorderLevel ?? 10) ? 'low' : 'in'
                   const attr = displayValue(product, section)
+
+                  if (section === 'Expiry Tracking') {
+                    const expDate = product.expiryDate ? new Date(product.expiryDate) : null
+                    const daysLeft = expDate ? Math.ceil((expDate.getTime() - stableNow) / (1000 * 60 * 60 * 24)) : null
+                    const expStatus =
+                      daysLeft === null
+                        ? { badge: 'in', label: 'No date' }
+                        : daysLeft < 0
+                        ? { badge: 'out', label: 'Expired (' + Math.abs(daysLeft) + 'd ago)' }
+                        : daysLeft <= 30
+                        ? { badge: 'out', label: 'Critical: ' + daysLeft + 'd left' }
+                        : daysLeft <= 90
+                        ? { badge: 'low', label: 'Exp in ' + daysLeft + 'd' }
+                        : { badge: 'in', label: 'Safe shelf-life' }
+
+                    return (
+                      <tr key={product.productId || product.id}>
+                        <td>
+                          <div>
+                            <strong className="var-name" style={{ display: 'block', color: 'var(--text)' }}>
+                              {product.name}
+                            </strong>
+                            {product.genericName && (
+                              <span style={{ fontSize: '11px', color: 'var(--primary)', fontWeight: 600 }}>
+                                {product.genericName}
+                              </span>
+                            )}
+                            {product.manufacturer && (
+                              <span style={{ fontSize: '11px', color: 'var(--text-soft)', marginLeft: '4px' }}>
+                                · {product.manufacturer}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td>
+                          <span className="var-sku" style={{ fontFamily: 'monospace' }}>
+                            {product.batchNumber || '—'}
+                          </span>
+                        </td>
+                        <td>
+                          <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text)' }}>
+                            {expDate ? expDate.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '—'}
+                          </span>
+                        </td>
+                        <td>
+                          <span className={'var-badge ' + expStatus.badge}>
+                            {expStatus.label}
+                          </span>
+                        </td>
+                        <td className="num var-stock">
+                          <strong>{stock.toLocaleString('en-IN')}</strong>
+                          <span className={'var-badge ' + state}>
+                            {state === 'out' ? 'Out' : state === 'low' ? 'Low' : 'In stock'}
+                          </span>
+                        </td>
+                        <td className="num var-price">
+                          <strong>{money(product.sellingPrice)}</strong>
+                          {product.mrp && Number(product.mrp) > 0 && (
+                            <small style={{ display: 'block', color: 'var(--text-soft)', textDecoration: 'line-through' }}>
+                              MRP {money(product.mrp)}
+                            </small>
+                          )}
+                        </td>
+                        <td className="num">
+                          <div className="var-row-actions">
+                            <button
+                              type="button"
+                              aria-label={'Edit ' + product.name}
+                              onClick={() => onNavigate?.(productLabel)}
+                            >
+                              <VarIcon name="edit" />
+                            </button>
+                            <button
+                              type="button"
+                              aria-label={'Print label for ' + product.name}
+                              onClick={() => window.print()}
+                            >
+                              <VarIcon name="print" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  }
+
+                  if (section === 'Batch Management') {
+                    const expDate = product.expiryDate ? new Date(product.expiryDate) : null
+                    const mfgDate = product.manufacturingDate ? new Date(product.manufacturingDate) : null
+
+                    return (
+                      <tr key={product.productId || product.id}>
+                        <td>
+                          <div>
+                            <strong className="var-name" style={{ display: 'block', color: 'var(--text)' }}>
+                              {product.name}
+                            </strong>
+                            {product.genericName && (
+                              <span style={{ fontSize: '11px', color: 'var(--primary)', fontWeight: 600 }}>
+                                {product.genericName}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td>
+                          <span className="var-sku" style={{ fontFamily: 'monospace' }}>
+                            {product.batchNumber || '—'}
+                          </span>
+                        </td>
+                        <td>
+                          <span style={{ fontSize: '12px', color: 'var(--text-soft)' }}>
+                            {mfgDate ? mfgDate.toLocaleDateString(undefined, { year: 'numeric', month: 'short' }) : '—'}
+                          </span>
+                        </td>
+                        <td>
+                          <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text)' }}>
+                            {expDate ? expDate.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '—'}
+                          </span>
+                        </td>
+                        <td className="num var-stock">
+                          <strong>{stock.toLocaleString('en-IN')}</strong>
+                          <span className={'var-badge ' + state}>
+                            {state === 'out' ? 'Out' : state === 'low' ? 'Low' : 'In stock'}
+                          </span>
+                        </td>
+                        <td className="num var-price">
+                          <strong>{money(product.sellingPrice)}</strong>
+                          {product.mrp && Number(product.mrp) > 0 && (
+                            <small style={{ display: 'block', color: 'var(--text-soft)', textDecoration: 'line-through' }}>
+                              MRP {money(product.mrp)}
+                            </small>
+                          )}
+                        </td>
+                        <td className="num">
+                          <div className="var-row-actions">
+                            <button
+                              type="button"
+                              aria-label={'Edit ' + product.name}
+                              onClick={() => onNavigate?.(productLabel)}
+                            >
+                              <VarIcon name="edit" />
+                            </button>
+                            <button
+                              type="button"
+                              aria-label={'Print label for ' + product.name}
+                              onClick={() => window.print()}
+                            >
+                              <VarIcon name="print" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  }
+
                   return (
-                    <tr key={product.productId}>
+                    <tr key={product.productId || product.id}>
                       <td className="var-cat">{product.category || 'Uncategorised'}</td>
                       <td>
                         <div className="var-variant">
@@ -449,7 +625,7 @@ export default function IndustryModule({ section, business, onNavigate }) {
                       </td>
                       <td className="num var-stock">
                         <strong>{stock.toLocaleString('en-IN')}</strong>
-                        <span className={`var-badge ${state}`}>
+                        <span className={'var-badge ' + state}>
                           {state === 'out' ? 'Out of stock' : state === 'low' ? 'Low stock' : 'In stock'}
                         </span>
                       </td>
@@ -468,14 +644,14 @@ export default function IndustryModule({ section, business, onNavigate }) {
                         <div className="var-row-actions">
                           <button
                             type="button"
-                            aria-label={`Edit ${product.name}`}
+                            aria-label={'Edit ' + product.name}
                             onClick={() => onNavigate?.(productLabel)}
                           >
                             <VarIcon name="edit" />
                           </button>
                           <button
                             type="button"
-                            aria-label={`Print label for ${product.name}`}
+                            aria-label={'Print label for ' + product.name}
                             onClick={() => window.print()}
                           >
                             <VarIcon name="print" />

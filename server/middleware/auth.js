@@ -1,4 +1,4 @@
-import { User, Member, Role, DEFAULT_PERMISSIONS, Business } from '../models/index.js'
+import { User, Member, Role, Business } from '../models/index.js'
 import { env } from '../config/env.js'
 import { ApiError } from '../utils/ApiError.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
@@ -37,31 +37,60 @@ export const authenticate = asyncHandler(async (req, res, next) => {
   if ((payload.tv || 0) !== (user.tokenVersion || 0)) {
     throw ApiError.unauthorized('Your session ended. Please sign in again.')
   }
+  if ((user.status || 'active') !== 'active') {
+    throw ApiError.unauthorized('Your account is unavailable. Please contact your administrator.')
+  }
 
   req.user = user
   req.authVia = via
 
-  // Sliding renewal for cookie sessions.
+  let member = null
+  let permissions = []
+  let business = null
+  if (user.business) {
+    business = await Business.findById(user.business)
+    if (!business || (business.status || 'active') !== 'active') {
+      throw ApiError.forbidden('Business access is unavailable.')
+    }
+    member = await Member.findOne({ business: user.business, account: user._id })
+    if (!member || member.status !== 'active') {
+      throw ApiError.forbidden('Your business access is inactive. Contact your administrator.')
+    }
+    const role = await Role.findOne({ business: user.business, roleId: member.roleId })
+    if (user.role === 'owner' && member.roleId !== 'ROLE-ADMIN') {
+      throw ApiError.forbidden('Business administrator access is unavailable.')
+    }
+    if (user.role === 'team' && member.roleId === 'ROLE-ADMIN') {
+      throw ApiError.forbidden('Your team access is unavailable.')
+    }
+    if (!role) throw ApiError.forbidden('Your business role is unavailable.')
+    permissions = role.permissions || []
+  }
+
+  if (user.mustChangePassword) {
+    const pathname = req.originalUrl?.split('?')[0]
+    const allowedPaths = [
+      '/api/auth/me',
+      '/api/auth/password',
+      '/api/auth/logout',
+      '/api/auth/logout-all',
+    ]
+    if (!allowedPaths.includes(pathname)) {
+      throw ApiError.forbidden('Change your temporary password before continuing.')
+    }
+  }
+
+  // Sliding renewal for cookie sessions happens only after current access checks.
   if (via === 'cookie' && typeof payload.exp === 'number') {
     const ttl = tokenTimeToLiveMs()
     const remaining = payload.exp * 1000 - Date.now()
     if (remaining < ttl * RENEW_AFTER_RATIO) refreshSessionCookie(res, user, req.cookies?.[env.cookie.csrfName])
   }
 
-  let member = null
-  let permissions = user.role === 'owner' ? DEFAULT_PERMISSIONS : []
-  if (user.business) {
-    member = await Member.findOne({ business: user.business, $or: [{ account: user._id }, { email: user.email }] })
-    if (user.role === 'team') {
-      if (!member || member.status !== 'active') throw ApiError.forbidden('Your team access is inactive. Contact your administrator.')
-      const role = await Role.findOne({ business: user.business, roleId: member.roleId })
-      permissions = role?.permissions || []
-    }
-  }
   req.member = member
   req.permissions = permissions
   req.auth = { userId: String(user._id), businessId: user.business ? String(user.business) : null, roleId: member?.roleId || null, permissions }
-  req.business = user.business ? await Business.findById(user.business) : null
+  req.business = business
   req.capabilities = req.business ? resolveBusinessCapabilities(req.business.toJSON()) : null
   next()
 })
@@ -90,6 +119,32 @@ export function requirePermission(permission) {
 export function requireAnyPermission(...permissions) {
   return (req, _res, next) => {
     if (!permissions.some((permission) => req.permissions?.includes(permission))) throw ApiError.forbidden(`Missing required permission: ${permissions.join(' or ')}.`)
+    next()
+  }
+}
+
+
+/**
+ * Middleware: Requires the authenticated user to have a specific platform_role.
+ *
+ * Authorization derives exclusively from the database user loaded by `authenticate`.
+ * Never reads platform_role from the request body, query string, headers, or JWT
+ * claims — those paths are untrusted and intentionally ignored.
+ *
+ * Usage:
+ *   const platformGuard = [requireDatabase, authenticate, requirePlatformRole('super_admin')]
+ *   api.use('/platform', platformGuard, platformRoutes)
+ *
+ * @param {'super_admin'|'user'} role The required platform_role value.
+ */
+export function requirePlatformRole(role) {
+  return (req, _res, next) => {
+    // req.user is the full DB document populated by authenticate().
+    // platformRole is the camelCase mapping of the platform_role column.
+    const userPlatformRole = req.user?.platformRole ?? req.user?.platform_role ?? 'user'
+    if (userPlatformRole !== role) {
+      throw ApiError.forbidden('Platform access denied.')
+    }
     next()
   }
 }

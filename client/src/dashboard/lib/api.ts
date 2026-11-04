@@ -19,29 +19,7 @@ function getCsrfToken(): string | null {
   if (typeof document === 'undefined') return null;
   const match = document.cookie.match(/sr_csrf=([^;]+)/);
   if (match) return decodeURIComponent(match[1]);
-  try {
-    return localStorage.getItem('sr_csrf');
-  } catch {
-    return null;
-  }
-}
-
-function getAuthToken(): string | null {
-  if (typeof localStorage === 'undefined') return null;
-  try {
-    return localStorage.getItem('sr_token');
-  } catch {
-    return null;
-  }
-}
-
-export function setAuthSession(session: { token?: string; csrfToken?: string }) {
-  try {
-    if (session.token) localStorage.setItem('sr_token', session.token);
-    if (session.csrfToken) localStorage.setItem('sr_csrf', session.csrfToken);
-  } catch {
-    // Ignore localStorage errors
-  }
+  return null;
 }
 
 export function clearAuthSession() {
@@ -66,11 +44,6 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     headers.set('x-csrf-token', csrf);
   }
 
-  const token = getAuthToken();
-  if (token && !headers.has('Authorization')) {
-    headers.set('Authorization', `Bearer ${token}`);
-  }
-
   const response = await fetch(url, {
     ...options,
     headers,
@@ -80,7 +53,9 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    const errorMsg = data?.error?.message || data?.message || `HTTP error ${response.status}`;
+    const errorMsg = response.status >= 500
+      ? 'Server error. Please try again.'
+      : data?.error?.message || data?.message || `Request failed (${response.status}).`;
     throw new Error(errorMsg);
   }
 
@@ -91,9 +66,7 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
 export const authApi = {
   me: () => request<any>('/auth/me'),
   login: async (credentials: { email: string; password: string; role?: string }) => {
-    const res = await request<any>('/auth/login', { method: 'POST', body: JSON.stringify(credentials) });
-    if (res?.token || res?.csrfToken) setAuthSession(res);
-    return res;
+    return request<any>('/auth/login', { method: 'POST', body: JSON.stringify(credentials) });
   },
   logout: async () => {
     try {
@@ -102,12 +75,8 @@ export const authApi = {
       clearAuthSession();
     }
   },
-  register: (payload: any) =>
-    request<any>('/auth/register', { method: 'POST', body: JSON.stringify(payload) }),
-  forgotPassword: (payload: any) =>
-    request<any>('/auth/forgot-password', { method: 'POST', body: JSON.stringify(payload) }),
-  resetPassword: (payload: any) =>
-    request<any>('/auth/reset-password', { method: 'POST', body: JSON.stringify(payload) }),
+  changePassword: (payload: { currentPassword: string; newPassword: string }) =>
+    request<any>('/auth/password', { method: 'PATCH', body: JSON.stringify(payload) }),
 };
 
 // 2. Business Profile API
@@ -151,13 +120,15 @@ export const inventoryApi = {
       }),
     });
   },
-  history: (params: Record<string, any> = {}) => {
+  history: async (params: Record<string, any> = {}) => {
     const qs = new URLSearchParams(params).toString();
-    return request<any[]>(`/inventory/transactions${qs ? `?${qs}` : ''}`);
+    const res = await request<any>(`/inventory/transactions${qs ? `?${qs}` : ''}`);
+    return Array.isArray(res) ? res : (res?.items || []);
   },
-  transactions: (params: Record<string, any> = {}) => {
+  transactions: async (params: Record<string, any> = {}) => {
     const qs = new URLSearchParams(params).toString();
-    return request<any[]>(`/inventory/transactions${qs ? `?${qs}` : ''}`);
+    const res = await request<any>(`/inventory/transactions${qs ? `?${qs}` : ''}`);
+    return Array.isArray(res) ? res : (res?.items || []);
   },
   summary: () => request<any>('/reports/summary'),
 };
@@ -237,6 +208,8 @@ export const usersApi = {
   listMembers: () => request<any[]>('/users'),
   invite: (payload: any) => request<any>('/users', { method: 'POST', body: JSON.stringify(payload) }),
   update: (id: string, payload: any) => request<any>(`/users/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  setStatus: (accountId: string, status: 'active' | 'inactive') =>
+    request<any>(`/users/${accountId}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
   delete: (id: string) => request<any>(`/users/${id}`, { method: 'DELETE' }),
 };
 
@@ -280,4 +253,3 @@ export const productImportsApi = {
     }),
   history: () => request<any[]>('/product-imports/history'),
 };
-

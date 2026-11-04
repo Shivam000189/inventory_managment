@@ -27,47 +27,47 @@ export const BottomNav: React.FC = () => {
     {
       id: 'overview',
       label: 'Overview',
-      path: '/app/overview',
+      path: '/overview',
       icon: Home,
       isActive: (r: string) =>
         r === '/' ||
         r === '/app' ||
-        r === '/app/' ||
-        r === '/app/overview' ||
+        r === '/' ||
+        r === '/overview' ||
         r === '/overview' ||
         r === '/dashboard',
     },
     {
       id: 'products',
       label: 'Products',
-      path: '/app/products',
+      path: '/products',
       icon: Package,
       isActive: (r: string) =>
-        r.startsWith('/app/products') ||
+        r.startsWith('/products') ||
         r.startsWith('/products') ||
         r.startsWith('/medicines'),
     },
     {
       id: 'inventory',
       label: 'Inventory',
-      path: '/app/inventory',
+      path: '/inventory',
       icon: Layers,
       isActive: (r: string) =>
-        r.startsWith('/app/inventory') ||
         r.startsWith('/inventory') ||
-        r.startsWith('/app/stock') ||
+        r.startsWith('/inventory') ||
+        r.startsWith('/stock') ||
         r.startsWith('/stock') ||
         r.startsWith('/categories'),
     },
     {
       id: 'purchases',
       label: 'Purchases',
-      path: '/app/purchase-orders',
+      path: '/purchase-orders',
       icon: ShoppingBag,
       isActive: (r: string) =>
-        r.startsWith('/app/purchase-orders') ||
         r.startsWith('/purchase-orders') ||
-        r.startsWith('/app/purchases') ||
+        r.startsWith('/purchase-orders') ||
+        r.startsWith('/purchases') ||
         r.startsWith('/purchases') ||
         r.startsWith('/receiving'),
     },
@@ -77,22 +77,22 @@ export const BottomNav: React.FC = () => {
     {
       id: 'pos',
       label: 'New Bill',
-      path: '/app/pos',
+      path: '/pos',
       icon: ShoppingCart,
       isActive: () => posActiveTab === 'new_bill',
       onSelect: () => {
-        navigate('/app/pos');
+        navigate('/pos');
         setPosActiveTab('new_bill');
       },
     },
     {
       id: 'bills',
       label: 'My Bills',
-      path: '/app/pos',
+      path: '/pos',
       icon: Receipt,
       isActive: () => posActiveTab === 'bills',
       onSelect: () => {
-        navigate('/app/pos');
+        navigate('/pos');
         setPosActiveTab('bills');
       },
     },

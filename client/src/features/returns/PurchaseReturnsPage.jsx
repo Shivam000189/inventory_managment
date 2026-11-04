@@ -1,4 +1,16 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useState, useMemo } from 'react'
+import {
+  RotateCcw,
+  Truck,
+  DollarSign,
+  PackageCheck,
+  Search,
+  Plus,
+  Package,
+} from 'lucide-react'
+import { StatCard } from '../../dashboard/components/common/StatCard.tsx'
+import { Badge } from '../../dashboard/components/common/Badge.tsx'
+import { TableSkeleton } from '../../components/ui/Feedback.tsx'
 import { returnApi } from '../../api/returnApi.js'
 import { productApi } from '../../api/productApi.js'
 import { purchaseOrderApi } from '../../api/purchaseOrderApi.js'
@@ -126,116 +138,199 @@ export default function PurchaseReturnsPage({ business = {}, purchase = true }) 
     },
   ]
 
+  const [search, setSearch] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+
+  const filteredReturns = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return returns;
+    return returns.filter(
+      (r) =>
+        (r.returnId || '').toLowerCase().includes(q) ||
+        (r.productName || '').toLowerCase().includes(q) ||
+        (r.reason || '').toLowerCase().includes(q)
+    );
+  }, [returns, search]);
+
+  const totalPages = Math.ceil(filteredReturns.length / pageSize) || 1;
+  const paginatedReturns = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredReturns.slice(start, start + pageSize);
+  }, [filteredReturns, currentPage, pageSize]);
+
   const totalUnitsReturned = returns.reduce((sum, r) => sum + Number(r.quantity || 0), 0)
   const totalRefund = returns.reduce((sum, r) => sum + Number(r.refundAmount || 0), 0)
 
   return (
-    <div className="returns-page returns-container">
-      <PageHeader
-        kicker="Purchases / Returns"
-        title="Purchase Returns"
-        badge={`${returns.length} completed`}
-        description={`Complete supplier returns and manage outbound inventory adjustments for ${business.name || 'your business'}.`}
-      />
+    <div className="space-y-6 animate-in fade-in duration-150 pb-10">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-[28px] font-semibold text-[#1C1B18] tracking-tight leading-tight">
+            Purchase Returns
+          </h1>
+          <p className="text-[13px] text-[#6B665E] mt-0.5">
+            Complete supplier returns and manage outbound inventory adjustments for {business.name || 'your business'}.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2.5 py-0.5">
+          <button
+            type="button"
+            onClick={() => {
+              const el = document.getElementById('return-order');
+              if (el) {
+                el.focus();
+                el.scrollIntoView({ behavior: 'smooth' });
+              }
+            }}
+            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-[#7FAE82] hover:bg-[#6C9C70] text-white text-xs font-semibold transition-all cursor-pointer shadow-2xs whitespace-nowrap active:scale-95"
+          >
+            <Plus size={16} />
+            <span>+ New Return</span>
+          </button>
+        </div>
+      </div>
 
       {message && (
-        <div className={`return-alert-box ${message.type === 'error' ? 'return-alert-error' : 'return-alert-success'}`}>
+        <div
+          className={`p-3.5 rounded-xl text-xs font-medium border ${
+            message.type === 'error'
+              ? 'bg-[#FDECEC] text-[#D64545] border-[#F9C2C2]'
+              : 'bg-[#E8F5EC] text-[#2E8B57] border-[#CDEBD5]'
+          }`}
+          role={message.type === 'error' ? 'alert' : 'status'}
+        >
           {message.text}
         </div>
       )}
 
-      {/* 4 Pastel KPI Summary Cards */}
-      <div className="ledger-kpi-grid">
-        <div className="ledger-kpi-card blue">
-          <div className="ledger-kpi-icon-bubble">
-            <Icon name="return" size={20} />
-          </div>
-          <div className="ledger-kpi-content">
-            <span className="ledger-kpi-label">Total PO Returns</span>
-            <span className="ledger-kpi-value">{returns.length}</span>
-            <span className="ledger-kpi-subtext">Processed supplier returns</span>
-          </div>
-        </div>
-
-        <div className="ledger-kpi-card slate">
-          <div className="ledger-kpi-icon-bubble">
-            <Icon name="truck" size={20} />
-          </div>
-          <div className="ledger-kpi-content">
-            <span className="ledger-kpi-label">Units Dispatched</span>
-            <span className="ledger-kpi-value">{totalUnitsReturned} units</span>
-            <span className="ledger-kpi-subtext">Returned to vendor</span>
-          </div>
-        </div>
-
-        <div className="ledger-kpi-card green">
-          <div className="ledger-kpi-icon-bubble">
-            <Icon name="dollar" size={20} />
-          </div>
-          <div className="ledger-kpi-content">
-            <span className="ledger-kpi-label">Supplier Credit</span>
-            <span className="ledger-kpi-value">
-              {business.currency || 'INR'} {totalRefund.toFixed(2)}
-            </span>
-            <span className="ledger-kpi-subtext">Credit notes & refunds</span>
-          </div>
-        </div>
-
-        <div className="ledger-kpi-card amber">
-          <div className="ledger-kpi-icon-bubble">
-            <Icon name="pending" size={20} />
-          </div>
-          <div className="ledger-kpi-content">
-            <span className="ledger-kpi-label">Eligible Orders</span>
-            <span className="ledger-kpi-value">{orders.length} orders</span>
-            <span className="ledger-kpi-subtext">Available for return</span>
-          </div>
-        </div>
+      {/* 4 Dashboard-style StatCards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <StatCard
+          icon={<RotateCcw size={18} strokeWidth={2} />}
+          iconBgColor="bg-[#EBF2FA] text-[#2563EB]"
+          label="Total PO Returns"
+          value={returns.length}
+          trend="Processed supplier returns"
+          isPositive={true}
+        />
+        <StatCard
+          icon={<Truck size={18} strokeWidth={2} />}
+          iconBgColor="bg-[#FAF6EF] text-[#6B665E]"
+          label="Units Dispatched"
+          value={`${totalUnitsReturned} units`}
+          trend="Returned to vendor"
+          isPositive={true}
+        />
+        <StatCard
+          icon={<DollarSign size={18} strokeWidth={2} />}
+          iconBgColor="bg-[#E8F5EC] text-[#2E8B57]"
+          label="Supplier Credit"
+          value={`${business.currency || 'INR'} ${totalRefund.toFixed(2)}`}
+          trend="Credit notes & refunds"
+          isPositive={true}
+        />
+        <StatCard
+          icon={<PackageCheck size={18} strokeWidth={2} />}
+          iconBgColor="bg-[#FFF4DC] text-[#D98E0B]"
+          label="Eligible Orders"
+          value={`${orders.length} orders`}
+          trend="Available for return"
+          isPositive={true}
+        />
       </div>
 
-      <Card title="Initiate Purchase Return" subtitle="Select purchase order and product to record an outbound return">
-        <form className="purchase-return-form" onSubmit={handleSubmit}>
-          <div className="returns-form-grid">
-            <Field label="Purchase Order" required htmlFor="return-order">
-              <Select id="return-order" name="orderId" defaultValue="" required>
+      {/* Initiate Return Form Card */}
+      <div className="bg-white rounded-2xl border border-[#EEE6DA] p-5 shadow-2xs space-y-4">
+        <div>
+          <h2 className="text-base font-semibold text-[#1C1B18]">Initiate Purchase Return</h2>
+          <p className="text-xs text-[#6B665E] mt-0.5">Select purchase order and product to record an outbound return</p>
+        </div>
+
+        <form className="space-y-4" onSubmit={handleSubmit}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            <div>
+              <label htmlFor="return-order" className="block text-xs font-semibold text-[#1C1B18] mb-1">
+                Purchase Order *
+              </label>
+              <select
+                id="return-order"
+                name="orderId"
+                defaultValue=""
+                required
+                className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs bg-white outline-none focus:border-[#7FAE82]"
+              >
                 <option value="" disabled>Select order</option>
                 {orders.map((order) => {
-                  const id = order.orderId || order.purchaseOrderId || order._id
+                  const id = order.orderId || order.purchaseOrderId || order._id;
                   return (
                     <option key={id} value={id}>
                       {order.orderNumber} · {order.supplierName || 'Supplier'}
                     </option>
-                  )
+                  );
                 })}
-              </Select>
-            </Field>
+              </select>
+            </div>
 
-            <Field label="Product to Return" required htmlFor="return-product">
-              <Select id="return-product" name="productId" defaultValue="" required>
+            <div>
+              <label htmlFor="return-product" className="block text-xs font-semibold text-[#1C1B18] mb-1">
+                Product to Return *
+              </label>
+              <select
+                id="return-product"
+                name="productId"
+                defaultValue=""
+                required
+                className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs bg-white outline-none focus:border-[#7FAE82]"
+              >
                 <option value="" disabled>Select product</option>
                 {products.map((product) => (
                   <option key={product.productId || product._id} value={product.productId || product._id}>
                     {product.name} ({product.sku || 'No SKU'})
                   </option>
                 ))}
-              </Select>
-            </Field>
+              </select>
+            </div>
 
-            <Field label="Return Quantity" required htmlFor="return-quantity">
-              <Input id="return-quantity" name="quantity" type="number" min="1" required placeholder="Units" />
-            </Field>
+            <div>
+              <label htmlFor="return-quantity" className="block text-xs font-semibold text-[#1C1B18] mb-1">
+                Return Quantity *
+              </label>
+              <input
+                id="return-quantity"
+                name="quantity"
+                type="number"
+                min="1"
+                required
+                placeholder="Units"
+                className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs outline-none focus:border-[#7FAE82]"
+              />
+            </div>
 
-            <Field label="Return Reason" htmlFor="return-reason">
-              <Select id="return-reason" name="reason" defaultValue="Damaged product">
+            <div>
+              <label htmlFor="return-reason" className="block text-xs font-semibold text-[#1C1B18] mb-1">
+                Return Reason
+              </label>
+              <select
+                id="return-reason"
+                name="reason"
+                defaultValue="Damaged product"
+                className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs bg-white outline-none focus:border-[#7FAE82]"
+              >
                 <option value="Damaged product">Damaged product</option>
                 <option value="Defective product">Defective product</option>
                 <option value="Incorrect product">Incorrect product</option>
                 <option value="Other">Other</option>
-              </Select>
-            </Field>
+              </select>
+            </div>
 
-            <Field label="Refund / Credit Amount" htmlFor="return-refund">
-              <Input
+            <div>
+              <label htmlFor="return-refund" className="block text-xs font-semibold text-[#1C1B18] mb-1">
+                Refund / Credit Amount
+              </label>
+              <input
                 id="return-refund"
                 name="refundAmount"
                 type="number"
@@ -243,29 +338,136 @@ export default function PurchaseReturnsPage({ business = {}, purchase = true }) 
                 step="0.01"
                 defaultValue="0"
                 placeholder="0.00"
+                className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs outline-none focus:border-[#7FAE82]"
               />
-            </Field>
+            </div>
           </div>
 
-          <div className="returns-form-actions">
-            <Button variant="primary" type="submit" loading={saving} disabled={saving} icon="arrow-path">
-              {saving ? 'Processing…' : 'Complete Return'}
-            </Button>
+          <div className="flex justify-end pt-2">
+            <button
+              type="submit"
+              disabled={saving}
+              className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-[#7FAE82] hover:bg-[#6C9C70] text-white text-xs font-semibold transition-all cursor-pointer shadow-2xs whitespace-nowrap active:scale-95 disabled:opacity-50"
+            >
+              <RotateCcw size={15} />
+              <span>{saving ? 'Processing…' : 'Complete Return'}</span>
+            </button>
           </div>
         </form>
-      </Card>
+      </div>
 
-      <Card title="Purchase Returns History" subtitle="Audit log of all completed supplier returns">
-        <DataTable
-          columns={columns}
-          data={returns}
-          loading={loading}
-          error={error}
-          onRetry={refetch}
-          emptyTitle="No returns recorded"
-          emptyDescription="No purchase returns recorded for this business yet."
-        />
-      </Card>
+      {/* History Table Section matching Products Page */}
+      <div className="space-y-3">
+        {/* Toolbar */}
+        <div className="bg-white rounded-2xl p-3 border border-[#EEE6DA] flex items-center justify-between gap-3 shadow-2xs">
+          <div className="relative flex-1 max-w-md">
+            <Search size={15} className="absolute left-3 top-2.5 text-[#9A948A]" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by return ID, product, or reason..."
+              className="w-full pl-9 pr-3 py-1.5 rounded-xl border border-[#EEE6DA] text-xs focus:border-[#7FAE82] outline-none"
+            />
+          </div>
+        </div>
+
+        {loading && returns.length === 0 ? (
+          <TableSkeleton
+            columns={[
+              { title: 'Return ID', width: '15%' },
+              { title: 'Product', width: '25%' },
+              { title: 'Quantity & Reason', width: '25%' },
+              { title: 'Credit / Refund', width: '15%', align: 'right' },
+              { title: 'Status', width: '10%', align: 'center' },
+              { title: 'Date', width: '10%', align: 'center' },
+            ]}
+            rows={6}
+          />
+        ) : filteredReturns.length === 0 ? (
+          <div className="bg-white rounded-2xl border border-[#EEE6DA] p-12 text-center shadow-2xs">
+            <Package className="mx-auto text-[#9A948A] mb-3 opacity-60" size={36} />
+            <h3 className="text-sm font-semibold text-[#1C1B18]">No returns found</h3>
+            <p className="text-xs text-[#6B665E] mt-1 max-w-sm mx-auto">
+              {returns.length ? 'No returns match your search.' : 'No purchase returns recorded for this business yet.'}
+            </p>
+          </div>
+        ) : (
+          <div className="bg-white rounded-2xl border border-[#EEE6DA] overflow-hidden shadow-2xs">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs min-w-[760px]">
+                <thead className="sticky top-0 z-10 bg-[#FAF6EF] border-b border-[#EEE6DA] text-[#8C867A] text-[11px] font-semibold uppercase tracking-wider">
+                  <tr>
+                    <th className="py-3 px-4 font-medium">Return ID</th>
+                    <th className="py-3 px-3 font-medium">Product</th>
+                    <th className="py-3 px-3 font-medium">Quantity & Reason</th>
+                    <th className="py-3 px-3 font-medium text-right">Credit / Refund</th>
+                    <th className="py-3 px-3 font-medium text-center">Status</th>
+                    <th className="py-3 px-4 text-center font-medium">Date</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#EEE6DA]/80">
+                  {paginatedReturns.map((item) => (
+                    <tr key={item.returnId || Math.random()} className="hover:bg-[#FAF6EF]/60 transition-colors">
+                      <td className="py-3 px-4 font-semibold text-[#1C1B18] text-[13px]">
+                        #{item.returnId || 'RET-ITEM'}
+                      </td>
+                      <td className="py-3 px-3">
+                        <div className="font-semibold text-[#1C1B18] text-[13px]">{item.productName || 'Unknown Product'}</div>
+                        <div className="text-[11px] text-[#9A948A]">{item.productSku || 'No SKU'}</div>
+                      </td>
+                      <td className="py-3 px-3">
+                        <div className="font-semibold text-[#1C1B18] text-xs">{item.quantity} units</div>
+                        <div className="text-[11px] text-[#6B665E]">{item.reason || 'Not specified'}</div>
+                      </td>
+                      <td className="py-3 px-3 text-right font-bold text-[#1C1B18] tabular-nums">
+                        {business.currency || 'INR'} {Number(item.refundAmount || 0).toFixed(2)}
+                      </td>
+                      <td className="py-3 px-3 text-center">
+                        <Badge variant="success">Completed</Badge>
+                      </td>
+                      <td className="py-3 px-4 text-center text-[#6B665E] whitespace-nowrap">
+                        {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'Recent'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination Footer */}
+            {totalPages > 1 && (
+              <div className="p-3 border-t border-[#EEE6DA] flex items-center justify-between text-xs text-[#6B665E]">
+                <span>
+                  Showing {Math.min((currentPage - 1) * pageSize + 1, filteredReturns.length)} to{' '}
+                  {Math.min(currentPage * pageSize, filteredReturns.length)} of {filteredReturns.length} returns
+                </span>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    className="px-2.5 py-1 rounded-lg border border-[#EEE6DA] bg-white text-xs font-semibold text-[#1C1B18] hover:bg-[#FAF6EF] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                  >
+                    Previous
+                  </button>
+                  <span className="px-2 font-medium text-[#1C1B18]">
+                    {currentPage} / {totalPages}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    className="px-2.5 py-1 rounded-lg border border-[#EEE6DA] bg-white text-xs font-semibold text-[#1C1B18] hover:bg-[#FAF6EF] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
-  )
+  );
 }
