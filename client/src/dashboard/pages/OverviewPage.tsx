@@ -94,27 +94,14 @@ export const OverviewPage: React.FC = () => {
         <span className="sr-only">Updating overview dashboard metrics…</span>
       )}
 
-      {/* Top Header & Fast Sale Action */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-[28px] font-semibold text-[#1C1B18] tracking-tight leading-tight">
-            Dashboard Overview
-          </h1>
-          <p className="text-[13px] text-[#6B665E] mt-0.5">
-            Real-time store telemetry, stock movements, and performance metrics for {businessProfile?.name || 'your store'}.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2.5 shrink-0">
-          <button
-            type="button"
-            onClick={() => navigate('/pos')}
-            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-[#381e12] hover:bg-[#26140c] text-white text-xs font-semibold transition-all cursor-pointer shadow-2xs whitespace-nowrap active:scale-95"
-          >
-            <ShoppingCart size={15} strokeWidth={2.5} />
-            <span>Open POS Counter</span>
-          </button>
-        </div>
+      {/* Top Header */}
+      <div>
+        <h1 className="text-[28px] font-semibold text-[#1C1B18] tracking-tight leading-tight">
+          Dashboard Overview
+        </h1>
+        <p className="text-[13px] text-[#6B665E] mt-0.5">
+          Real-time store telemetry, stock movements, and performance metrics for {businessProfile?.name || 'your store'}.
+        </p>
       </div>
 
       {/* 3D Quick Actions Ribbon */}
