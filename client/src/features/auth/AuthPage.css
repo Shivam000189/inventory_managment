@@ -17,13 +17,25 @@
   --auth-brand-glow: rgba(56, 30, 18, 0.24);
 }
 
-/* Page Canvas with Ambient Warm Clay Lighting */
+/* Lock root page scrolling when login view is active for a true single-frame presentation */
+html:has(.auth-modern-stage),
+body:has(.auth-modern-stage) {
+  overflow: hidden;
+  height: 100dvh;
+  margin: 0;
+  padding: 0;
+}
+
+/* Page Canvas with Ambient Warm Clay Lighting — True Single-Frame Viewport */
 .auth-modern-stage {
   position: relative;
+  height: 100dvh;
   min-height: 100dvh;
-  width: 100%;
+  max-height: 100dvh;
+  width: 100vw;
+  max-width: 100%;
   box-sizing: border-box;
-  padding: clamp(16px, 3.5vw, 44px);
+  padding: clamp(10px, 2vh, 24px) clamp(16px, 2.5vw, 36px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -33,26 +45,26 @@
     radial-gradient(circle at 12% 88%, rgba(246, 237, 225, 0.8) 0%, rgba(235, 221, 204, 0.95) 100%);
   font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   color: var(--auth-text-ink);
-  overflow-y: auto;
+  overflow: hidden; /* Zero scrolling on desktop / laptop */
 }
 
 /* --------------------------------------------------------------------------
-   Main Two-Column Card Container — 20% Claymorphism
+   Main Two-Column Card Container — 20% Claymorphism (Single Frame Fit)
    -------------------------------------------------------------------------- */
 .auth-modern-card {
   position: relative;
   display: flex;
   flex-direction: row;
   width: 100%;
-  max-width: 1040px;
-  min-height: 610px;
+  max-width: 1020px;
+  max-height: calc(100dvh - clamp(20px, 4vh, 48px));
   background: linear-gradient(145deg, #ffffff 0%, #fbf9f6 100%);
   border: 1.5px solid rgba(255, 255, 255, 0.95);
-  border-radius: 32px;
+  border-radius: 28px;
   /* 20% Claymorphism: Soft exterior elevation + subtle inner lighting highlight */
   box-shadow:
-    0 28px 60px -8px rgba(56, 30, 18, 0.10),
-    0 12px 24px -4px rgba(56, 30, 18, 0.05),
+    0 24px 50px -8px rgba(56, 30, 18, 0.10),
+    0 10px 20px -4px rgba(56, 30, 18, 0.05),
     inset 2px 2px 5px 0 rgba(255, 255, 255, 0.95),
     inset -3px -3px 8px 0 rgba(56, 30, 18, 0.035);
   overflow: hidden;
@@ -111,17 +123,18 @@
 }
 
 /* --------------------------------------------------------------------------
-   Right Pane: Authentication Form & Quick Demo Actions
+   Right Pane: Authentication Form & Quick Demo Actions (Single-Frame Compact)
    -------------------------------------------------------------------------- */
 .auth-card-body {
   position: relative;
   flex: 1 1 46%;
   box-sizing: border-box;
-  padding: 38px 42px 30px;
+  padding: clamp(16px, 2.5vh, 28px) clamp(20px, 2.8vw, 36px);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   background: transparent;
+  overflow: hidden;
 }
 
 /* Header Bar inside card body */
@@ -129,7 +142,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 20px;
+  margin-bottom: clamp(6px, 1.2vh, 14px);
 }
 
 .stockroom-brand-mark {
@@ -140,16 +153,16 @@
 }
 
 .stockroom-brand-icon {
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: var(--auth-brand-color);
   color: #ffffff;
-  border-radius: 10px;
+  border-radius: 9px;
   font-weight: 800;
-  font-size: 16px;
+  font-size: 15px;
   letter-spacing: -0.5px;
   box-shadow:
     0 6px 14px var(--auth-brand-glow),
@@ -163,17 +176,17 @@
 }
 
 .stockroom-brand-title {
-  font-size: 14.5px;
+  font-size: 14px;
   font-weight: 800;
-  letter-spacing: 1.6px;
+  letter-spacing: 1.4px;
   color: var(--auth-text-ink);
   line-height: 1.1;
 }
 
 .stockroom-brand-sub {
-  font-size: 8px;
+  font-size: 7.5px;
   font-weight: 700;
-  letter-spacing: 1.8px;
+  letter-spacing: 1.6px;
   color: var(--auth-text-subtle);
   line-height: 1.1;
   margin-top: 1px;
@@ -182,7 +195,7 @@
 .auth-top-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .auth-aux-link,
@@ -193,7 +206,7 @@
   border-radius: 8px;
   color: var(--auth-text-muted);
   font: inherit;
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 600;
   text-decoration: none;
   cursor: pointer;
@@ -208,34 +221,34 @@
 
 /* Hero Heading */
 .auth-hero-heading {
-  margin-bottom: 20px;
+  margin-bottom: clamp(8px, 1.4vh, 14px);
 }
 
 .auth-title {
-  margin: 0 0 6px;
-  font-size: 28px;
+  margin: 0 0 3px;
+  font-size: clamp(22px, 2.2vw, 25px);
   font-weight: 800;
   color: var(--auth-text-ink);
-  letter-spacing: -0.6px;
+  letter-spacing: -0.5px;
   line-height: 1.15;
 }
 
 .auth-description {
   margin: 0;
-  font-size: 13px;
+  font-size: 12px;
   color: var(--auth-text-muted);
   font-weight: 400;
-  line-height: 1.45;
+  line-height: 1.4;
 }
 
 /* Error Banner */
 .auth-error-banner {
-  padding: 9px 13px;
-  border-radius: 12px;
-  font-size: 12.5px;
+  padding: 7px 11px;
+  border-radius: 10px;
+  font-size: 12px;
   font-weight: 500;
-  margin-bottom: 16px;
-  line-height: 1.4;
+  margin-bottom: 10px;
+  line-height: 1.35;
   background: rgba(220, 38, 38, 0.08);
   color: #B91C1C;
   border: 1px solid rgba(220, 38, 38, 0.2);
@@ -246,17 +259,17 @@
 .auth-input-form {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: clamp(7px, 1.1vh, 11px);
 }
 
 .auth-input-group {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 3px;
 }
 
 .auth-input-group label {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   color: #554f46;
   letter-spacing: 0.1px;
@@ -268,12 +281,12 @@
   display: flex;
   align-items: center;
   width: 100%;
-  height: 46px;
+  height: clamp(38px, 4.2vh, 42px);
   background: var(--auth-input-bg);
   border: 1.5px solid var(--auth-input-border);
-  border-radius: 14px;
+  border-radius: 12px;
   box-sizing: border-box;
-  padding: 0 14px;
+  padding: 0 12px;
   box-shadow:
     inset 1.5px 1.5px 3px rgba(56, 30, 18, 0.035),
     inset -1.5px -1.5px 3px rgba(255, 255, 255, 0.95);
@@ -290,7 +303,7 @@
 
 .auth-field-icon {
   color: #8c857b;
-  margin-right: 9px;
+  margin-right: 8px;
   flex-shrink: 0;
   transition: color 0.15s ease;
 }
@@ -305,7 +318,7 @@
   border: 0;
   background: transparent;
   color: var(--auth-text-ink);
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 500;
   font-family: inherit;
   outline: none;
@@ -322,13 +335,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   border: 0;
   background: transparent;
   color: #8c857b;
   cursor: pointer;
-  border-radius: 8px;
+  border-radius: 6px;
   transition: all 0.15s ease;
 }
 
@@ -343,22 +356,22 @@
   align-items: center;
   justify-content: space-between;
   margin-top: -2px;
-  margin-bottom: 2px;
+  margin-bottom: 0px;
 }
 
 .auth-checkbox-label {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  font-size: 12px;
+  gap: 7px;
+  font-size: 11.5px;
   color: var(--auth-text-muted);
   cursor: pointer;
   user-select: none;
 }
 
 .auth-checkbox {
-  width: 16px;
-  height: 16px;
+  width: 15px;
+  height: 15px;
   accent-color: var(--auth-brand-color);
   cursor: pointer;
   border-radius: 4px;
@@ -367,32 +380,32 @@
 /* Primary Action CTA Button: Soft Inflated Clay Depth in #381e12 */
 .auth-primary-submit-btn {
   width: 100%;
-  height: 48px;
+  height: clamp(40px, 4.4vh, 44px);
   border: 0;
-  border-radius: 14px;
+  border-radius: 12px;
   background: linear-gradient(180deg, #442416 0%, #381e12 60%, #2a150c 100%) !important;
   color: #ffffff !important;
   font-family: inherit;
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 700;
   letter-spacing: 0.3px;
   cursor: pointer;
   box-shadow:
-    0 8px 22px rgba(56, 30, 18, 0.28),
+    0 8px 20px rgba(56, 30, 18, 0.26),
     inset 1.5px 1.5px 2px rgba(255, 255, 255, 0.32),
     inset -1.5px -2px 3px rgba(0, 0, 0, 0.24);
   transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-top: 4px;
+  margin-top: 1px;
 }
 
 .auth-primary-submit-btn:hover:not(:disabled) {
   background: linear-gradient(180deg, #381d11 0%, #26140c 100%) !important;
   transform: translateY(-1.5px);
   box-shadow:
-    0 12px 26px rgba(38, 20, 12, 0.34),
+    0 10px 24px rgba(38, 20, 12, 0.32),
     inset 1.5px 1.5px 2px rgba(255, 255, 255, 0.36),
     inset -1.5px -2px 3px rgba(0, 0, 0, 0.28);
 }
@@ -400,7 +413,7 @@
 .auth-primary-submit-btn:active:not(:disabled) {
   transform: scale(0.985);
   box-shadow:
-    0 4px 12px rgba(38, 20, 12, 0.24),
+    0 4px 10px rgba(38, 20, 12, 0.22),
     inset 2px 2px 4px rgba(0, 0, 0, 0.3);
 }
 
@@ -429,16 +442,16 @@
    Compact 1-Click Demo Section — Clay Pill Badges
    -------------------------------------------------------------------------- */
 .auth-demo-wrapper {
-  margin-top: 20px;
+  margin-top: clamp(8px, 1.3vh, 14px);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 7px;
 }
 
 .auth-demo-header {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .auth-demo-rule {
@@ -448,14 +461,14 @@
 }
 
 .auth-demo-badge {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.6px;
   color: var(--auth-text-subtle);
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   user-select: none;
 }
 
@@ -466,16 +479,16 @@
 .auth-demo-pill-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+  gap: 6px;
 }
 
 .auth-demo-pill {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 8px 10px;
-  border-radius: 12px;
+  gap: 5px;
+  padding: 5px 8px;
+  border-radius: 10px;
   border: 1.5px solid rgba(238, 230, 218, 0.7);
   background: #faf8f5;
   cursor: pointer;
@@ -485,7 +498,7 @@
   font-family: inherit;
   box-sizing: border-box;
   box-shadow:
-    0 2px 6px rgba(56, 30, 18, 0.035),
+    0 2px 5px rgba(56, 30, 18, 0.03),
     inset 1px 1px 2px rgba(255, 255, 255, 0.95),
     inset -1px -1px 2px rgba(56, 30, 18, 0.03);
 }
@@ -495,7 +508,7 @@
   border-color: var(--demo-accent, var(--auth-brand-color));
   transform: translateY(-1.5px);
   box-shadow:
-    0 6px 14px rgba(56, 30, 18, 0.08),
+    0 5px 12px rgba(56, 30, 18, 0.08),
     inset 1px 1px 2px rgba(255, 255, 255, 1),
     inset -1px -1px 2px rgba(56, 30, 18, 0.02);
 }
@@ -517,7 +530,7 @@
 }
 
 .auth-demo-pill-label {
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--auth-text-ink);
   white-space: nowrap;
@@ -525,25 +538,34 @@
 
 /* Footer note */
 .auth-card-footer {
-  margin-top: 18px;
+  margin-top: clamp(6px, 1vh, 10px);
   text-align: center;
-  font-size: 11.5px;
+  font-size: 10.5px;
   color: var(--auth-text-subtle);
-  line-height: 1.4;
+  line-height: 1.3;
 }
 
 /* --------------------------------------------------------------------------
    Mobile & Responsive Adaptations
    -------------------------------------------------------------------------- */
 @media (max-width: 860px) {
+  html:has(.auth-modern-stage),
+  body:has(.auth-modern-stage) {
+    overflow-y: auto;
+    height: auto;
+  }
+
   .auth-modern-stage {
-    padding: 16px;
+    padding: 16px 14px;
+    height: auto;
+    min-height: 100dvh;
+    overflow-y: auto;
   }
 
   .auth-modern-card {
     flex-direction: column;
-    max-width: 460px;
-    min-height: auto;
+    max-width: 440px;
+    max-height: none;
     border-radius: 24px;
     box-shadow:
       0 20px 45px -6px rgba(56, 30, 18, 0.10),
@@ -552,18 +574,18 @@
       inset -2px -2px 5px 0 rgba(56, 30, 18, 0.035);
   }
 
-  /* Per user spec: on mobile, hide the 3D illustration and show focused login */
+  /* On mobile, hide the 3D illustration and show focused login */
   .auth-card-media {
     display: none;
   }
 
   .auth-card-body {
     flex: 1 1 100%;
-    padding: 30px 24px 24px;
+    padding: 24px 20px 20px;
   }
 
   .auth-title {
-    font-size: 24px;
+    font-size: 22px;
   }
 
   .auth-demo-pill-grid {
