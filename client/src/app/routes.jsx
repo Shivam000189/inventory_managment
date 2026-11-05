@@ -266,6 +266,9 @@ export const DASHBOARD_CHILD_ROUTES = [
   { path: 'business-profile', element: <Navigate to="/settings" replace /> },
   { path: 'industry', element: <Navigate to="/settings" replace /> },
   { path: 'bulk-import', element: <Navigate to="/product-import" replace /> },
+  { path: 'stock-inward', element: <Navigate to="/stock-in" replace /> },
+  { path: 'stock-outward', element: <Navigate to="/stock-out" replace /> },
+  { path: 'movement-audit', element: <Navigate to="/stock-history" replace /> },
 
   // Status & Fallback
   { path: 'forbidden', element: <LazyRoute Component={ForbiddenPage} /> },
