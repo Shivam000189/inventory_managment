@@ -143,10 +143,6 @@ export default function AuthPage({ onAuthenticated, onBackToHome }: AuthPageProp
             loading="eager"
           />
           <div className="auth-media-blend-overlay" />
-          <div className="auth-media-badge">
-            <span className="auth-badge-dot" />
-            <span>Autonomous Warehouse Hub</span>
-          </div>
         </div>
 
         {/* Right Side: Authentication Form & Quick Demos */}
