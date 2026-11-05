@@ -28,7 +28,7 @@ interface DemoAccount {
   email: string
   password: string
   accent: string
-  icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>
+  icon: React.ComponentType<{ className?: string; style?: React.CSSProperties; size?: number }>
 }
 
 const DEMO_ACCOUNTS: DemoAccount[] = [

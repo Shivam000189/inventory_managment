@@ -27,7 +27,12 @@ import { Product, PaymentMethod, Bill, BillItem } from '../types';
 import { formatINR } from '../lib/formatters';
 import { batchApi, ProductBatch } from '../../api/batchApi';
 import { prescriptionApi } from '../../api/prescriptionApi';
-import { isPharmacyBusiness, getIndustryCategoryPresets } from '../../shared/industryConfig';
+import {
+  isPharmacyBusiness,
+  isClothingBusiness,
+  isForeignCategoryForBusiness,
+  getIndustryCategoryPresets,
+} from '../../shared/industryConfig';
 import { Stethoscope, Pill, AlertTriangle } from 'lucide-react';
 
 interface CartItem {
@@ -104,10 +109,13 @@ export const PosSalesPage: React.FC = () => {
   const industryPresets = useMemo(() => getIndustryCategoryPresets(businessProfile), [businessProfile]);
 
   const categories = useMemo(() => {
-    const existing = products.map((p) => p.category).filter(Boolean);
+    // If business is clothing, exclude foreign industry seed categories
+    const existing = products
+      .map((p) => p.category)
+      .filter((cat): cat is string => Boolean(cat) && !isForeignCategoryForBusiness(cat, businessProfile));
     const set = new Set<string>(['All', ...industryPresets, ...existing]);
     return Array.from(set);
-  }, [industryPresets, products]);
+  }, [industryPresets, products, businessProfile]);
 
   // Autofocus POS search on mount
   useEffect(() => {
@@ -118,6 +126,10 @@ export const PosSalesPage: React.FC = () => {
 
   // Product filtering for POS
   const filteredProducts = products.filter((p) => {
+    // Exclude foreign industry items in clothing store view
+    if (isForeignCategoryForBusiness(p.category, businessProfile)) {
+      return false;
+    }
     const q = productSearch.toLowerCase().trim();
     const matchesSearch =
       p.name.toLowerCase().includes(q) ||
@@ -453,13 +465,18 @@ export const PosSalesPage: React.FC = () => {
           </div>
 
           {/* Right Pane (≈38% / 5 cols on lg, 4 on xl): Sticky Billing Cart Panel */}
-          <div className="lg:col-span-5 xl:col-span-4 bg-white rounded-3xl border border-[#EEE6DA] p-4 shadow-sm space-y-4 sticky top-20">
-            {/* Cart Header & Customer Fields */}
-            <div>
-              <div className="flex items-center justify-between mb-2.5">
+          <div className="lg:col-span-5 xl:col-span-4 bg-white rounded-3xl border border-[#EEE6DA] p-3.5 sm:p-4 shadow-sm lg:sticky lg:top-2 lg:h-[calc(100vh-5.5rem)] flex flex-col justify-between overflow-hidden">
+            {/* Top Fixed Zone: Cart Header & Customer Fields */}
+            <div className="shrink-0 space-y-2 pb-2.5 border-b border-[#EEE6DA]/80">
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <ShoppingBag size={17} className="text-[#1C1B18]" />
+                  <ShoppingBag size={16} className="text-[#1C1B18]" />
                   <h3 className="font-bold text-sm text-[#1C1B18]">Current Bill</h3>
+                  {cart.length > 0 && (
+                    <span className="text-[11px] font-semibold text-[#6B665E] bg-[#FAF6EF] px-2 py-0.5 rounded-full border border-[#EEE6DA]">
+                      {cart.reduce((sum, i) => sum + i.quantity, 0)} items
+                    </span>
+                  )}
                 </div>
                 {cart.length > 0 && (
                   <button
@@ -469,7 +486,7 @@ export const PosSalesPage: React.FC = () => {
                       setCustName('');
                       setCustPhone('');
                     }}
-                    className="text-[11px] text-[#D64545] hover:underline cursor-pointer"
+                    className="text-[11px] font-medium text-[#D64545] hover:underline cursor-pointer"
                   >
                     Clear cart
                   </button>
@@ -500,7 +517,7 @@ export const PosSalesPage: React.FC = () => {
                 </div>
 
                 {suggestedCustomer && (
-                  <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-[#FAF6EF] border border-[#EEE6DA] text-[11px]">
+                  <div className="flex items-center justify-between px-2.5 py-1 rounded-lg bg-[#FAF6EF] border border-[#EEE6DA] text-[11px]">
                     <span className="text-[#6B665E] truncate">
                       Found: <strong className="text-[#1C1B18]">{suggestedCustomer.name}</strong> {suggestedCustomer.phone !== '—' ? `(${suggestedCustomer.phone})` : ''}
                     </span>
@@ -519,24 +536,24 @@ export const PosSalesPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Line Items List */}
-            <div className="divide-y divide-[#EEE6DA] max-h-60 overflow-y-auto pr-1">
+            {/* Middle Flexible Zone: Line Items List (Internally scrollable, never stretches outer card) */}
+            <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-[#EEE6DA] py-1 pr-1 my-1">
               {cart.length === 0 ? (
-                <div className="py-12 text-center text-[#9A948A] text-xs space-y-1">
-                  <ShoppingBag size={24} className="mx-auto text-[#DDD3C4]" />
-                  <p>Cart is currently empty</p>
-                  <p className="text-[11px] text-[#DDD3C4]">
+                <div className="h-full min-h-[90px] flex flex-col items-center justify-center text-center text-[#9A948A] text-xs space-y-1 py-4">
+                  <ShoppingBag size={22} className="text-[#DDD3C4]" />
+                  <p className="font-medium text-[#6B665E]">Cart is currently empty</p>
+                  <p className="text-[11px] text-[#9A948A]">
                     Click items on the left to add to bill
                   </p>
                 </div>
               ) : (
                 cart.map((item) => (
-                  <div key={item.product.id} className="py-2.5 flex items-center justify-between text-xs gap-2">
+                  <div key={item.product.id} className="py-2 flex items-center justify-between text-xs gap-2">
                     <div className="min-w-0 flex-1">
-                      <div className="font-semibold text-[#1C1B18] truncate">
+                      <div className="font-semibold text-[#1C1B18] truncate leading-tight">
                         {item.product.name}
                       </div>
-                      <div className="text-[11px] text-[#6B665E] tabular-nums">
+                      <div className="text-[10.5px] text-[#6B665E] tabular-nums mt-0.5">
                         {formatINR(item.product.sellingPrice)} × {item.quantity}
                       </div>
                     </div>
@@ -550,7 +567,7 @@ export const PosSalesPage: React.FC = () => {
                       >
                         <Minus size={12} />
                       </button>
-                      <span className="px-2 font-bold text-[#1C1B18] tabular-nums text-xs">
+                      <span className="px-1.5 font-bold text-[#1C1B18] tabular-nums text-xs min-w-[20px] text-center">
                         {item.quantity}
                       </span>
                       <button
@@ -563,7 +580,7 @@ export const PosSalesPage: React.FC = () => {
                     </div>
 
                     <div className="text-right shrink-0 w-16">
-                      <div className="font-bold text-[#1C1B18] tabular-nums">
+                      <div className="font-bold text-[#1C1B18] tabular-nums text-xs">
                         {formatINR(item.product.sellingPrice * item.quantity)}
                       </div>
                     </div>
@@ -572,6 +589,7 @@ export const PosSalesPage: React.FC = () => {
                       type="button"
                       onClick={() => removeFromCart(item.product.id)}
                       className="text-[#9A948A] hover:text-[#D64545] p-1 cursor-pointer"
+                      title="Remove item"
                     >
                       <Trash2 size={13} />
                     </button>
@@ -580,99 +598,123 @@ export const PosSalesPage: React.FC = () => {
               )}
             </div>
 
-            {/* Payment Method Segmented Control */}
-            <div className="space-y-1.5">
-              <label className="block text-[11px] font-semibold text-[#6B665E]">
-                Payment Method
-              </label>
-              <div className="grid grid-cols-4 gap-1 p-1 bg-[#FAF6EF] rounded-xl border border-[#EEE6DA]">
-                {(['UPI', 'Cash', 'Card', 'Credit'] as PaymentMethod[]).map((method) => (
-                  <button
-                    key={method}
-                    type="button"
-                    onClick={() => setPaymentMethod(method)}
-                    className={`py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer text-center ${
-                      paymentMethod === method
-                        ? 'bg-white text-[#1C1B18] shadow-2xs'
-                        : 'text-[#6B665E] hover:text-[#1C1B18]'
-                    }`}
-                  >
-                    {method}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Cash Tendered & Change if Cash */}
-            {paymentMethod === 'Cash' && (
-              <div className="grid grid-cols-2 gap-2 bg-[#FAF6EF] p-2.5 rounded-xl border border-[#EEE6DA] text-xs">
-                <div>
-                  <label className="text-[10.5px] text-[#6B665E] block mb-0.5">Cash Tendered</label>
-                  <input
-                    type="number"
-                    value={cashTendered || ''}
-                    onChange={(e) => setCashTendered(parseFloat(e.target.value) || 0)}
-                    placeholder="₹ 0"
-                    className="w-full px-2 py-1 rounded-lg border border-[#DDD3C4] bg-white font-bold tabular-nums"
-                  />
+            {/* Bottom Fixed Zone: Payment, Summary & Pinned Create Bill Button */}
+            <div className="shrink-0 pt-2 border-t border-[#EEE6DA] space-y-2 mt-auto bg-white">
+              {/* Payment Method Segmented Control */}
+              <div className="space-y-1">
+                <label className="block text-[10.5px] font-semibold text-[#6B665E]">
+                  Payment Method
+                </label>
+                <div className="grid grid-cols-4 gap-1 p-0.5 bg-[#FAF6EF] rounded-xl border border-[#EEE6DA]">
+                  {(['UPI', 'Cash', 'Card', 'Credit'] as PaymentMethod[]).map((method) => (
+                    <button
+                      key={method}
+                      type="button"
+                      onClick={() => setPaymentMethod(method)}
+                      className={`py-1 text-xs font-semibold rounded-lg transition-colors cursor-pointer text-center ${
+                        paymentMethod === method
+                          ? 'bg-white text-[#1C1B18] shadow-2xs'
+                          : 'text-[#6B665E] hover:text-[#1C1B18]'
+                      }`}
+                    >
+                      {method}
+                    </button>
+                  ))}
                 </div>
-                <div>
-                  <label className="text-[10.5px] text-[#6B665E] block mb-0.5">Change Due</label>
-                  <div className="px-2 py-1 font-bold text-[#2E8B57] text-sm tabular-nums">
-                    {formatINR(changeDue)}
+              </div>
+
+              {/* Cash Tendered & Change if Cash */}
+              {paymentMethod === 'Cash' && (
+                <div className="grid grid-cols-2 gap-2 bg-[#FAF6EF] p-2 rounded-xl border border-[#EEE6DA] text-xs">
+                  <div>
+                    <label className="text-[10px] text-[#6B665E] block mb-0.5">Cash Tendered</label>
+                    <input
+                      type="number"
+                      value={cashTendered || ''}
+                      onChange={(e) => setCashTendered(parseFloat(e.target.value) || 0)}
+                      placeholder="₹ 0"
+                      className="w-full px-2 py-1 rounded-lg border border-[#DDD3C4] bg-white font-bold tabular-nums text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-[#6B665E] block mb-0.5">Change Due</label>
+                    <div className="px-2 py-1 font-bold text-[#2E8B57] text-xs tabular-nums">
+                      {formatINR(changeDue)}
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* UPI QR preview notice if UPI */}
-            {paymentMethod === 'UPI' && (
-              <div className="p-2.5 rounded-xl bg-[#E8F5EC]/60 border border-[#b8dec0] flex items-center gap-2 text-xs text-[#2E8B57]">
-                <QrCode size={18} className="shrink-0" />
-                <span className="text-[11px] leading-tight">
-                  UPI ID: <span className="font-mono font-bold">{businessProfile.upiId}</span>
-                </span>
-              </div>
-            )}
-
-            {/* Bill Summary */}
-            <div className="bg-[#FAF6EF] rounded-2xl p-3 border border-[#EEE6DA] space-y-1.5 text-xs">
-              <div className="flex justify-between text-[#6B665E]">
-                <span>Items Subtotal</span>
-                <span className="font-semibold text-[#1C1B18] tabular-nums">{formatINR(rawSubtotal)}</span>
-              </div>
-              <div className="flex justify-between text-[#6B665E]">
-                <span>GST Taxes (Included)</span>
-                <span className="font-semibold text-[#1C1B18] tabular-nums">{formatINR(totalTax)}</span>
-              </div>
-              {totalDiscount > 0 && (
-                <div className="flex justify-between text-[#2E8B57]">
-                  <span>Discount</span>
-                  <span className="font-semibold tabular-nums">-{formatINR(totalDiscount)}</span>
+              {/* UPI QR preview notice if UPI */}
+              {paymentMethod === 'UPI' && (
+                <div className="p-1.5 px-2.5 rounded-xl bg-[#E8F5EC]/60 border border-[#b8dec0] flex items-center gap-2 text-xs text-[#2E8B57]">
+                  <QrCode size={15} className="shrink-0" />
+                  <span className="text-[10.5px] leading-tight truncate">
+                    UPI ID: <span className="font-mono font-bold">{businessProfile.upiId}</span>
+                  </span>
                 </div>
               )}
-              <div className="border-t border-[#EEE6DA] pt-2 flex justify-between items-baseline">
-                <span className="text-xs font-bold text-[#1C1B18]">Grand Total</span>
-                <span className="text-xl font-extrabold text-[#1C1B18] tabular-nums">
+
+              {/* Bill Summary */}
+              <div className="bg-[#FAF6EF] rounded-xl p-2.5 border border-[#EEE6DA] space-y-1 text-xs">
+                <div className="flex justify-between text-[#6B665E] text-[11px]">
+                  <span>Items Subtotal</span>
+                  <span className="font-semibold text-[#1C1B18] tabular-nums">{formatINR(rawSubtotal)}</span>
+                </div>
+                <div className="flex justify-between text-[#6B665E] text-[11px]">
+                  <span>GST Taxes (Included)</span>
+                  <span className="font-semibold text-[#1C1B18] tabular-nums">{formatINR(totalTax)}</span>
+                </div>
+                {totalDiscount > 0 && (
+                  <div className="flex justify-between text-[#2E8B57] text-[11px]">
+                    <span>Discount</span>
+                    <span className="font-semibold tabular-nums">-{formatINR(totalDiscount)}</span>
+                  </div>
+                )}
+                <div className="border-t border-[#EEE6DA] pt-1.5 flex justify-between items-baseline">
+                  <span className="text-xs font-bold text-[#1C1B18]">Grand Total</span>
+                  <span className="text-lg font-extrabold text-[#1C1B18] tabular-nums">
+                    {formatINR(cartTotal)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Always Pinned Create Bill Button */}
+              <button
+                type="button"
+                disabled={cart.length === 0}
+                onClick={handleCreateBill}
+                className={`w-full py-2.5 sm:py-3 rounded-2xl font-bold text-sm transition-all duration-150 cursor-pointer shadow-md ${
+                  cart.length === 0
+                    ? 'bg-[#DDD3C4] text-[#9A948A] cursor-not-allowed shadow-none'
+                    : 'bg-[#381e12] hover:bg-[#26140c] text-white active:scale-99'
+                }`}
+              >
+                Create bill {cartTotal > 0 ? formatINR(cartTotal) : ''}
+              </button>
+            </div>
+          </div>
+
+          {/* Mobile Floating Checkout Bar (< lg screens when cart has items) */}
+          {cart.length > 0 && (
+            <div className="lg:hidden fixed bottom-16 left-0 right-0 z-30 px-4 py-2.5 bg-white/95 backdrop-blur-md border-t border-[#EEE6DA] shadow-lg flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <span className="text-[10px] text-[#6B665E] block font-medium">
+                  Total ({cart.reduce((sum, i) => sum + i.quantity, 0)} items)
+                </span>
+                <span className="text-base font-extrabold text-[#1C1B18] tabular-nums">
                   {formatINR(cartTotal)}
                 </span>
               </div>
+              <button
+                type="button"
+                onClick={handleCreateBill}
+                className="px-5 py-2.5 rounded-xl bg-[#381e12] hover:bg-[#26140c] text-white font-bold text-xs shadow-md active:scale-95 transition-all cursor-pointer whitespace-nowrap"
+              >
+                Create Bill
+              </button>
             </div>
-
-            {/* Create Bill Button */}
-            <button
-              type="button"
-              disabled={cart.length === 0}
-              onClick={handleCreateBill}
-              className={`w-full py-3 rounded-2xl font-bold text-sm transition-all duration-150 cursor-pointer shadow-md ${
-                cart.length === 0
-                  ? 'bg-[#DDD3C4] text-[#9A948A] cursor-not-allowed shadow-none'
-                  : 'bg-[#381e12] hover:bg-[#26140c] text-white active:scale-99'
-              }`}
-            >
-              Create bill {cartTotal > 0 ? formatINR(cartTotal) : ''}
-            </button>
-          </div>
+          )}
         </div>
       ) : (
         /* Bills List Tab */

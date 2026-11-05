@@ -180,6 +180,17 @@ export function isPharmacyBusiness(business?: { industry?: string; businessType?
   return false;
 }
 
+export function isClothingBusiness(business?: { industry?: string; businessType?: string; name?: string } | null): boolean {
+  if (!business) return false;
+  const ind = normalizeConfigValue(business.industry);
+  if (ind === 'clothing') return true;
+  const bt = normalizeConfigValue(business.businessType);
+  if (bt === 'clothing') return true;
+  const name = normalizeConfigValue(business.name);
+  if (name === 'clothing') return true;
+  return false;
+}
+
 export const INDUSTRY_CATEGORIES: Record<string, string[]> = {
   pharmacy: [
     'Analgesics & NSAIDs',
@@ -274,8 +285,76 @@ export const INDUSTRY_CATEGORIES: Record<string, string[]> = {
 export function getIndustryCategoryPresets(business?: { industry?: string; businessType?: string; name?: string } | null): string[] {
   if (!business) return INDUSTRY_CATEGORIES.other;
   if (isPharmacyBusiness(business)) return INDUSTRY_CATEGORIES.pharmacy;
+  if (isClothingBusiness(business)) return INDUSTRY_CATEGORIES.clothing;
   const industryKey = normalizeConfigValue(business.industry || business.businessType || business.name);
   return INDUSTRY_CATEGORIES[industryKey] || INDUSTRY_CATEGORIES.other;
+}
+
+/**
+ * Checks whether a given category is a foreign preset from another industry
+ * (e.g. 'Pharmacy Supplies' or 'Toys' inside a clothing business).
+ */
+export function isForeignCategoryForBusiness(
+  category: string,
+  business?: { industry?: string; businessType?: string; name?: string } | null
+): boolean {
+  if (!category) return false;
+  if (isClothingBusiness(business)) {
+    const foreignToClothing = new Set([
+      'Sports',
+      'Toys',
+      'Pharmacy Supplies',
+      'Personal Care',
+      'Stationery',
+      'Home',
+      'Groceries',
+      'Electronics',
+      'Analgesics & NSAIDs',
+      'Antibiotics & Antivirals',
+      'Cardiovascular Drugs',
+      'Antidepressants & Antianxiety Drugs',
+      'Antidiabetics',
+      'Respiratory Drugs',
+      'Gastrointestinal Drugs',
+      'Dermatologicals & Topicals',
+      'Vitamins & Nutritional Supplements',
+      'First Aid & Medical Supplies',
+      'Smartphones & Mobile Accessories',
+      'Computers, Laptops & Peripherals',
+      'Audio, Headphones & Speakers',
+      'TV & Home Entertainment',
+      'Cameras & Photography',
+      'Smart Home & Wearables',
+      'Cables & Adapters',
+      'Components & Storage',
+      'Staples, Flours & Grains',
+      'Edible Oils, Ghee & Spices',
+      'Dairy, Eggs & Bakery',
+      'Snacks & Packaged Foods',
+      'Beverages & Drinks',
+      'Fresh Fruits & Vegetables',
+      'Personal Care & Hygiene',
+      'Household Cleaning & Laundry',
+      'Hand Tools & Instruments',
+      'Power Tools & Accessories',
+      'Fasteners, Screws & Bolts',
+      'Plumbing, Pipes & Fittings',
+      'Electricals & Wiring',
+      'Paints & Adhesives',
+      'Sanitaryware & Fittings',
+      'Safety Equipment & PPE',
+      'Engine & Transmission Parts',
+      'Brake Systems & Pads',
+      'Suspension & Steering',
+      'Electricals, Lights & Batteries',
+      'Filters & Spark Plugs',
+      'Oils, Coolants & Lubricants',
+      'Tires, Tubes & Wheels',
+      'Body Parts & Accessories',
+    ]);
+    return foreignToClothing.has(category);
+  }
+  return false;
 }
 
 export const INDUSTRY_PRODUCT_NAME_PLACEHOLDERS: Record<string, string> = {

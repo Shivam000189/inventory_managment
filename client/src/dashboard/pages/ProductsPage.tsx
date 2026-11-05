@@ -30,7 +30,13 @@ import { TableSkeleton, Skeleton } from '../../components/ui/Feedback';
 import { useApp } from '../context/AppContext';
 import { Product } from '../types';
 import { formatINR, downloadCSV } from '../lib/formatters';
-import { isPharmacyBusiness, getIndustryCategoryPresets, getIndustryProductNamePlaceholder } from '../../shared/industryConfig';
+import {
+  isPharmacyBusiness,
+  isClothingBusiness,
+  isForeignCategoryForBusiness,
+  getIndustryCategoryPresets,
+  getIndustryProductNamePlaceholder,
+} from '../../shared/industryConfig';
 
 export const ProductsPage: React.FC = () => {
   const { products, addProduct, updateProduct, deleteProduct, adjustStock, suppliers, isLoadingBackend, businessProfile } = useApp();
@@ -136,10 +142,13 @@ export const ProductsPage: React.FC = () => {
   const namePlaceholder = useMemo(() => getIndustryProductNamePlaceholder(businessProfile), [businessProfile]);
 
   const categories = useMemo(() => {
-    const existing = products.map((p) => p.category).filter(Boolean);
+    // If business is clothing, exclude foreign industry seed categories
+    const existing = products
+      .map((p) => p.category)
+      .filter((cat): cat is string => Boolean(cat) && !isForeignCategoryForBusiness(cat, businessProfile));
     const set = new Set<string>(['All', ...industryPresets, ...existing]);
     return Array.from(set);
-  }, [industryPresets, products]);
+  }, [industryPresets, products, businessProfile]);
 
   const [isCustomCategory, setIsCustomCategory] = useState(false);
 
@@ -185,6 +194,10 @@ export const ProductsPage: React.FC = () => {
   // Filtering
   const filteredProducts = products
     .filter((p) => {
+      // Exclude foreign industry items in clothing store view
+      if (isForeignCategoryForBusiness(p.category, businessProfile)) {
+        return false;
+      }
       const q = searchQuery.toLowerCase();
       const matchesSearch =
         p.name.toLowerCase().includes(q) ||
@@ -404,11 +417,10 @@ export const ProductsPage: React.FC = () => {
             <button
               type="button"
               onClick={() => setViewMode('table')}
-              className={`p-1.5 rounded-lg cursor-pointer transition-all ${
-                viewMode === 'table'
+              className={`p-1.5 rounded-lg cursor-pointer transition-all ${viewMode === 'table'
                   ? 'bg-white text-[#1C1B18] shadow-2xs font-semibold'
                   : 'text-[#6B665E] hover:text-[#1C1B18]'
-              }`}
+                }`}
               title="Table view"
               aria-label="Table view"
             >
@@ -417,11 +429,10 @@ export const ProductsPage: React.FC = () => {
             <button
               type="button"
               onClick={() => setViewMode('grid')}
-              className={`p-1.5 rounded-lg cursor-pointer transition-all ${
-                viewMode === 'grid'
+              className={`p-1.5 rounded-lg cursor-pointer transition-all ${viewMode === 'grid'
                   ? 'bg-white text-[#1C1B18] shadow-2xs font-semibold'
                   : 'text-[#6B665E] hover:text-[#1C1B18]'
-              }`}
+                }`}
               title="Grid view"
               aria-label="Grid view"
             >
@@ -430,7 +441,7 @@ export const ProductsPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Row 2: Category Dropdown + Sort Dropdown */}
+        {/* Row 2: Category Dropdown + Status Dropdown */}
         <div className="grid grid-cols-2 gap-2">
           <select
             value={selectedCategory}
@@ -438,38 +449,32 @@ export const ProductsPage: React.FC = () => {
             className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs text-[#1C1B18] bg-white cursor-pointer outline-none focus:border-[#7FAE82] transition-colors"
           >
             {categories.map((c) => (
-              <option key={c} value={c}>Category: {c}</option>
+              <option key={c} value={c}>{c}</option>
             ))}
           </select>
 
           <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as any)}
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as any)}
             className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs text-[#1C1B18] bg-white cursor-pointer outline-none focus:border-[#7FAE82] transition-colors"
           >
-            <option value="name">Sort: Name</option>
-            <option value="price">Sort: Price (High to Low)</option>
-            <option value="stock">Sort: Stock</option>
+            <option value="All">All</option>
+            <option value="In stock">In stock</option>
+            <option value="Low">Low</option>
+            <option value="Out">Out</option>
           </select>
         </div>
 
-        {/* Row 3: Stock Status Pills */}
-        <div className="grid grid-cols-4 gap-1 bg-[#FAF6EF] p-1 rounded-xl border border-[#EEE6DA]/80 w-full">
-          {(['All', 'In stock', 'Low', 'Out'] as const).map((status) => (
-            <button
-              key={status}
-              type="button"
-              onClick={() => setStatusFilter(status)}
-              className={`py-1.5 px-1 text-center text-xs font-semibold rounded-lg transition-all cursor-pointer truncate ${
-                statusFilter === status
-                  ? 'bg-white text-[#1C1B18] shadow-2xs'
-                  : 'text-[#6B665E] hover:text-[#1C1B18]'
-              }`}
-            >
-              {status}
-            </button>
-          ))}
-        </div>
+        {/* Row 3: Sort Dropdown */}
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value as any)}
+          className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs text-[#1C1B18] bg-white cursor-pointer outline-none focus:border-[#7FAE82] transition-colors"
+        >
+          <option value="name">Sort: Name</option>
+          <option value="price">Sort: Price (High to Low)</option>
+          <option value="stock">Sort: Stock</option>
+        </select>
       </div>
 
       {/* Desktop Toolbar (Visible on desktop >= md) */}
@@ -494,27 +499,21 @@ export const ProductsPage: React.FC = () => {
             className="px-3 py-1.5 rounded-xl border border-[#EEE6DA] text-xs text-[#1C1B18] bg-white cursor-pointer outline-none"
           >
             {categories.map((c) => (
-              <option key={c} value={c}>Category: {c}</option>
+              <option key={c} value={c}>{c}</option>
             ))}
           </select>
-        </div>
 
-        {/* Stock Status Pills */}
-        <div className="flex items-center gap-1 bg-[#FAF6EF] p-1 rounded-xl border border-[#EEE6DA]/80">
-          {(['All', 'In stock', 'Low', 'Out'] as const).map((status) => (
-            <button
-              key={status}
-              type="button"
-              onClick={() => setStatusFilter(status)}
-              className={`px-3 py-1 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
-                statusFilter === status
-                  ? 'bg-white text-[#1C1B18] shadow-2xs'
-                  : 'text-[#6B665E] hover:text-[#1C1B18]'
-              }`}
-            >
-              {status}
-            </button>
-          ))}
+          {/* Stock Status Dropdown */}
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as any)}
+            className="px-3 py-1.5 rounded-xl border border-[#EEE6DA] text-xs text-[#1C1B18] bg-white cursor-pointer outline-none"
+          >
+            <option value="All">All</option>
+            <option value="In stock">In stock</option>
+            <option value="Low">Low</option>
+            <option value="Out">Out</option>
+          </select>
         </div>
 
         <div className="flex items-center gap-2">
@@ -534,9 +533,8 @@ export const ProductsPage: React.FC = () => {
             <button
               type="button"
               onClick={() => setViewMode('table')}
-              className={`p-1.5 rounded-lg cursor-pointer ${
-                viewMode === 'table' ? 'bg-white text-[#1C1B18] shadow-2xs' : 'text-[#6B665E]'
-              }`}
+              className={`p-1.5 rounded-lg cursor-pointer ${viewMode === 'table' ? 'bg-white text-[#1C1B18] shadow-2xs' : 'text-[#6B665E]'
+                }`}
               title="Table view"
               aria-label="Table view"
             >
@@ -545,9 +543,8 @@ export const ProductsPage: React.FC = () => {
             <button
               type="button"
               onClick={() => setViewMode('grid')}
-              className={`p-1.5 rounded-lg cursor-pointer ${
-                viewMode === 'grid' ? 'bg-white text-[#1C1B18] shadow-2xs' : 'text-[#6B665E]'
-              }`}
+              className={`p-1.5 rounded-lg cursor-pointer ${viewMode === 'grid' ? 'bg-white text-[#1C1B18] shadow-2xs' : 'text-[#6B665E]'
+                }`}
               title="Grid view"
               aria-label="Grid view"
             >
@@ -690,13 +687,12 @@ export const ProductsPage: React.FC = () => {
                       <td className="py-3 px-3">
                         <div className="flex items-baseline justify-between gap-3 max-w-[150px]">
                           <span
-                            className={`font-bold text-sm tabular-nums ${
-                              isOut
+                            className={`font-bold text-sm tabular-nums ${isOut
                                 ? 'text-[#D64545]'
                                 : isLow
                                   ? 'text-[#E8772E]'
                                   : 'text-[#7FAE82]'
-                            }`}
+                              }`}
                           >
                             {p.stock} <span className="text-xs font-normal opacity-80">{p.unit}</span>
                           </span>
@@ -830,11 +826,10 @@ export const ProductsPage: React.FC = () => {
                           key={pageNum}
                           type="button"
                           onClick={() => setCurrentPage(pageNum)}
-                          className={`w-7 h-7 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                            currentPage === pageNum
+                          className={`w-7 h-7 rounded-lg text-xs font-semibold transition-all cursor-pointer ${currentPage === pageNum
                               ? 'bg-[#381e12] text-white shadow-2xs'
                               : 'text-[#6B665E] hover:bg-[#FAF6EF] hover:text-[#1C1B18]'
-                          }`}
+                            }`}
                         >
                           {pageNum}
                         </button>
@@ -867,166 +862,165 @@ export const ProductsPage: React.FC = () => {
         /* Grid View */
         <div className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {paginatedProducts.map((p) => {
-            const isLow = p.stock > 0 && p.stock <= p.reorderLevel;
-            const isOut = p.stock === 0;
-            const statusVariant = isOut ? 'danger' : isLow ? 'warning' : 'success';
-            const statusText = isOut ? 'Out of stock' : isLow ? 'Low stock' : 'In stock';
+            {paginatedProducts.map((p) => {
+              const isLow = p.stock > 0 && p.stock <= p.reorderLevel;
+              const isOut = p.stock === 0;
+              const statusVariant = isOut ? 'danger' : isLow ? 'warning' : 'success';
+              const statusText = isOut ? 'Out of stock' : isLow ? 'Low stock' : 'In stock';
 
-            return (
-              <div
-                key={p.id}
-                onClick={() => setViewingProduct(p)}
-                className="bg-white rounded-2xl p-4 border border-[#EEE6DA] hover:border-[#DDD3C4] transition-all cursor-pointer group shadow-2xs flex flex-col justify-between"
-              >
-                <div>
-                  <div className="flex items-start justify-between mb-3">
-                    <ProductIcon name={p.name} type={p.iconType} className="w-11 h-11 rounded-2xl bg-[#FAF6EF] text-[#6B665E] flex items-center justify-center border border-[#EEE6DA]" size={20} />
-                    <Badge variant={statusVariant}>{statusText}</Badge>
-                  </div>
-                  <h4 className="font-semibold text-sm text-[#1C1B18] group-hover:text-[#6C9C70] transition-colors line-clamp-1">
-                    {p.name}
-                  </h4>
-                  {p.genericName && (
-                    <p className="text-[11px] text-[#7FAE82] font-medium line-clamp-1 mt-0.5">
-                      {p.genericName}
-                    </p>
-                  )}
-                  {!p.genericName && p.brand && (
-                    <p className="text-[11px] text-[#8C867A] line-clamp-1 mt-0.5">
-                      {p.brand} {p.size ? `(${p.size})` : ''}
-                    </p>
-                  )}
-                  <p className="text-[11px] text-[#9A948A] mt-0.5">
-                    SKU: {p.sku} · {p.category}
-                  </p>
-                  {(p.batchNumber || p.expiryDate) && (
-                    <div className="mt-2 flex flex-wrap gap-1.5">
-                      {p.batchNumber && (
-                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#FAF6EF] border border-[#EEE6DA] text-[#6B665E]">
-                          {p.batchNumber}
-                        </span>
-                      )}
-                      {(() => {
-                        const expStatus = getExpiryStatus(p.expiryDate);
-                        return expStatus ? (
-                          <Badge variant={expStatus.badgeVariant}>{expStatus.shortLabel}</Badge>
-                        ) : null;
-                      })()}
-                    </div>
-                  )}
-                </div>
-
-                <div className="mt-4 pt-3 border-t border-[#EEE6DA] flex items-center justify-between">
+              return (
+                <div
+                  key={p.id}
+                  onClick={() => setViewingProduct(p)}
+                  className="bg-white rounded-2xl p-4 border border-[#EEE6DA] hover:border-[#DDD3C4] transition-all cursor-pointer group shadow-2xs flex flex-col justify-between"
+                >
                   <div>
-                    <div className="text-[10px] text-[#9A948A]">Selling Price</div>
-                    <div className="font-bold text-sm text-[#1C1B18] tabular-nums">
-                      {formatINR(p.sellingPrice)}
+                    <div className="flex items-start justify-between mb-3">
+                      <ProductIcon name={p.name} type={p.iconType} className="w-11 h-11 rounded-2xl bg-[#FAF6EF] text-[#6B665E] flex items-center justify-center border border-[#EEE6DA]" size={20} />
+                      <Badge variant={statusVariant}>{statusText}</Badge>
                     </div>
-                    {p.mrp && p.mrp > 0 && (
-                      <div className="text-[10px] text-[#9A948A] line-through">
-                        MRP {formatINR(p.mrp)}
+                    <h4 className="font-semibold text-sm text-[#1C1B18] group-hover:text-[#6C9C70] transition-colors line-clamp-1">
+                      {p.name}
+                    </h4>
+                    {p.genericName && (
+                      <p className="text-[11px] text-[#7FAE82] font-medium line-clamp-1 mt-0.5">
+                        {p.genericName}
+                      </p>
+                    )}
+                    {!p.genericName && p.brand && (
+                      <p className="text-[11px] text-[#8C867A] line-clamp-1 mt-0.5">
+                        {p.brand} {p.size ? `(${p.size})` : ''}
+                      </p>
+                    )}
+                    <p className="text-[11px] text-[#9A948A] mt-0.5">
+                      SKU: {p.sku} · {p.category}
+                    </p>
+                    {(p.batchNumber || p.expiryDate) && (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {p.batchNumber && (
+                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#FAF6EF] border border-[#EEE6DA] text-[#6B665E]">
+                            {p.batchNumber}
+                          </span>
+                        )}
+                        {(() => {
+                          const expStatus = getExpiryStatus(p.expiryDate);
+                          return expStatus ? (
+                            <Badge variant={expStatus.badgeVariant}>{expStatus.shortLabel}</Badge>
+                          ) : null;
+                        })()}
                       </div>
                     )}
                   </div>
-                  <div className="text-right">
-                    <div className="text-[10px] text-[#9A948A]">Stock</div>
-                    <div className="font-semibold text-xs text-[#1C1B18] tabular-nums">
-                      {p.stock} {p.unit}
+
+                  <div className="mt-4 pt-3 border-t border-[#EEE6DA] flex items-center justify-between">
+                    <div>
+                      <div className="text-[10px] text-[#9A948A]">Selling Price</div>
+                      <div className="font-bold text-sm text-[#1C1B18] tabular-nums">
+                        {formatINR(p.sellingPrice)}
+                      </div>
+                      {p.mrp && p.mrp > 0 && (
+                        <div className="text-[10px] text-[#9A948A] line-through">
+                          MRP {formatINR(p.mrp)}
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <div className="text-[10px] text-[#9A948A]">Stock</div>
+                      <div className="font-semibold text-xs text-[#1C1B18] tabular-nums">
+                        {p.stock} {p.unit}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
           </div>
           <div className="bg-white rounded-2xl border border-[#EEE6DA] shadow-2xs">
-          {/* Pagination Footer */}
-          <div className="p-3.5 border-t border-[#EEE6DA] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#6B665E] bg-[#FAF6EF]/30">
-            <div className="flex items-center gap-4">
-              <span>
-                Showing{' '}
-                <strong className="text-[#1C1B18]">
-                  {filteredProducts.length === 0 ? 0 : (currentPage - 1) * pageSize + 1}
-                </strong>{' '}
-                to{' '}
-                <strong className="text-[#1C1B18]">
-                  {Math.min(currentPage * pageSize, filteredProducts.length)}
-                </strong>{' '}
-                of <strong className="text-[#1C1B18]">{filteredProducts.length}</strong> {isPharmacy ? 'medicines' : 'products'}
-              </span>
+            {/* Pagination Footer */}
+            <div className="p-3.5 border-t border-[#EEE6DA] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#6B665E] bg-[#FAF6EF]/30">
+              <div className="flex items-center gap-4">
+                <span>
+                  Showing{' '}
+                  <strong className="text-[#1C1B18]">
+                    {filteredProducts.length === 0 ? 0 : (currentPage - 1) * pageSize + 1}
+                  </strong>{' '}
+                  to{' '}
+                  <strong className="text-[#1C1B18]">
+                    {Math.min(currentPage * pageSize, filteredProducts.length)}
+                  </strong>{' '}
+                  of <strong className="text-[#1C1B18]">{filteredProducts.length}</strong> {isPharmacy ? 'medicines' : 'products'}
+                </span>
 
-              <div className="flex items-center gap-1.5 pl-2 border-l border-[#EEE6DA]">
-                <span className="text-[#6B665E]">Rows:</span>
-                <select
-                  value={pageSize}
-                  onChange={(e) => setPageSize(Number(e.target.value))}
-                  className="px-2 py-1 rounded-lg border border-[#EEE6DA] bg-white text-xs font-semibold text-[#1C1B18] outline-none cursor-pointer focus:border-[#7FAE82]"
-                >
-                  <option value={10}>10</option>
-                  <option value={20}>20</option>
-                  <option value={50}>50</option>
-                  <option value={100}>100</option>
-                </select>
-              </div>
-            </div>
-
-            {totalPages > 1 && (
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  disabled={currentPage === 1}
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  className="px-2.5 py-1 rounded-lg bg-[#381e12] hover:bg-[#26140c] text-xs font-semibold text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer active:scale-95"
-                >
-                  Previous
-                </button>
-
-                <div className="flex items-center gap-1 px-1">
-                  {Array.from({ length: totalPages }).map((_, idx) => {
-                    const pageNum = idx + 1;
-                    if (
-                      pageNum === 1 ||
-                      pageNum === totalPages ||
-                      (pageNum >= currentPage - 1 && pageNum <= currentPage + 1)
-                    ) {
-                      return (
-                        <button
-                          key={pageNum}
-                          type="button"
-                          onClick={() => setCurrentPage(pageNum)}
-                          className={`w-7 h-7 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                            currentPage === pageNum
-                              ? 'bg-[#381e12] text-white shadow-2xs'
-                              : 'text-[#6B665E] hover:bg-[#FAF6EF] hover:text-[#1C1B18]'
-                          }`}
-                        >
-                          {pageNum}
-                        </button>
-                      );
-                    }
-                    if (pageNum === currentPage - 2 || pageNum === currentPage + 2) {
-                      return (
-                        <span key={pageNum} className="text-[#9A948A] px-0.5 text-xs">
-                          …
-                        </span>
-                      );
-                    }
-                    return null;
-                  })}
+                <div className="flex items-center gap-1.5 pl-2 border-l border-[#EEE6DA]">
+                  <span className="text-[#6B665E]">Rows:</span>
+                  <select
+                    value={pageSize}
+                    onChange={(e) => setPageSize(Number(e.target.value))}
+                    className="px-2 py-1 rounded-lg border border-[#EEE6DA] bg-white text-xs font-semibold text-[#1C1B18] outline-none cursor-pointer focus:border-[#7FAE82]"
+                  >
+                    <option value={10}>10</option>
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                  </select>
                 </div>
-
-                <button
-                  type="button"
-                  disabled={currentPage === totalPages}
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  className="px-2.5 py-1 rounded-lg bg-[#381e12] hover:bg-[#26140c] text-xs font-semibold text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer active:scale-95"
-                >
-                  Next
-                </button>
               </div>
-            )}
-          </div></div>
+
+              {totalPages > 1 && (
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    className="px-2.5 py-1 rounded-lg bg-[#381e12] hover:bg-[#26140c] text-xs font-semibold text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer active:scale-95"
+                  >
+                    Previous
+                  </button>
+
+                  <div className="flex items-center gap-1 px-1">
+                    {Array.from({ length: totalPages }).map((_, idx) => {
+                      const pageNum = idx + 1;
+                      if (
+                        pageNum === 1 ||
+                        pageNum === totalPages ||
+                        (pageNum >= currentPage - 1 && pageNum <= currentPage + 1)
+                      ) {
+                        return (
+                          <button
+                            key={pageNum}
+                            type="button"
+                            onClick={() => setCurrentPage(pageNum)}
+                            className={`w-7 h-7 rounded-lg text-xs font-semibold transition-all cursor-pointer ${currentPage === pageNum
+                                ? 'bg-[#381e12] text-white shadow-2xs'
+                                : 'text-[#6B665E] hover:bg-[#FAF6EF] hover:text-[#1C1B18]'
+                              }`}
+                          >
+                            {pageNum}
+                          </button>
+                        );
+                      }
+                      if (pageNum === currentPage - 2 || pageNum === currentPage + 2) {
+                        return (
+                          <span key={pageNum} className="text-[#9A948A] px-0.5 text-xs">
+                            …
+                          </span>
+                        );
+                      }
+                      return null;
+                    })}
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    className="px-2.5 py-1 rounded-lg bg-[#381e12] hover:bg-[#26140c] text-xs font-semibold text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer active:scale-95"
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
+            </div></div>
         </div>
       )}
 
@@ -1034,620 +1028,620 @@ export const ProductsPage: React.FC = () => {
       {isAddDrawerOpen && (
         <Portal>
           <div className="fixed inset-0 z-50 overflow-hidden">
-          <div
-            className="fixed inset-0 bg-black/30 backdrop-blur-xs transition-opacity"
-            onClick={() => setIsAddDrawerOpen(false)}
-          />
-          <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
-            <div className="w-screen max-w-lg bg-white border-l border-[#EEE6DA] shadow-2xl flex flex-col justify-between animate-in slide-in-from-right duration-200">
-              <div className="p-5 border-b border-[#EEE6DA] flex items-center justify-between">
-                <div>
-                  <h3 className="text-base font-semibold text-[#1C1B18]">
-                    {editingProduct ? `Edit ${itemNoun}` : `Add New ${itemNoun}`}
-                  </h3>
-                  <p className="text-xs text-[#6B665E]">
-                    Enter master product specifications and stock thresholds.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsAddDrawerOpen(false)}
-                  className="p-1.5 rounded-lg text-[#6B665E] hover:bg-[#FAF6EF]"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-
-              {/* Form Body */}
-              <form id="product-form" onSubmit={handleSaveProduct} className="flex-1 overflow-y-auto p-5 space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold text-[#1C1B18] mb-1">
-                    {itemNoun} Name *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder={namePlaceholder}
-                    className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs focus:border-[#7FAE82] outline-none"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
+            <div
+              className="fixed inset-0 bg-black/30 backdrop-blur-xs transition-opacity"
+              onClick={() => setIsAddDrawerOpen(false)}
+            />
+            <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
+              <div className="w-screen max-w-lg bg-white border-l border-[#EEE6DA] shadow-2xl flex flex-col justify-between animate-in slide-in-from-right duration-200">
+                <div className="p-5 border-b border-[#EEE6DA] flex items-center justify-between">
                   <div>
-                    <label className="block text-xs font-semibold text-[#1C1B18] mb-1 flex items-center justify-between">
-                      <span>SKU *</span>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setFormData({
-                            ...formData,
-                            sku: `SKU-${Math.floor(1000 + Math.random() * 9000)}`,
-                          })
-                        }
-                        className="text-[10px] text-[#7FAE82] hover:underline flex items-center gap-0.5 cursor-pointer"
-                      >
-                        <Sparkles size={11} /> Auto
-                      </button>
+                    <h3 className="text-base font-semibold text-[#1C1B18]">
+                      {editingProduct ? `Edit ${itemNoun}` : `Add New ${itemNoun}`}
+                    </h3>
+                    <p className="text-xs text-[#6B665E]">
+                      Enter master product specifications and stock thresholds.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsAddDrawerOpen(false)}
+                    className="p-1.5 rounded-lg text-[#6B665E] hover:bg-[#FAF6EF]"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+
+                {/* Form Body */}
+                <form id="product-form" onSubmit={handleSaveProduct} className="flex-1 overflow-y-auto p-5 space-y-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-[#1C1B18] mb-1">
+                      {itemNoun} Name *
                     </label>
                     <input
                       type="text"
                       required
-                      value={formData.sku}
-                      onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      placeholder={namePlaceholder}
                       className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs focus:border-[#7FAE82] outline-none"
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-semibold text-[#1C1B18] mb-1">
-                      Barcode
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.barcode}
-                      onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
-                      placeholder="89012345..."
-                      className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs focus:border-[#7FAE82] outline-none"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-[#1C1B18] mb-1">
-                      Category
-                    </label>
-                    <select
-                      value={isCustomCategory ? '__custom__' : formData.category}
-                      onChange={(e) => {
-                        if (e.target.value === '__custom__') {
-                          setIsCustomCategory(true);
-                          setFormData({ ...formData, category: '' });
-                        } else {
-                          setIsCustomCategory(false);
-                          setFormData({ ...formData, category: e.target.value });
-                        }
-                      }}
-                      className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs bg-white outline-none focus:border-[#381e12]"
-                    >
-                      {categories.filter((c) => c !== 'All').map((c) => (
-                        <option key={c} value={c}>{c}</option>
-                      ))}
-                      <option value="__custom__">+ Enter Custom Category...</option>
-                    </select>
-                    {isCustomCategory && (
-                      <div className="flex items-center gap-1.5 mt-2">
-                        <input
-                          type="text"
-                          placeholder="Type custom category..."
-                          value={formData.category}
-                          onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                          className="flex-1 px-3 py-1.5 rounded-xl border border-[#381e12] text-xs bg-[#FAF6EF] outline-none"
-                          autoFocus
-                          required
-                        />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-[#1C1B18] mb-1 flex items-center justify-between">
+                        <span>SKU *</span>
                         <button
                           type="button"
-                          onClick={() => {
-                            setIsCustomCategory(false);
-                            setFormData({ ...formData, category: industryPresets[0] || 'General' });
-                          }}
-                          className="px-2 py-1.5 text-xs text-[#9A948A] hover:text-[#1C1B18] rounded-lg hover:bg-[#FAF6EF]"
-                          title="Cancel custom category"
+                          onClick={() =>
+                            setFormData({
+                              ...formData,
+                              sku: `SKU-${Math.floor(1000 + Math.random() * 9000)}`,
+                            })
+                          }
+                          className="text-[10px] text-[#7FAE82] hover:underline flex items-center gap-0.5 cursor-pointer"
                         >
-                          Cancel
+                          <Sparkles size={11} /> Auto
                         </button>
-                      </div>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-[#1C1B18] mb-1">
-                      Unit of Measure
-                    </label>
-                    <select
-                      value={formData.unit}
-                      onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs bg-white outline-none"
-                    >
-                      <option value="pcs">Pieces (pcs)</option>
-                      <option value="strip">Strip</option>
-                      <option value="bottle">Bottle</option>
-                      <option value="pair">Pair</option>
-                      <option value="box">Box</option>
-                      <option value="kg">Kilogram (kg)</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-[#1C1B18] mb-1">
-                      Purchase Cost (₹) *
-                    </label>
-                    <input
-                      type="number"
-                      required
-                      min={0}
-                      value={formData.purchasePrice}
-                      onChange={(e) =>
-                        setFormData({ ...formData, purchasePrice: parseFloat(e.target.value) || 0 })
-                      }
-                      className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs focus:border-[#7FAE82] outline-none tabular-nums"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-[#1C1B18] mb-1">
-                      Selling Price (₹) *
-                    </label>
-                    <input
-                      type="number"
-                      required
-                      min={0}
-                      value={formData.sellingPrice}
-                      onChange={(e) =>
-                        setFormData({ ...formData, sellingPrice: parseFloat(e.target.value) || 0 })
-                      }
-                      className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs focus:border-[#7FAE82] outline-none tabular-nums font-semibold"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-[#1C1B18] mb-1">
-                      MRP (₹)
-                    </label>
-                    <input
-                      type="number"
-                      min={0}
-                      value={formData.mrp}
-                      onChange={(e) =>
-                        setFormData({ ...formData, mrp: parseFloat(e.target.value) || 0 })
-                      }
-                      placeholder="Max Retail Price"
-                      className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs focus:border-[#7FAE82] outline-none tabular-nums"
-                    />
-                  </div>
-                </div>
-
-                {/* Industry-Specific Dynamic Attribute Sections */}
-                {isPharmacy && (
-                  <div className="p-3.5 rounded-2xl bg-[#FAF6EF]/60 border border-[#EEE6DA] space-y-3">
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-[#1C1B18]">
-                      <span>💊 Pharmacy & Drug Compliance</span>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-[11px] font-semibold text-[#1C1B18] mb-1">
-                          Generic Name / Molecule
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.genericName}
-                          onChange={(e) => setFormData({ ...formData, genericName: e.target.value })}
-                          placeholder="e.g. Paracetamol 500mg"
-                          className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs bg-white focus:border-[#7FAE82] outline-none"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-[11px] font-semibold text-[#1C1B18] mb-1">
-                          Manufacturer / Brand
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.manufacturer}
-                          onChange={(e) => setFormData({ ...formData, manufacturer: e.target.value })}
-                          placeholder="e.g. Cipla, Sun Pharma"
-                          className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs bg-white focus:border-[#7FAE82] outline-none"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-[11px] font-semibold text-[#1C1B18] mb-1">
-                        Batch Number
                       </label>
                       <input
                         type="text"
-                        value={formData.batchNumber}
-                        onChange={(e) => setFormData({ ...formData, batchNumber: e.target.value })}
-                        placeholder="e.g. BATCH-2024-08"
-                        className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs bg-white focus:border-[#7FAE82] outline-none font-mono"
+                        required
+                        value={formData.sku}
+                        onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs focus:border-[#7FAE82] outline-none"
                       />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-[11px] font-semibold text-[#1C1B18] mb-1">
-                          Mfg Date
-                        </label>
-                        <input
-                          type="date"
-                          value={formData.manufacturingDate}
-                          onChange={(e) => setFormData({ ...formData, manufacturingDate: e.target.value })}
-                          className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs bg-white focus:border-[#7FAE82] outline-none"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-[11px] font-semibold text-[#1C1B18] mb-1 text-[#D64545]">
-                          Expiry Date *
-                        </label>
-                        <input
-                          type="date"
-                          value={formData.expiryDate}
-                          onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
-                          className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs bg-white focus:border-[#7FAE82] outline-none font-medium"
-                        />
-                      </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-[#1C1B18] mb-1">
+                        Barcode
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.barcode}
+                        onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
+                        placeholder="89012345..."
+                        className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs focus:border-[#7FAE82] outline-none"
+                      />
                     </div>
                   </div>
-                )}
 
-                {isClothing && (
-                  <div className="p-3.5 rounded-2xl bg-[#FAF6EF]/60 border border-[#EEE6DA] space-y-3">
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-[#1C1B18]">
-                      <span>👗 Apparel & Variant Attributes</span>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-[#1C1B18] mb-1">
+                        Category
+                      </label>
+                      <select
+                        value={isCustomCategory ? '__custom__' : formData.category}
+                        onChange={(e) => {
+                          if (e.target.value === '__custom__') {
+                            setIsCustomCategory(true);
+                            setFormData({ ...formData, category: '' });
+                          } else {
+                            setIsCustomCategory(false);
+                            setFormData({ ...formData, category: e.target.value });
+                          }
+                        }}
+                        className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs bg-white outline-none focus:border-[#381e12]"
+                      >
+                        {categories.filter((c) => c !== 'All').map((c) => (
+                          <option key={c} value={c}>{c}</option>
+                        ))}
+                        <option value="__custom__">+ Enter Custom Category...</option>
+                      </select>
+                      {isCustomCategory && (
+                        <div className="flex items-center gap-1.5 mt-2">
+                          <input
+                            type="text"
+                            placeholder="Type custom category..."
+                            value={formData.category}
+                            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                            className="flex-1 px-3 py-1.5 rounded-xl border border-[#381e12] text-xs bg-[#FAF6EF] outline-none"
+                            autoFocus
+                            required
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsCustomCategory(false);
+                              setFormData({ ...formData, category: industryPresets[0] || 'General' });
+                            }}
+                            className="px-2 py-1.5 text-xs text-[#9A948A] hover:text-[#1C1B18] rounded-lg hover:bg-[#FAF6EF]"
+                            title="Cancel custom category"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      )}
                     </div>
 
-                    <div className="grid grid-cols-3 gap-3">
-                      <div>
-                        <label className="block text-[11px] font-semibold text-[#1C1B18] mb-1">
-                          Brand
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.brand}
-                          onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
-                          placeholder="e.g. Zara"
-                          className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs bg-white focus:border-[#7FAE82] outline-none"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-[11px] font-semibold text-[#1C1B18] mb-1">
-                          Size
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.size}
-                          onChange={(e) => setFormData({ ...formData, size: e.target.value })}
-                          placeholder="S, M, L, XL, 32"
-                          className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs bg-white focus:border-[#7FAE82] outline-none"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-[11px] font-semibold text-[#1C1B18] mb-1">
-                          Color
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.color}
-                          onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-                          placeholder="Navy Blue"
-                          className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs bg-white focus:border-[#7FAE82] outline-none"
-                        />
-                      </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-[#1C1B18] mb-1">
+                        Unit of Measure
+                      </label>
+                      <select
+                        value={formData.unit}
+                        onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs bg-white outline-none"
+                      >
+                        <option value="pcs">Pieces (pcs)</option>
+                        <option value="strip">Strip</option>
+                        <option value="bottle">Bottle</option>
+                        <option value="pair">Pair</option>
+                        <option value="box">Box</option>
+                        <option value="kg">Kilogram (kg)</option>
+                      </select>
                     </div>
                   </div>
-                )}
 
-                {isElectronics && (
-                  <div className="p-3.5 rounded-2xl bg-[#FAF6EF]/60 border border-[#EEE6DA] space-y-3">
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-[#1C1B18]">
-                      <span>📱 Device & Serial Tracking</span>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-[#1C1B18] mb-1">
+                        Purchase Cost (₹) *
+                      </label>
+                      <input
+                        type="number"
+                        required
+                        min={0}
+                        value={formData.purchasePrice}
+                        onChange={(e) =>
+                          setFormData({ ...formData, purchasePrice: parseFloat(e.target.value) || 0 })
+                        }
+                        className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs focus:border-[#7FAE82] outline-none tabular-nums"
+                      />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-[11px] font-semibold text-[#1C1B18] mb-1">
-                          Brand & Model
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.model}
-                          onChange={(e) => setFormData({ ...formData, model: e.target.value })}
-                          placeholder="e.g. iPhone 15 / Galaxy S24"
-                          className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs bg-white focus:border-[#7FAE82] outline-none"
-                        />
+                    <div>
+                      <label className="block text-xs font-semibold text-[#1C1B18] mb-1">
+                        Selling Price (₹) *
+                      </label>
+                      <input
+                        type="number"
+                        required
+                        min={0}
+                        value={formData.sellingPrice}
+                        onChange={(e) =>
+                          setFormData({ ...formData, sellingPrice: parseFloat(e.target.value) || 0 })
+                        }
+                        className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs focus:border-[#7FAE82] outline-none tabular-nums font-semibold"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-[#1C1B18] mb-1">
+                        MRP (₹)
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={formData.mrp}
+                        onChange={(e) =>
+                          setFormData({ ...formData, mrp: parseFloat(e.target.value) || 0 })
+                        }
+                        placeholder="Max Retail Price"
+                        className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs focus:border-[#7FAE82] outline-none tabular-nums"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Industry-Specific Dynamic Attribute Sections */}
+                  {isPharmacy && (
+                    <div className="p-3.5 rounded-2xl bg-[#FAF6EF]/60 border border-[#EEE6DA] space-y-3">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-[#1C1B18]">
+                        <span>💊 Pharmacy & Drug Compliance</span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-[#1C1B18] mb-1">
+                            Generic Name / Molecule
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.genericName}
+                            onChange={(e) => setFormData({ ...formData, genericName: e.target.value })}
+                            placeholder="e.g. Paracetamol 500mg"
+                            className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs bg-white focus:border-[#7FAE82] outline-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-semibold text-[#1C1B18] mb-1">
+                            Manufacturer / Brand
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.manufacturer}
+                            onChange={(e) => setFormData({ ...formData, manufacturer: e.target.value })}
+                            placeholder="e.g. Cipla, Sun Pharma"
+                            className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs bg-white focus:border-[#7FAE82] outline-none"
+                          />
+                        </div>
                       </div>
 
                       <div>
                         <label className="block text-[11px] font-semibold text-[#1C1B18] mb-1">
-                          Warranty (Months)
-                        </label>
-                        <input
-                          type="number"
-                          value={formData.warrantyMonths}
-                          onChange={(e) => setFormData({ ...formData, warrantyMonths: parseInt(e.target.value) || 0 })}
-                          placeholder="12"
-                          className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs bg-white focus:border-[#7FAE82] outline-none"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-[11px] font-semibold text-[#1C1B18] mb-1">
-                          Serial Number
+                          Batch Number
                         </label>
                         <input
                           type="text"
-                          value={formData.serialNumber}
-                          onChange={(e) => setFormData({ ...formData, serialNumber: e.target.value })}
-                          placeholder="SN-..."
+                          value={formData.batchNumber}
+                          onChange={(e) => setFormData({ ...formData, batchNumber: e.target.value })}
+                          placeholder="e.g. BATCH-2024-08"
                           className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs bg-white focus:border-[#7FAE82] outline-none font-mono"
                         />
                       </div>
 
-                      <div>
-                        <label className="block text-[11px] font-semibold text-[#1C1B18] mb-1">
-                          IMEI (15 digits)
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.imei}
-                          onChange={(e) => setFormData({ ...formData, imei: e.target.value })}
-                          placeholder="354890123456789"
-                          className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs bg-white focus:border-[#7FAE82] outline-none font-mono"
-                        />
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-[#1C1B18] mb-1">
+                            Mfg Date
+                          </label>
+                          <input
+                            type="date"
+                            value={formData.manufacturingDate}
+                            onChange={(e) => setFormData({ ...formData, manufacturingDate: e.target.value })}
+                            className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs bg-white focus:border-[#7FAE82] outline-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-semibold text-[#1C1B18] mb-1 text-[#D64545]">
+                            Expiry Date *
+                          </label>
+                          <input
+                            type="date"
+                            value={formData.expiryDate}
+                            onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
+                            className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs bg-white focus:border-[#7FAE82] outline-none font-medium"
+                          />
+                        </div>
                       </div>
+                    </div>
+                  )}
+
+                  {isClothing && (
+                    <div className="p-3.5 rounded-2xl bg-[#FAF6EF]/60 border border-[#EEE6DA] space-y-3">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-[#1C1B18]">
+                        <span>👗 Apparel & Variant Attributes</span>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-3">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-[#1C1B18] mb-1">
+                            Brand
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.brand}
+                            onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
+                            placeholder="e.g. Zara"
+                            className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs bg-white focus:border-[#7FAE82] outline-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-semibold text-[#1C1B18] mb-1">
+                            Size
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.size}
+                            onChange={(e) => setFormData({ ...formData, size: e.target.value })}
+                            placeholder="S, M, L, XL, 32"
+                            className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs bg-white focus:border-[#7FAE82] outline-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-semibold text-[#1C1B18] mb-1">
+                            Color
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.color}
+                            onChange={(e) => setFormData({ ...formData, color: e.target.value })}
+                            placeholder="Navy Blue"
+                            className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs bg-white focus:border-[#7FAE82] outline-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {isElectronics && (
+                    <div className="p-3.5 rounded-2xl bg-[#FAF6EF]/60 border border-[#EEE6DA] space-y-3">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-[#1C1B18]">
+                        <span>📱 Device & Serial Tracking</span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-[#1C1B18] mb-1">
+                            Brand & Model
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.model}
+                            onChange={(e) => setFormData({ ...formData, model: e.target.value })}
+                            placeholder="e.g. iPhone 15 / Galaxy S24"
+                            className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs bg-white focus:border-[#7FAE82] outline-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-semibold text-[#1C1B18] mb-1">
+                            Warranty (Months)
+                          </label>
+                          <input
+                            type="number"
+                            value={formData.warrantyMonths}
+                            onChange={(e) => setFormData({ ...formData, warrantyMonths: parseInt(e.target.value) || 0 })}
+                            placeholder="12"
+                            className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs bg-white focus:border-[#7FAE82] outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-[#1C1B18] mb-1">
+                            Serial Number
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.serialNumber}
+                            onChange={(e) => setFormData({ ...formData, serialNumber: e.target.value })}
+                            placeholder="SN-..."
+                            className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs bg-white focus:border-[#7FAE82] outline-none font-mono"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-semibold text-[#1C1B18] mb-1">
+                            IMEI (15 digits)
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.imei}
+                            onChange={(e) => setFormData({ ...formData, imei: e.target.value })}
+                            placeholder="354890123456789"
+                            className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs bg-white focus:border-[#7FAE82] outline-none font-mono"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {isHardware && (
+                    <div className="p-3.5 rounded-2xl bg-[#FAF6EF]/60 border border-[#EEE6DA] space-y-3">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-[#1C1B18]">
+                        <span>🔧 Yard & Location Storage</span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-[#1C1B18] mb-1">
+                            Warehouse
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.warehouse}
+                            onChange={(e) => setFormData({ ...formData, warehouse: e.target.value })}
+                            placeholder="Main Yard / Godown 1"
+                            className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs bg-white focus:border-[#7FAE82] outline-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-semibold text-[#1C1B18] mb-1">
+                            Rack / Bin Location
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.rackLocation}
+                            onChange={(e) => setFormData({ ...formData, rackLocation: e.target.value })}
+                            placeholder="Aisle 3, Rack B-12"
+                            className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs bg-white focus:border-[#7FAE82] outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-[#1C1B18] mb-1">
+                            Wholesale Price (₹)
+                          </label>
+                          <input
+                            type="number"
+                            value={formData.wholesalePrice}
+                            onChange={(e) => setFormData({ ...formData, wholesalePrice: parseFloat(e.target.value) || 0 })}
+                            className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs bg-white focus:border-[#7FAE82] outline-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-semibold text-[#1C1B18] mb-1">
+                            Dealer Price (₹)
+                          </label>
+                          <input
+                            type="number"
+                            value={formData.dealerPrice}
+                            onChange={(e) => setFormData({ ...formData, dealerPrice: parseFloat(e.target.value) || 0 })}
+                            className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs bg-white focus:border-[#7FAE82] outline-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {isWholesale && !isHardware && (
+                    <div className="p-3.5 rounded-2xl bg-[#FAF6EF]/60 border border-[#EEE6DA] space-y-3">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-[#1C1B18]">
+                        <span>📦 B2B Wholesale Tiers</span>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-3">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-[#1C1B18] mb-1">
+                            Wholesale Price (₹)
+                          </label>
+                          <input
+                            type="number"
+                            value={formData.wholesalePrice}
+                            onChange={(e) => setFormData({ ...formData, wholesalePrice: parseFloat(e.target.value) || 0 })}
+                            className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs bg-white focus:border-[#7FAE82] outline-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-semibold text-[#1C1B18] mb-1">
+                            Min Order Qty (MOQ)
+                          </label>
+                          <input
+                            type="number"
+                            value={formData.wholesaleMinQuantity}
+                            onChange={(e) => setFormData({ ...formData, wholesaleMinQuantity: parseInt(e.target.value) || 1 })}
+                            className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs bg-white focus:border-[#7FAE82] outline-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-semibold text-[#1C1B18] mb-1">
+                            Dealer Price (₹)
+                          </label>
+                          <input
+                            type="number"
+                            value={formData.dealerPrice}
+                            onChange={(e) => setFormData({ ...formData, dealerPrice: parseFloat(e.target.value) || 0 })}
+                            className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs bg-white focus:border-[#7FAE82] outline-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {isGrocery && !isPharmacy && (
+                    <div className="p-3.5 rounded-2xl bg-[#FAF6EF]/60 border border-[#EEE6DA] space-y-3">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-[#1C1B18]">
+                        <span>🛒 Grocery Shelf-life</span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-[#1C1B18] mb-1">
+                            Weight / Volume (kg / L)
+                          </label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={formData.weight}
+                            onChange={(e) => setFormData({ ...formData, weight: parseFloat(e.target.value) || 0 })}
+                            placeholder="e.g. 1.0"
+                            className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs bg-white focus:border-[#7FAE82] outline-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-semibold text-[#1C1B18] mb-1 text-[#D64545]">
+                            Expiry Date
+                          </label>
+                          <input
+                            type="date"
+                            value={formData.expiryDate}
+                            onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
+                            className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs bg-white focus:border-[#7FAE82] outline-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-[#1C1B18] mb-1">
+                        Opening / Current Stock
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={formData.stock}
+                        onChange={(e) =>
+                          setFormData({ ...formData, stock: parseInt(e.target.value) || 0 })
+                        }
+                        className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs focus:border-[#7FAE82] outline-none tabular-nums"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-[#1C1B18] mb-1">
+                        Low-stock Alert Level
+                      </label>
+                      <input
+                        type="number"
+                        min={1}
+                        value={formData.reorderLevel}
+                        onChange={(e) =>
+                          setFormData({ ...formData, reorderLevel: parseInt(e.target.value) || 1 })
+                        }
+                        className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs focus:border-[#7FAE82] outline-none tabular-nums"
+                      />
                     </div>
                   </div>
-                )}
 
-                {isHardware && (
-                  <div className="p-3.5 rounded-2xl bg-[#FAF6EF]/60 border border-[#EEE6DA] space-y-3">
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-[#1C1B18]">
-                      <span>🔧 Yard & Location Storage</span>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-[11px] font-semibold text-[#1C1B18] mb-1">
-                          Warehouse
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.warehouse}
-                          onChange={(e) => setFormData({ ...formData, warehouse: e.target.value })}
-                          placeholder="Main Yard / Godown 1"
-                          className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs bg-white focus:border-[#7FAE82] outline-none"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-[11px] font-semibold text-[#1C1B18] mb-1">
-                          Rack / Bin Location
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.rackLocation}
-                          onChange={(e) => setFormData({ ...formData, rackLocation: e.target.value })}
-                          placeholder="Aisle 3, Rack B-12"
-                          className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs bg-white focus:border-[#7FAE82] outline-none"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-[11px] font-semibold text-[#1C1B18] mb-1">
-                          Wholesale Price (₹)
-                        </label>
-                        <input
-                          type="number"
-                          value={formData.wholesalePrice}
-                          onChange={(e) => setFormData({ ...formData, wholesalePrice: parseFloat(e.target.value) || 0 })}
-                          className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs bg-white focus:border-[#7FAE82] outline-none"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-[11px] font-semibold text-[#1C1B18] mb-1">
-                          Dealer Price (₹)
-                        </label>
-                        <input
-                          type="number"
-                          value={formData.dealerPrice}
-                          onChange={(e) => setFormData({ ...formData, dealerPrice: parseFloat(e.target.value) || 0 })}
-                          className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs bg-white focus:border-[#7FAE82] outline-none"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {isWholesale && !isHardware && (
-                  <div className="p-3.5 rounded-2xl bg-[#FAF6EF]/60 border border-[#EEE6DA] space-y-3">
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-[#1C1B18]">
-                      <span>📦 B2B Wholesale Tiers</span>
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-3">
-                      <div>
-                        <label className="block text-[11px] font-semibold text-[#1C1B18] mb-1">
-                          Wholesale Price (₹)
-                        </label>
-                        <input
-                          type="number"
-                          value={formData.wholesalePrice}
-                          onChange={(e) => setFormData({ ...formData, wholesalePrice: parseFloat(e.target.value) || 0 })}
-                          className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs bg-white focus:border-[#7FAE82] outline-none"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-[11px] font-semibold text-[#1C1B18] mb-1">
-                          Min Order Qty (MOQ)
-                        </label>
-                        <input
-                          type="number"
-                          value={formData.wholesaleMinQuantity}
-                          onChange={(e) => setFormData({ ...formData, wholesaleMinQuantity: parseInt(e.target.value) || 1 })}
-                          className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs bg-white focus:border-[#7FAE82] outline-none"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-[11px] font-semibold text-[#1C1B18] mb-1">
-                          Dealer Price (₹)
-                        </label>
-                        <input
-                          type="number"
-                          value={formData.dealerPrice}
-                          onChange={(e) => setFormData({ ...formData, dealerPrice: parseFloat(e.target.value) || 0 })}
-                          className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs bg-white focus:border-[#7FAE82] outline-none"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {isGrocery && !isPharmacy && (
-                  <div className="p-3.5 rounded-2xl bg-[#FAF6EF]/60 border border-[#EEE6DA] space-y-3">
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-[#1C1B18]">
-                      <span>🛒 Grocery Shelf-life</span>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-[11px] font-semibold text-[#1C1B18] mb-1">
-                          Weight / Volume (kg / L)
-                        </label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={formData.weight}
-                          onChange={(e) => setFormData({ ...formData, weight: parseFloat(e.target.value) || 0 })}
-                          placeholder="e.g. 1.0"
-                          className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs bg-white focus:border-[#7FAE82] outline-none"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-[11px] font-semibold text-[#1C1B18] mb-1 text-[#D64545]">
-                          Expiry Date
-                        </label>
-                        <input
-                          type="date"
-                          value={formData.expiryDate}
-                          onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
-                          className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs bg-white focus:border-[#7FAE82] outline-none"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-semibold text-[#1C1B18] mb-1">
-                      Opening / Current Stock
+                      Primary Supplier
                     </label>
-                    <input
-                      type="number"
-                      min={0}
-                      value={formData.stock}
-                      onChange={(e) =>
-                        setFormData({ ...formData, stock: parseInt(e.target.value) || 0 })
-                      }
-                      className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs focus:border-[#7FAE82] outline-none tabular-nums"
-                    />
+                    <select
+                      value={formData.supplierId}
+                      onChange={(e) => setFormData({ ...formData, supplierId: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs bg-white outline-none"
+                    >
+                      {suppliers.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name} ({s.contactPerson})
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   <div>
                     <label className="block text-xs font-semibold text-[#1C1B18] mb-1">
-                      Low-stock Alert Level
+                      Description & Notes
                     </label>
-                    <input
-                      type="number"
-                      min={1}
-                      value={formData.reorderLevel}
-                      onChange={(e) =>
-                        setFormData({ ...formData, reorderLevel: parseInt(e.target.value) || 1 })
-                      }
-                      className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs focus:border-[#7FAE82] outline-none tabular-nums"
+                    <textarea
+                      rows={3}
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      placeholder="Product details, batch handling, specifications..."
+                      className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs focus:border-[#7FAE82] outline-none resize-none"
                     />
                   </div>
-                </div>
+                </form>
 
-                <div>
-                  <label className="block text-xs font-semibold text-[#1C1B18] mb-1">
-                    Primary Supplier
-                  </label>
-                  <select
-                    value={formData.supplierId}
-                    onChange={(e) => setFormData({ ...formData, supplierId: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs bg-white outline-none"
+                {/* Sticky Footer */}
+                <div className="p-4 bg-[#FAF6EF] border-t border-[#EEE6DA] flex items-center justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsAddDrawerOpen(false)}
+                    className="px-4 py-2 rounded-xl text-xs font-semibold bg-[#381e12] hover:bg-[#26140c] text-white cursor-pointer"
                   >
-                    {suppliers.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name} ({s.contactPerson})
-                      </option>
-                    ))}
-                  </select>
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    form="product-form"
+                    className="px-5 py-2 rounded-xl bg-[#381e12] hover:bg-[#26140c] text-white text-xs font-semibold transition-colors cursor-pointer shadow-xs"
+                  >
+                    {editingProduct ? 'Save Changes' : 'Create Product'}
+                  </button>
                 </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-[#1C1B18] mb-1">
-                    Description & Notes
-                  </label>
-                  <textarea
-                    rows={3}
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="Product details, batch handling, specifications..."
-                    className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs focus:border-[#7FAE82] outline-none resize-none"
-                  />
-                </div>
-              </form>
-
-              {/* Sticky Footer */}
-              <div className="p-4 bg-[#FAF6EF] border-t border-[#EEE6DA] flex items-center justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setIsAddDrawerOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold bg-[#381e12] hover:bg-[#26140c] text-white cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  form="product-form"
-                  className="px-5 py-2 rounded-xl bg-[#381e12] hover:bg-[#26140c] text-white text-xs font-semibold transition-colors cursor-pointer shadow-xs"
-                >
-                  {editingProduct ? 'Save Changes' : 'Create Product'}
-                </button>
               </div>
             </div>
           </div>
-        </div>
         </Portal>
       )}
 
@@ -1655,79 +1649,79 @@ export const ProductsPage: React.FC = () => {
       {adjustingProduct && (
         <Portal>
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl max-w-md w-full border border-[#EEE6DA] shadow-2xl p-5 animate-in zoom-in-95 duration-150">
-            <h3 className="text-base font-semibold text-[#1C1B18] mb-1">
-              Adjust Stock: {adjustingProduct.name}
-            </h3>
-            <p className="text-xs text-[#6B665E] mb-4">
-              Current stock on hand: <span className="font-bold text-[#1C1B18]">{adjustingProduct.stock} {adjustingProduct.unit}</span>
-            </p>
+            <div className="bg-white rounded-2xl max-w-md w-full border border-[#EEE6DA] shadow-2xl p-5 animate-in zoom-in-95 duration-150">
+              <h3 className="text-base font-semibold text-[#1C1B18] mb-1">
+                Adjust Stock: {adjustingProduct.name}
+              </h3>
+              <p className="text-xs text-[#6B665E] mb-4">
+                Current stock on hand: <span className="font-bold text-[#1C1B18]">{adjustingProduct.stock} {adjustingProduct.unit}</span>
+              </p>
 
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-semibold text-[#1C1B18] mb-1">
-                  New Physical Count
-                </label>
-                <input
-                  type="number"
-                  min={0}
-                  value={adjustStockValue}
-                  onChange={(e) => setAdjustStockValue(parseInt(e.target.value) || 0)}
-                  className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-sm font-bold tabular-nums outline-none focus:border-[#7FAE82]"
-                />
-                <div className="text-[11px] mt-1 text-[#6B665E]">
-                  Variance:{' '}
-                  <span
-                    className={`font-semibold ${adjustStockValue - adjustingProduct.stock >= 0
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-semibold text-[#1C1B18] mb-1">
+                    New Physical Count
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={adjustStockValue}
+                    onChange={(e) => setAdjustStockValue(parseInt(e.target.value) || 0)}
+                    className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-sm font-bold tabular-nums outline-none focus:border-[#7FAE82]"
+                  />
+                  <div className="text-[11px] mt-1 text-[#6B665E]">
+                    Variance:{' '}
+                    <span
+                      className={`font-semibold ${adjustStockValue - adjustingProduct.stock >= 0
                         ? 'text-[#2E8B57]'
                         : 'text-[#D64545]'
-                      }`}
+                        }`}
+                    >
+                      {adjustStockValue - adjustingProduct.stock >= 0 ? '+' : ''}
+                      {adjustStockValue - adjustingProduct.stock} {adjustingProduct.unit}
+                    </span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-[#1C1B18] mb-1">
+                    Reason for Adjustment
+                  </label>
+                  <select
+                    value={adjustReason}
+                    onChange={(e) => setAdjustReason(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs bg-white outline-none"
                   >
-                    {adjustStockValue - adjustingProduct.stock >= 0 ? '+' : ''}
-                    {adjustStockValue - adjustingProduct.stock} {adjustingProduct.unit}
-                  </span>
+                    <option value="Correction">Physical Count Correction</option>
+                    <option value="Damage">Damaged Goods</option>
+                    <option value="Theft/Loss">Theft / Unaccounted Loss</option>
+                    <option value="Gift/Sample">Customer Sample / Gift</option>
+                    <option value="Internal Use">Internal Store Use</option>
+                  </select>
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-[#1C1B18] mb-1">
-                  Reason for Adjustment
-                </label>
-                <select
-                  value={adjustReason}
-                  onChange={(e) => setAdjustReason(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs bg-white outline-none"
+              <div className="mt-5 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setAdjustingProduct(null)}
+                  className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-[#381e12] hover:bg-[#26140c] text-white cursor-pointer"
                 >
-                  <option value="Correction">Physical Count Correction</option>
-                  <option value="Damage">Damaged Goods</option>
-                  <option value="Theft/Loss">Theft / Unaccounted Loss</option>
-                  <option value="Gift/Sample">Customer Sample / Gift</option>
-                  <option value="Internal Use">Internal Store Use</option>
-                </select>
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    adjustStock(adjustingProduct.id, adjustStockValue, adjustReason);
+                    setAdjustingProduct(null);
+                  }}
+                  className="px-4 py-1.5 rounded-xl bg-[#381e12] text-white text-xs font-semibold hover:bg-[#26140c] cursor-pointer"
+                >
+                  Apply Adjustment
+                </button>
               </div>
             </div>
-
-            <div className="mt-5 flex items-center justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setAdjustingProduct(null)}
-                className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-[#381e12] hover:bg-[#26140c] text-white cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  adjustStock(adjustingProduct.id, adjustStockValue, adjustReason);
-                  setAdjustingProduct(null);
-                }}
-                className="px-4 py-1.5 rounded-xl bg-[#381e12] text-white text-xs font-semibold hover:bg-[#26140c] cursor-pointer"
-              >
-                Apply Adjustment
-              </button>
-            </div>
           </div>
-        </div>
         </Portal>
       )}
 
@@ -1735,156 +1729,156 @@ export const ProductsPage: React.FC = () => {
       {viewingProduct && (
         <Portal>
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl max-w-2xl w-full border border-[#EEE6DA] shadow-2xl p-6 animate-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-start justify-between border-b border-[#EEE6DA] pb-4 mb-4">
-              <div className="flex items-center gap-3">
-                <ProductIcon name={viewingProduct.name} type={viewingProduct.iconType} className="w-12 h-12 rounded-2xl bg-[#FAF6EF] text-[#6B665E] flex items-center justify-center border border-[#EEE6DA]" size={24} />
+            <div className="bg-white rounded-3xl max-w-2xl w-full border border-[#EEE6DA] shadow-2xl p-6 animate-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto">
+              <div className="flex items-start justify-between border-b border-[#EEE6DA] pb-4 mb-4">
+                <div className="flex items-center gap-3">
+                  <ProductIcon name={viewingProduct.name} type={viewingProduct.iconType} className="w-12 h-12 rounded-2xl bg-[#FAF6EF] text-[#6B665E] flex items-center justify-center border border-[#EEE6DA]" size={24} />
+                  <div>
+                    <h3 className="text-lg font-bold text-[#1C1B18]">{viewingProduct.name}</h3>
+                    <div className="text-xs text-[#6B665E]">
+                      SKU: {viewingProduct.sku} · Barcode: {viewingProduct.barcode}
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setViewingProduct(null)}
+                  className="p-1 rounded-lg text-[#6B665E] hover:bg-[#FAF6EF]"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
+                <div className="p-3.5 rounded-2xl bg-[#FAF6EF] border border-[#EEE6DA]">
+                  <div className="text-[11px] text-[#6B665E]">Current Stock</div>
+                  <div className="text-xl font-bold text-[#1C1B18] tabular-nums mt-0.5">
+                    {viewingProduct.stock} {viewingProduct.unit}
+                  </div>
+                  <div className="text-[10px] text-[#D98E0B] mt-1 font-medium">
+                    Reorder level: {viewingProduct.reorderLevel}
+                  </div>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-[#FAF6EF] border border-[#EEE6DA]">
+                  <div className="text-[11px] text-[#6B665E]">Selling Price</div>
+                  <div className="text-xl font-bold text-[#2E8B57] tabular-nums mt-0.5">
+                    {formatINR(viewingProduct.sellingPrice)}
+                  </div>
+                  <div className="text-[10px] text-[#6B665E] mt-1">
+                    Margin: {Math.round(((viewingProduct.sellingPrice - viewingProduct.purchasePrice) / viewingProduct.sellingPrice) * 100)}%
+                  </div>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-[#FAF6EF] border border-[#EEE6DA]">
+                  <div className="text-[11px] text-[#6B665E]">Total Stock Value</div>
+                  <div className="text-xl font-bold text-[#1C1B18] tabular-nums mt-0.5">
+                    {formatINR(viewingProduct.purchasePrice * viewingProduct.stock)}
+                  </div>
+                  <div className="text-[10px] text-[#6B665E] mt-1">
+                    Cost: {formatINR(viewingProduct.purchasePrice)}/unit
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3 text-xs">
                 <div>
-                  <h3 className="text-lg font-bold text-[#1C1B18]">{viewingProduct.name}</h3>
-                  <div className="text-xs text-[#6B665E]">
-                    SKU: {viewingProduct.sku} · Barcode: {viewingProduct.barcode}
+                  <div className="text-xs font-semibold text-[#1C1B18] mb-1.5">Product Details</div>
+                  <div className="grid grid-cols-2 gap-2 text-[#6B665E] bg-white p-3 rounded-xl border border-[#EEE6DA]">
+                    <div>Category: <span className="font-semibold text-[#1C1B18]">{viewingProduct.category}</span></div>
+                    <div>Tax Rate: <span className="font-semibold text-[#1C1B18]">{viewingProduct.taxRate}% GST</span></div>
+                    <div>Supplier: <span className="font-semibold text-[#1C1B18]">{viewingProduct.supplierName || 'Primary Supplier'}</span></div>
+                    <div>Status: <span className="font-semibold text-[#2E8B57]">{viewingProduct.active ? 'Active' : 'Archived'}</span></div>
                   </div>
                 </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setViewingProduct(null)}
-                className="p-1 rounded-lg text-[#6B665E] hover:bg-[#FAF6EF]"
-              >
-                <X size={20} />
-              </button>
-            </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
-              <div className="p-3.5 rounded-2xl bg-[#FAF6EF] border border-[#EEE6DA]">
-                <div className="text-[11px] text-[#6B665E]">Current Stock</div>
-                <div className="text-xl font-bold text-[#1C1B18] tabular-nums mt-0.5">
-                  {viewingProduct.stock} {viewingProduct.unit}
-                </div>
-                <div className="text-[10px] text-[#D98E0B] mt-1 font-medium">
-                  Reorder level: {viewingProduct.reorderLevel}
-                </div>
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-[#FAF6EF] border border-[#EEE6DA]">
-                <div className="text-[11px] text-[#6B665E]">Selling Price</div>
-                <div className="text-xl font-bold text-[#2E8B57] tabular-nums mt-0.5">
-                  {formatINR(viewingProduct.sellingPrice)}
-                </div>
-                <div className="text-[10px] text-[#6B665E] mt-1">
-                  Margin: {Math.round(((viewingProduct.sellingPrice - viewingProduct.purchasePrice) / viewingProduct.sellingPrice) * 100)}%
-                </div>
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-[#FAF6EF] border border-[#EEE6DA]">
-                <div className="text-[11px] text-[#6B665E]">Total Stock Value</div>
-                <div className="text-xl font-bold text-[#1C1B18] tabular-nums mt-0.5">
-                  {formatINR(viewingProduct.purchasePrice * viewingProduct.stock)}
-                </div>
-                <div className="text-[10px] text-[#6B665E] mt-1">
-                  Cost: {formatINR(viewingProduct.purchasePrice)}/unit
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-3 text-xs">
-              <div>
-                <div className="text-xs font-semibold text-[#1C1B18] mb-1.5">Product Details</div>
-                <div className="grid grid-cols-2 gap-2 text-[#6B665E] bg-white p-3 rounded-xl border border-[#EEE6DA]">
-                  <div>Category: <span className="font-semibold text-[#1C1B18]">{viewingProduct.category}</span></div>
-                  <div>Tax Rate: <span className="font-semibold text-[#1C1B18]">{viewingProduct.taxRate}% GST</span></div>
-                  <div>Supplier: <span className="font-semibold text-[#1C1B18]">{viewingProduct.supplierName || 'Primary Supplier'}</span></div>
-                  <div>Status: <span className="font-semibold text-[#2E8B57]">{viewingProduct.active ? 'Active' : 'Archived'}</span></div>
-                </div>
-              </div>
-
-              {/* Industry / Batch / Compliance Details */}
-              {(viewingProduct.batchNumber || viewingProduct.expiryDate || viewingProduct.mrp || viewingProduct.genericName || viewingProduct.brand || viewingProduct.rackLocation || viewingProduct.wholesalePrice) && (
-                <div>
-                  <div className="text-xs font-semibold text-[#1C1B18] mb-1.5">
-                    Industry & Compliance Specifications
+                {/* Industry / Batch / Compliance Details */}
+                {(viewingProduct.batchNumber || viewingProduct.expiryDate || viewingProduct.mrp || viewingProduct.genericName || viewingProduct.brand || viewingProduct.rackLocation || viewingProduct.wholesalePrice) && (
+                  <div>
+                    <div className="text-xs font-semibold text-[#1C1B18] mb-1.5">
+                      Industry & Compliance Specifications
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-[#6B665E] bg-[#FAF6EF]/50 p-3 rounded-xl border border-[#EEE6DA]">
+                      {viewingProduct.mrp ? (
+                        <div>MRP: <span className="font-bold text-[#1C1B18]">{formatINR(viewingProduct.mrp)}</span></div>
+                      ) : null}
+                      {viewingProduct.genericName ? (
+                        <div>Generic Molecule: <span className="font-semibold text-[#7FAE82]">{viewingProduct.genericName}</span></div>
+                      ) : null}
+                      {viewingProduct.manufacturer ? (
+                        <div>Manufacturer: <span className="font-semibold text-[#1C1B18]">{viewingProduct.manufacturer}</span></div>
+                      ) : null}
+                      {viewingProduct.batchNumber ? (
+                        <div>Batch No: <span className="font-mono font-bold text-[#1C1B18]">{viewingProduct.batchNumber}</span></div>
+                      ) : null}
+                      {viewingProduct.expiryDate ? (
+                        <div>
+                          Expiry Date:{' '}
+                          <span className="font-semibold text-[#D64545]">
+                            {new Date(viewingProduct.expiryDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                          </span>
+                        </div>
+                      ) : null}
+                      {viewingProduct.manufacturingDate ? (
+                        <div>
+                          Mfg Date:{' '}
+                          <span className="font-semibold text-[#1C1B18]">
+                            {new Date(viewingProduct.manufacturingDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                          </span>
+                        </div>
+                      ) : null}
+                      {viewingProduct.brand ? (
+                        <div>Brand: <span className="font-semibold text-[#1C1B18]">{viewingProduct.brand}</span></div>
+                      ) : null}
+                      {viewingProduct.size ? (
+                        <div>Size: <span className="font-semibold text-[#1C1B18]">{viewingProduct.size}</span></div>
+                      ) : null}
+                      {viewingProduct.color ? (
+                        <div>Color: <span className="font-semibold text-[#1C1B18]">{viewingProduct.color}</span></div>
+                      ) : null}
+                      {viewingProduct.rackLocation ? (
+                        <div>Rack / Bin: <span className="font-semibold text-[#1C1B18]">{viewingProduct.rackLocation}</span></div>
+                      ) : null}
+                      {viewingProduct.wholesalePrice ? (
+                        <div>Wholesale Price: <span className="font-bold text-[#1C1B18]">{formatINR(viewingProduct.wholesalePrice)}</span></div>
+                      ) : null}
+                    </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 text-[#6B665E] bg-[#FAF6EF]/50 p-3 rounded-xl border border-[#EEE6DA]">
-                    {viewingProduct.mrp ? (
-                      <div>MRP: <span className="font-bold text-[#1C1B18]">{formatINR(viewingProduct.mrp)}</span></div>
-                    ) : null}
-                    {viewingProduct.genericName ? (
-                      <div>Generic Molecule: <span className="font-semibold text-[#7FAE82]">{viewingProduct.genericName}</span></div>
-                    ) : null}
-                    {viewingProduct.manufacturer ? (
-                      <div>Manufacturer: <span className="font-semibold text-[#1C1B18]">{viewingProduct.manufacturer}</span></div>
-                    ) : null}
-                    {viewingProduct.batchNumber ? (
-                      <div>Batch No: <span className="font-mono font-bold text-[#1C1B18]">{viewingProduct.batchNumber}</span></div>
-                    ) : null}
-                    {viewingProduct.expiryDate ? (
-                      <div>
-                        Expiry Date:{' '}
-                        <span className="font-semibold text-[#D64545]">
-                          {new Date(viewingProduct.expiryDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
-                        </span>
-                      </div>
-                    ) : null}
-                    {viewingProduct.manufacturingDate ? (
-                      <div>
-                        Mfg Date:{' '}
-                        <span className="font-semibold text-[#1C1B18]">
-                          {new Date(viewingProduct.manufacturingDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
-                        </span>
-                      </div>
-                    ) : null}
-                    {viewingProduct.brand ? (
-                      <div>Brand: <span className="font-semibold text-[#1C1B18]">{viewingProduct.brand}</span></div>
-                    ) : null}
-                    {viewingProduct.size ? (
-                      <div>Size: <span className="font-semibold text-[#1C1B18]">{viewingProduct.size}</span></div>
-                    ) : null}
-                    {viewingProduct.color ? (
-                      <div>Color: <span className="font-semibold text-[#1C1B18]">{viewingProduct.color}</span></div>
-                    ) : null}
-                    {viewingProduct.rackLocation ? (
-                      <div>Rack / Bin: <span className="font-semibold text-[#1C1B18]">{viewingProduct.rackLocation}</span></div>
-                    ) : null}
-                    {viewingProduct.wholesalePrice ? (
-                      <div>Wholesale Price: <span className="font-bold text-[#1C1B18]">{formatINR(viewingProduct.wholesalePrice)}</span></div>
-                    ) : null}
-                  </div>
-                </div>
-              )}
+                )}
 
-              {viewingProduct.description && (
-                <p className="text-xs text-[#6B665E] bg-[#FAF6EF]/50 p-3 rounded-xl border border-[#EEE6DA] mt-2">
-                  {viewingProduct.description}
-                </p>
-              )}
-            </div>
+                {viewingProduct.description && (
+                  <p className="text-xs text-[#6B665E] bg-[#FAF6EF]/50 p-3 rounded-xl border border-[#EEE6DA] mt-2">
+                    {viewingProduct.description}
+                  </p>
+                )}
+              </div>
 
-            <div className="mt-6 flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setViewingProduct(null);
-                  handleOpenEdit(viewingProduct);
-                }}
-                className="px-4 py-2 rounded-xl border border-[#EEE6DA] text-xs font-semibold text-[#1C1B18] hover:bg-[#FAF6EF]"
-              >
-                Edit Product
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const p = viewingProduct;
-                  setViewingProduct(null);
-                  setAdjustingProduct(p);
-                  setAdjustStockValue(p.stock);
-                }}
-                className="px-4 py-2 rounded-xl bg-[#381e12] text-white text-xs font-semibold hover:bg-[#26140c]"
-              >
-                Adjust Stock
-              </button>
+              <div className="mt-6 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setViewingProduct(null);
+                    handleOpenEdit(viewingProduct);
+                  }}
+                  className="px-4 py-2 rounded-xl border border-[#EEE6DA] text-xs font-semibold text-[#1C1B18] hover:bg-[#FAF6EF]"
+                >
+                  Edit Product
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const p = viewingProduct;
+                    setViewingProduct(null);
+                    setAdjustingProduct(p);
+                    setAdjustStockValue(p.stock);
+                  }}
+                  className="px-4 py-2 rounded-xl bg-[#381e12] text-white text-xs font-semibold hover:bg-[#26140c]"
+                >
+                  Adjust Stock
+                </button>
+              </div>
             </div>
           </div>
-        </div>
         </Portal>
       )}
       {/* Bulk Import Modal (CSV & PDF) */}

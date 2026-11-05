@@ -20,6 +20,7 @@ const NotFoundPage = lazy(() => import('../dashboard/pages/NotFoundPage.tsx').th
 const BatchManagementPage = lazy(() => import('../dashboard/pages/BatchManagementPage.tsx').then((m) => ({ default: m.BatchManagementPage })));
 const ExpiryTrackingPage = lazy(() => import('../dashboard/pages/ExpiryTrackingPage.tsx').then((m) => ({ default: m.ExpiryTrackingPage })));
 const PrescriptionManagementPage = lazy(() => import('../dashboard/pages/PrescriptionManagementPage.tsx').then((m) => ({ default: m.PrescriptionManagementPage })));
+const StockMovementsPage = lazy(() => import('../dashboard/pages/StockMovementsPage.tsx').then((m) => ({ default: m.StockMovementsPage })));
 
 // Feature Pages (Workflows)
 const ReceivingGrnPage = lazy(() => import('../features/purchasing/ReceivingGrnPage.jsx'));
@@ -154,10 +155,10 @@ export function OverviewRoute() {
   );
 }
 
-function LazyRoute({ Component }) {
+function LazyRoute({ Component, ...rest }) {
   return (
     <Suspense fallback={<TablePageSkeleton className="p-6" />}>
-      <Component />
+      <Component {...rest} />
     </Suspense>
   );
 }
@@ -208,8 +209,8 @@ export const DASHBOARD_CHILD_ROUTES = [
 
   // Feature Workflows (Richer implementations)
   { path: 'receiving', element: <AdminRouteGuard><FeaturePageWrapper Component={ReceivingGrnPage} /></AdminRouteGuard> },
-  { path: 'stock-in', element: <AdminRouteGuard><FeaturePageWrapper Component={InventoryOperations} section="Stock In" /></AdminRouteGuard> },
-  { path: 'stock-out', element: <AdminRouteGuard><FeaturePageWrapper Component={InventoryOperations} section="Stock Out" /></AdminRouteGuard> },
+  { path: 'stock-in', element: <AdminRouteGuard><LazyRoute Component={StockMovementsPage} initialTab="inward" /></AdminRouteGuard> },
+  { path: 'stock-out', element: <AdminRouteGuard><LazyRoute Component={StockMovementsPage} initialTab="outward" /></AdminRouteGuard> },
   { path: 'adjustments', element: <AdminRouteGuard><FeaturePageWrapper Component={InventoryOperations} section="Adjustments" /></AdminRouteGuard> },
   { path: 'stock-history', element: <AdminRouteGuard><FeaturePageWrapper Component={InventoryOperations} section="Stock History" /></AdminRouteGuard> },
   { path: 'categories', element: <AdminRouteGuard><FeaturePageWrapper Component={InventoryOperations} section="Categories" /></AdminRouteGuard> },

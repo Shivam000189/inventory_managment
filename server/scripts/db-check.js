@@ -20,6 +20,22 @@ try {
 
   if (result.directDbConnected) {
     console.log(`✓ Direct PostgreSQL pool connected successfully (database: "${result.details.database}")`)
+
+    // Verify Row Level Security (RLS) across all public tables
+    const { getPgPool } = await import('../config/supabase.js')
+    const pool = getPgPool()
+    const rlsCheck = await pool.query(`
+      SELECT tablename, rowsecurity 
+      FROM pg_tables 
+      WHERE schemaname = 'public' AND rowsecurity = false
+    `)
+
+    if (rlsCheck.rows.length > 0) {
+      console.error(`✗ Security Alert: ${rlsCheck.rows.length} table(s) have RLS disabled:`, rlsCheck.rows.map(r => r.tablename))
+      process.exit(1)
+    } else {
+      console.log('✓ Row Level Security (RLS) is active on 100% of public tables')
+    }
   } else if (env.supabase.databaseUrl) {
     console.warn('✗ Direct PostgreSQL pool failed:', result.details.directDbError)
   }
