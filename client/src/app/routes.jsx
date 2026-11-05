@@ -30,6 +30,8 @@ const ProductVariantsPage = lazy(() => import('../dashboard/pages/clothing/Produ
 const VariantGridPage = lazy(() => import('../dashboard/pages/clothing/VariantGridPage.tsx').then((m) => ({ default: m.VariantGridPage })));
 const ReplenishmentPage = lazy(() => import('../dashboard/pages/clothing/ReplenishmentPage.tsx').then((m) => ({ default: m.ReplenishmentPage })));
 const PromotionsPage = lazy(() => import('../dashboard/pages/clothing/PromotionsPage.tsx').then((m) => ({ default: m.PromotionsPage })));
+const SerialNumbersPage = lazy(() => import('../dashboard/pages/SerialNumbersPage.tsx').then((m) => ({ default: m.SerialNumbersPage })));
+const WarrantyTrackingPage = lazy(() => import('../dashboard/pages/WarrantyTrackingPage.tsx').then((m) => ({ default: m.WarrantyTrackingPage })));
 
 // Feature Pages (Workflows)
 const ReceivingGrnPage = lazy(() => import('../features/purchasing/ReceivingGrnPage.jsx'));
@@ -236,8 +238,8 @@ export const DASHBOARD_CHILD_ROUTES = [
   { path: 'batches', element: <AdminRouteGuard><LazyRoute Component={BatchManagementPage} /></AdminRouteGuard> },
   { path: 'expiry', element: <AdminRouteGuard><LazyRoute Component={ExpiryTrackingPage} /></AdminRouteGuard> },
   { path: 'prescriptions', element: <AdminRouteGuard><LazyRoute Component={PrescriptionManagementPage} /></AdminRouteGuard> },
-  { path: 'serial-numbers', element: <AdminRouteGuard><FeaturePageWrapper Component={IndustryModule} section="Serial Numbers" /></AdminRouteGuard> },
-  { path: 'warranties', element: <AdminRouteGuard><FeaturePageWrapper Component={IndustryModule} section="Warranty Tracking" /></AdminRouteGuard> },
+  { path: 'serial-numbers', element: <AdminRouteGuard><LazyRoute Component={SerialNumbersPage} /></AdminRouteGuard> },
+  { path: 'warranties', element: <AdminRouteGuard><LazyRoute Component={WarrantyTrackingPage} /></AdminRouteGuard> },
   { path: 'offers', element: <AdminRouteGuard><FeaturePageWrapper Component={IndustryModule} section="Offers / Discounts" /></AdminRouteGuard> },
   { path: 'bulk-pricing', element: <AdminRouteGuard><FeaturePageWrapper Component={BulkPricingPage} /></AdminRouteGuard> },
   { path: 'variant-grid', element: <AdminRouteGuard><LazyRoute Component={VariantGridPage} /></AdminRouteGuard> },
