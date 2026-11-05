@@ -6,12 +6,13 @@ import { assert, toNumber, toObjectId } from '../validators/assert.js'
 const oid = (value, label = 'id') => toObjectId(value, label)
 const scoped = (businessId, more = {}) => ({ business: oid(businessId, 'business'), ...more })
 const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100
+const toPlain = (val) => (typeof val?.toObject === 'function' ? val.toObject() : (typeof val?.toJSON === 'function' ? val.toJSON() : val || {}))
 const clean = (v) => String(v || '').trim()
 
 export async function listVariants(businessId, query = {}) {
   const products = await Product.find(scoped(businessId, { 'variants.0': { $exists: true } })).sort('name')
   const search = clean(query.search).toLowerCase()
-  return products.flatMap((product) => product.variants.map((variant) => ({ productId: String(product._id), productName: product.name, category: product.category, variantId: String(variant._id), ...variant.toObject(), sellingPrice: variant.sellingPrice ?? product.sellingPrice, purchasePrice: variant.purchasePrice ?? product.purchasePrice }))).filter((row) => (!search || `${row.productName} ${row.sku} ${row.barcode}`.toLowerCase().includes(search)) && (!query.size || query.size === 'all' || row.size === query.size) && (!query.color || query.color === 'all' || row.color === query.color) && (!query.stock || query.stock === 'all' || (query.stock === 'out' ? row.currentStock === 0 : query.stock === 'low' ? row.currentStock > 0 && row.currentStock <= row.reorderPoint : row.currentStock > row.reorderPoint)))
+  return products.flatMap((product) => product.variants.map((variant) => ({ productId: String(product._id), productName: product.name, category: product.category, variantId: String(variant._id), ...toPlain(variant), sellingPrice: variant.sellingPrice ?? product.sellingPrice, purchasePrice: variant.purchasePrice ?? product.purchasePrice }))).filter((row) => (!search || `${row.productName} ${row.sku} ${row.barcode}`.toLowerCase().includes(search)) && (!query.size || query.size === 'all' || row.size === query.size) && (!query.color || query.color === 'all' || row.color === query.color) && (!query.stock || query.stock === 'all' || (query.stock === 'out' ? row.currentStock === 0 : query.stock === 'low' ? row.currentStock > 0 && row.currentStock <= row.reorderPoint : row.currentStock > row.reorderPoint)))
 }
 
 export async function bulkUpsertVariants(businessId, productId, rows, actor) {
@@ -34,7 +35,7 @@ export async function bulkUpsertVariants(businessId, productId, rows, actor) {
     }
     product.currentStock = product.variants.reduce((sum, v) => sum + v.currentStock, 0)
     await product.save({ session })
-    return { productId: String(product._id), variants: product.variants.map((v) => v.toObject()), updatedBy: actor }
+    return { productId: String(product._id), variants: product.variants.map((v) => toPlain(v)), updatedBy: actor }
   })
 }
 
@@ -49,7 +50,7 @@ export async function changeVariantStock(businessId, productId, variantId, paylo
     assert(next >= 0, `${variant.sku} has only ${previousStock} unit(s).`)
     variant.currentStock = next; product.currentStock = product.variants.reduce((sum, v) => sum + v.currentStock, 0); await product.save({ session })
     const [transaction] = await StockTransaction.create([{ business: product.business, productId: product._id, variantId: variant._id, variantSku: variant.sku, variantSize: variant.size, variantColor: variant.color, type, quantity, previousStock, newStock: next, reason: clean(payload.reason) || 'Variant stock update', createdBy: actor }], { session })
-    return { product: product.toJSON(), variant: variant.toObject(), transaction: transaction.toJSON() }
+    return { product: product.toJSON(), variant: toPlain(variant), transaction: transaction.toJSON() }
   })
 }
 
@@ -57,7 +58,7 @@ export async function resolveBarcode(businessId, value) {
   const code = clean(value); const product = await Product.findOne(scoped(businessId, { $or: [{ barcode: code }, { 'variants.barcode': code }] }))
   if (!product) throw ApiError.notFound('No product or variant found for this barcode.')
   const variant = product.variants.find((v) => v.barcode === code)
-  return { product: product.toJSON(), variant: variant ? variant.toObject() : null }
+  return { product: product.toJSON(), variant: variant ? toPlain(variant) : null }
 }
 
 export async function replenishment(businessId, query = {}) {
@@ -119,7 +120,7 @@ export async function cashMovement(businessId, userId, payload) { const shift = 
 export async function clothingReport(businessId) {
   const [products, sales, returns, promotions, coupons, giftCards, customers, loyalty, suggestions] = await Promise.all([Product.find(scoped(businessId)), SalesOrder.find(scoped(businessId, { status: 'Completed' })), Return.find(scoped(businessId, { type: 'sale', status: 'Completed' })), Promotion.find(scoped(businessId)), Coupon.find(scoped(businessId)), GiftCard.find(scoped(businessId)), Customer.find(scoped(businessId)), LoyaltyTransaction.find(scoped(businessId)), replenishment(businessId)])
   const variants = products.flatMap((product) => product.variants.map((variant) => ({ product, variant })))
-  const sold = sales.flatMap((sale) => sale.items.map((item) => ({ ...item.toObject(), orderDate: sale.createdAt })))
+  const sold = sales.flatMap((sale) => sale.items.map((item) => ({ ...toPlain(item), orderDate: sale.createdAt })))
   const sumBy = (items, key, quantity = 'quantity') => Object.entries(items.reduce((map, item) => { const label = item[key] || 'Unspecified'; map[label] = (map[label] || 0) + Number(item[quantity] || 0); return map }, {})).map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value)
   const soldVariantIds = new Set(sold.map((item) => String(item.variantId || '')).filter(Boolean))
   const recentCutoff = Date.now() - 90 * 86400000

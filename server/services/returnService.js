@@ -5,6 +5,7 @@ import { applyStockChange } from './inventoryService.js'
 import { toObjectId, toNumber, assert } from '../validators/assert.js'
 
 const round2 = (value) => Math.round((Number(value) + Number.EPSILON) * 100) / 100
+const toPlain = (val) => (typeof val?.toObject === 'function' ? val.toObject() : (typeof val?.toJSON === 'function' ? val.toJSON() : val || {}))
 const scoped = (businessId, extra = {}) => ({ business: toObjectId(businessId, 'business'), ...extra })
 const REASONS = ['Damaged product', 'Defective product', 'Incorrect product', 'Customer changed mind', 'Size/Fit issue', 'Other']
 const CONDITIONS = ['Sellable', 'Damaged', 'Defective', 'Opened / Used', 'Other']
@@ -46,8 +47,8 @@ async function decorateReturns(businessId, docs) {
   if (!docs.length) return []
   const refunds = await Refund.find(scoped(businessId, { returnId: { $in: docs.map((doc) => doc._id) } })).sort('createdAt')
   const byReturn = new Map()
-  for (const refund of refunds) byReturn.set(String(refund.returnId), [...(byReturn.get(String(refund.returnId)) || []), refund.toJSON()])
-  return docs.map((doc) => ({ ...doc.toJSON(), refunds: byReturn.get(String(doc._id)) || [] }))
+  for (const refund of refunds) byReturn.set(String(refund.returnId), [...(byReturn.get(String(refund.returnId)) || []), toPlain(refund)])
+  return docs.map((doc) => ({ ...toPlain(doc), refunds: byReturn.get(String(doc._id)) || [] }))
 }
 
 export async function listReturns(businessId, query = {}) {
@@ -107,7 +108,7 @@ export async function listEligibleOrders(businessId, query = {}) {
     SalesOrder.countDocuments(filter),
   ])
   const orderIds = orders.map((order) => order._id)
-  const productIds = [...new Set(orders.flatMap((order) => order.items.map((item) => String(item.productId))))]
+  const productIds = [...new Set(orders.flatMap((order) => (order.items || []).map((item) => String(item.productId))))]
   const [payments, previousReturns, products] = await Promise.all([
     Payment.find({ business, type: 'sale', referenceId: { $in: orderIds } }),
     Return.find({ business, type: 'sale', orderId: { $in: orderIds }, status: { $ne: 'Cancelled' } }),
@@ -119,12 +120,12 @@ export async function listEligibleOrders(businessId, query = {}) {
     const amountPaidActual = round2(orderPayments.reduce((sum, payment) => sum + payment.amount, 0))
     const outstandingActual = round2(Math.max(0, order.totalAmount - amountPaidActual - (order.returnAdjustmentAmount || 0)))
     return {
-      ...order.toJSON(), amountPaidActual, outstandingActual,
+      ...toPlain(order), amountPaidActual, outstandingActual,
       originalPaymentMethods: [...new Set(orderPayments.map((payment) => payment.paymentMethod))],
-      items: order.items.map((item) => {
+      items: (order.items || []).map((item) => {
         const product = productMap.get(String(item.productId))
         const alreadyReturned = previousReturns.filter((record) => String(record.orderId) === String(order._id) && String(record.productId) === String(item.productId) && String(record.variantId || '') === String(item.variantId || '')).reduce((sum, record) => sum + record.quantity, 0)
-        return { ...item.toObject(), productId: String(item.productId), sku: item.variantSku || product?.sku || '', size: item.variantSize || product?.size || '', color: item.variantColor || product?.color || '', unit: product?.unit || 'piece', alreadyReturned, returnableQuantity: Math.max(0, item.quantity - alreadyReturned) }
+        return { ...toPlain(item), productId: String(item.productId), sku: item.variantSku || product?.sku || '', size: item.variantSize || product?.size || '', color: item.variantColor || product?.color || '', unit: product?.unit || 'piece', alreadyReturned, returnableQuantity: Math.max(0, item.quantity - alreadyReturned) }
       }),
     }
   }).filter((order) => order.items.some((item) => item.returnableQuantity > 0))
