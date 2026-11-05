@@ -278,6 +278,26 @@ export function getIndustryCategoryPresets(business?: { industry?: string; busin
   return INDUSTRY_CATEGORIES[industryKey] || INDUSTRY_CATEGORIES.other;
 }
 
+export const INDUSTRY_PRODUCT_NAME_PLACEHOLDERS: Record<string, string> = {
+  pharmacy: "e.g. Paracetamol 500mg, Amoxicillin 250mg, Metformin 500mg",
+  clothing: "e.g. Men's Cotton T-Shirt, Denim Jeans, Linen Shirt",
+  electronics: "e.g. Wireless Noise-Cancelling Headphones, 65W USB-C Charger",
+  grocery: "e.g. Basmati Rice 5kg, Full Cream Milk 1L, Olive Oil",
+  hardware: "e.g. Cordless Drill 18V, Stainless Steel Screws (100pk)",
+  automobile: "e.g. Front Brake Pads Set, Synthetic Engine Oil 5W-40",
+  restaurant: "e.g. Margherita Pizza, Cold Brew Coffee, Grilled Burger",
+  manufacturing: "e.g. Aluminum Sheet 2mm, Steel Fastener M8, Industrial Bearing",
+  wholesale: "e.g. Bulk Wheat Grain 50kg, Packaged Snack Cartons",
+  other: "e.g. Standard Office Notebook, Shipping Box Medium",
+};
+
+export function getIndustryProductNamePlaceholder(business?: { industry?: string; businessType?: string; name?: string } | null): string {
+  if (!business) return INDUSTRY_PRODUCT_NAME_PLACEHOLDERS.other;
+  if (isPharmacyBusiness(business)) return INDUSTRY_PRODUCT_NAME_PLACEHOLDERS.pharmacy;
+  const industryKey = normalizeConfigValue(business.industry || business.businessType || business.name);
+  return INDUSTRY_PRODUCT_NAME_PLACEHOLDERS[industryKey] || INDUSTRY_PRODUCT_NAME_PLACEHOLDERS.other;
+}
+
 const unique = <T>(items: T[]): T[] => [...new Set(items)]
 
 function getIndustryConfig(industry: string): IndustrySetting {

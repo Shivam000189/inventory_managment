@@ -30,7 +30,7 @@ import { TableSkeleton, Skeleton } from '../../components/ui/Feedback';
 import { useApp } from '../context/AppContext';
 import { Product } from '../types';
 import { formatINR, downloadCSV } from '../lib/formatters';
-import { isPharmacyBusiness, getIndustryCategoryPresets } from '../../shared/industryConfig';
+import { isPharmacyBusiness, getIndustryCategoryPresets, getIndustryProductNamePlaceholder } from '../../shared/industryConfig';
 
 export const ProductsPage: React.FC = () => {
   const { products, addProduct, updateProduct, deleteProduct, adjustStock, suppliers, isLoadingBackend, businessProfile } = useApp();
@@ -133,6 +133,7 @@ export const ProductsPage: React.FC = () => {
   const [adjustReason, setAdjustReason] = useState('Correction');
 
   const industryPresets = useMemo(() => getIndustryCategoryPresets(businessProfile), [businessProfile]);
+  const namePlaceholder = useMemo(() => getIndustryProductNamePlaceholder(businessProfile), [businessProfile]);
 
   const categories = useMemo(() => {
     const existing = products.map((p) => p.category).filter(Boolean);
@@ -1061,14 +1062,14 @@ export const ProductsPage: React.FC = () => {
               <form id="product-form" onSubmit={handleSaveProduct} className="flex-1 overflow-y-auto p-5 space-y-4">
                 <div>
                   <label className="block text-xs font-semibold text-[#1C1B18] mb-1">
-                    Product Name *
+                    {itemNoun} Name *
                   </label>
                   <input
                     type="text"
                     required
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="e.g. Men's Cotton T-Shirt"
+                    placeholder={namePlaceholder}
                     className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs focus:border-[#7FAE82] outline-none"
                   />
                 </div>
