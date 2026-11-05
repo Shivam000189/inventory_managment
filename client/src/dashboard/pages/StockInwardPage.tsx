@@ -22,6 +22,7 @@ import { TableSkeleton } from '../../components/ui/Feedback';
 import { useApp } from '../context/AppContext';
 import { formatINR } from '../lib/formatters';
 import { Product, StockMovement } from '../types';
+import { isForeignCategoryForBusiness } from '../../shared/industryConfig';
 
 export const StockInwardPage: React.FC = () => {
   const {
@@ -107,8 +108,19 @@ export const StockInwardPage: React.FC = () => {
     return undefined;
   };
 
+  // Store products filtered by industry context
+  const storeProducts = useMemo(() => {
+    const relevant = products.filter((p) => !isForeignCategoryForBusiness(p.category, businessProfile));
+    return relevant.length > 0 ? relevant : products;
+  }, [products, businessProfile]);
+
+  const selectedProduct = useMemo(
+    () => products.find((p) => p.id === selectedProductId),
+    [products, selectedProductId]
+  );
+
   const handleOpenDrawer = () => {
-    setSelectedProductId(products[0]?.id || '');
+    setSelectedProductId(storeProducts[0]?.id || products[0]?.id || '');
     setQuantity('');
     setReference(`IN-${Date.now().toString().slice(-5)}`);
     setReason('Supplier Receipt');
