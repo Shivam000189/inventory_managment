@@ -24,6 +24,12 @@ const StockInwardPage = lazy(() => import('../dashboard/pages/StockInwardPage.ts
 const StockOutwardPage = lazy(() => import('../dashboard/pages/StockOutwardPage.tsx').then((m) => ({ default: m.StockOutwardPage })));
 const StockAdjustmentsPage = lazy(() => import('../dashboard/pages/StockAdjustmentsPage.tsx').then((m) => ({ default: m.StockAdjustmentsPage })));
 const StockMovementAuditPage = lazy(() => import('../dashboard/pages/StockMovementAuditPage.tsx').then((m) => ({ default: m.StockMovementAuditPage })));
+const SizeManagementPage = lazy(() => import('../dashboard/pages/clothing/SizeManagementPage.tsx').then((m) => ({ default: m.SizeManagementPage })));
+const ColorManagementPage = lazy(() => import('../dashboard/pages/clothing/ColorManagementPage.tsx').then((m) => ({ default: m.ColorManagementPage })));
+const ProductVariantsPage = lazy(() => import('../dashboard/pages/clothing/ProductVariantsPage.tsx').then((m) => ({ default: m.ProductVariantsPage })));
+const VariantGridPage = lazy(() => import('../dashboard/pages/clothing/VariantGridPage.tsx').then((m) => ({ default: m.VariantGridPage })));
+const ReplenishmentPage = lazy(() => import('../dashboard/pages/clothing/ReplenishmentPage.tsx').then((m) => ({ default: m.ReplenishmentPage })));
+const PromotionsPage = lazy(() => import('../dashboard/pages/clothing/PromotionsPage.tsx').then((m) => ({ default: m.PromotionsPage })));
 
 // Feature Pages (Workflows)
 const ReceivingGrnPage = lazy(() => import('../features/purchasing/ReceivingGrnPage.jsx'));
@@ -33,7 +39,6 @@ const SalesOrdersPage = lazy(() => import('../features/sales/SalesOrdersPage.jsx
 const PaymentsPage = lazy(() => import('../features/payments/PaymentsPage.jsx'));
 const ReturnsPage = lazy(() => import('../features/returns/ReturnsPage.jsx'));
 const UserManagementPage = lazy(() => import('../features/team/UserManagementPage.jsx'));
-const ColorManagementPage = lazy(() => import('../features/industries/clothing/ColorManagementPage.jsx'));
 const ClothingModule = lazy(() => import('../features/industries/clothing/ClothingModule.jsx'));
 const IndustryModule = lazy(() => import('../features/industries/generic/IndustryModule.jsx'));
 const BulkPricingPage = lazy(() => import('../features/industries/wholesale/BulkPricingPage.jsx'));
@@ -226,9 +231,9 @@ export const DASHBOARD_CHILD_ROUTES = [
   { path: 'purchase-returns', element: <AdminRouteGuard><FeaturePageWrapper Component={ReturnsPage} purchase={true} /></AdminRouteGuard> },
   { path: 'roles', element: <AdminRouteGuard><FeaturePageWrapper Component={UserManagementPage} section="Roles" /></AdminRouteGuard> },
   { path: 'permissions', element: <AdminRouteGuard><FeaturePageWrapper Component={UserManagementPage} section="Permissions" /></AdminRouteGuard> },
-  { path: 'colors', element: <AdminRouteGuard><FeaturePageWrapper Component={ColorManagementPage} /></AdminRouteGuard> },
-  { path: 'sizes', element: <AdminRouteGuard><FeaturePageWrapper Component={IndustryModule} section="Size Management" /></AdminRouteGuard> },
-  { path: 'variants', element: <AdminRouteGuard><FeaturePageWrapper Component={IndustryModule} section="Product Variants" /></AdminRouteGuard> },
+  { path: 'colors', element: <AdminRouteGuard><LazyRoute Component={ColorManagementPage} /></AdminRouteGuard> },
+  { path: 'sizes', element: <AdminRouteGuard><LazyRoute Component={SizeManagementPage} /></AdminRouteGuard> },
+  { path: 'variants', element: <AdminRouteGuard><LazyRoute Component={ProductVariantsPage} /></AdminRouteGuard> },
   { path: 'batches', element: <AdminRouteGuard><LazyRoute Component={BatchManagementPage} /></AdminRouteGuard> },
   { path: 'expiry', element: <AdminRouteGuard><LazyRoute Component={ExpiryTrackingPage} /></AdminRouteGuard> },
   { path: 'prescriptions', element: <AdminRouteGuard><LazyRoute Component={PrescriptionManagementPage} /></AdminRouteGuard> },
@@ -236,9 +241,9 @@ export const DASHBOARD_CHILD_ROUTES = [
   { path: 'warranties', element: <AdminRouteGuard><FeaturePageWrapper Component={IndustryModule} section="Warranty Tracking" /></AdminRouteGuard> },
   { path: 'offers', element: <AdminRouteGuard><FeaturePageWrapper Component={IndustryModule} section="Offers / Discounts" /></AdminRouteGuard> },
   { path: 'bulk-pricing', element: <AdminRouteGuard><FeaturePageWrapper Component={BulkPricingPage} /></AdminRouteGuard> },
-  { path: 'variant-grid', element: <AdminRouteGuard><FeaturePageWrapper Component={ClothingModule} section="Variant Grid" /></AdminRouteGuard> },
-  { path: 'replenishment', element: <AdminRouteGuard><FeaturePageWrapper Component={ClothingModule} section="Replenishment" /></AdminRouteGuard> },
-  { path: 'promotions', element: <AdminRouteGuard><FeaturePageWrapper Component={ClothingModule} section="Promotions" /></AdminRouteGuard> },
+  { path: 'variant-grid', element: <AdminRouteGuard><LazyRoute Component={VariantGridPage} /></AdminRouteGuard> },
+  { path: 'replenishment', element: <AdminRouteGuard><LazyRoute Component={ReplenishmentPage} /></AdminRouteGuard> },
+  { path: 'promotions', element: <AdminRouteGuard><LazyRoute Component={PromotionsPage} /></AdminRouteGuard> },
   { path: 'loyalty', element: <AdminRouteGuard><FeaturePageWrapper Component={ClothingModule} section="Loyalty" /></AdminRouteGuard> },
   { path: 'coupons', element: <AdminRouteGuard><FeaturePageWrapper Component={ClothingModule} section="Coupons" /></AdminRouteGuard> },
   { path: 'gift-cards', element: <AdminRouteGuard><FeaturePageWrapper Component={ClothingModule} section="Gift Cards" /></AdminRouteGuard> },

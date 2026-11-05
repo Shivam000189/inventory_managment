@@ -211,6 +211,52 @@ function rowToDocData(row, idField) {
     doc.businessId = row.business_id
   }
 
+  // Ensure subdocument arrays (variants, items) behave like Mongoose subdocuments
+  if (Array.isArray(doc.variants)) {
+    if (!doc.variants.id) {
+      Object.defineProperty(doc.variants, 'id', {
+        value: function (id) {
+          const target = String(id)
+          return this.find((v) => String(v._id || v.id) === target) || null
+        },
+        enumerable: false,
+        configurable: true,
+        writable: true,
+      })
+    }
+    for (const v of doc.variants) {
+      if (v && typeof v === 'object') {
+        if (!v._id && v.id) v._id = v.id
+        if (!v.id && v._id) v.id = v._id
+        if (typeof v.toObject !== 'function') {
+          Object.defineProperty(v, 'toObject', {
+            value: function () { return { ...this } },
+            enumerable: false,
+            configurable: true,
+            writable: true,
+          })
+        }
+      }
+    }
+  }
+
+  if (Array.isArray(doc.items)) {
+    for (const item of doc.items) {
+      if (item && typeof item === 'object') {
+        if (!item._id && item.id) item._id = item.id
+        if (!item.id && item._id) item.id = item._id
+        if (typeof item.toObject !== 'function') {
+          Object.defineProperty(item, 'toObject', {
+            value: function () { return { ...this } },
+            enumerable: false,
+            configurable: true,
+            writable: true,
+          })
+        }
+      }
+    }
+  }
+
   return doc
 }
 
@@ -445,6 +491,7 @@ export class SupabaseQuery {
   async exec() {
     const supabase = getSupabaseAdmin()
     let query = supabase.from(this._model._tableName).select('*')
+    const inMemoryFilters = []
 
     // Apply filters
     for (const [key, value] of Object.entries(this._filter)) {
@@ -454,6 +501,7 @@ export class SupabaseQuery {
         const conditions = []
         for (const item of value) {
           for (const [k, v] of Object.entries(item)) {
+            if (k.includes('.')) continue // Skip nested dot notation from PostgREST query
             const col = camelToSnake(k)
             if (v instanceof RegExp) {
               const clean = v.source.replace(/\\/g, '').replace(/^\^|\$$/g, '')
@@ -469,6 +517,11 @@ export class SupabaseQuery {
         if (conditions.length > 0) {
           query = query.or(conditions.join(','))
         }
+        continue
+      }
+
+      if (key.includes('.')) {
+        inMemoryFilters.push([key, value])
         continue
       }
 
@@ -549,7 +602,7 @@ export class SupabaseQuery {
       query = query.limit(this._limit)
     }
 
-    if (this._single) {
+    if (this._single && inMemoryFilters.length === 0) {
       const { data, error } = await query.limit(1).maybeSingle()
       if (error) {
         throw new Error(`Failed query on ${this._model._tableName}: ${error.message}`)
@@ -564,10 +617,39 @@ export class SupabaseQuery {
       throw new Error(`Failed query on ${this._model._tableName}: ${error.message}`)
     }
 
-    const docs = (data || []).map((row) => {
+    let docs = (data || []).map((row) => {
       const docData = rowToDocData(row, this._model._idField)
       return this._lean ? docData : new SupabaseDocument(docData, this._model)
     })
+
+    if (inMemoryFilters.length > 0) {
+      docs = docs.filter((doc) => {
+        return inMemoryFilters.every(([k, v]) => {
+          if (k.startsWith('variants.')) {
+            const subKey = k.replace(/^variants\./, '')
+            const variants = Array.isArray(doc.variants) ? doc.variants : []
+            if (subKey === '0') {
+              if (v && v.$exists !== undefined) return v.$exists ? variants.length > 0 : variants.length === 0
+              return variants.length > 0
+            }
+            if (subKey === '_id') {
+              const target = String(v)
+              return variants.some((varItem) => String(varItem._id || varItem.id) === target)
+            }
+            if (typeof v === 'boolean') {
+              return variants.some((varItem) => varItem[subKey] === v)
+            }
+            return variants.some((varItem) => String(varItem[subKey]) === String(v))
+          }
+          return true
+        })
+      })
+    }
+
+    if (this._single) {
+      return docs[0] || null
+    }
+
     return docs
   }
 }
@@ -809,6 +891,33 @@ export function createSupabaseModel(tableName, { idField = 'id', methods = {}, s
 
       for (const [key, value] of Object.entries(filter)) {
         if (value === undefined) continue
+        if (key.includes('.')) continue
+
+        if (key === '$or' && Array.isArray(value)) {
+          const conditions = []
+          for (const item of value) {
+            for (const [k, v] of Object.entries(item)) {
+              if (k.includes('.')) continue
+              const col = camelToSnake(k)
+              if (v instanceof RegExp) {
+                const clean = v.source.replace(/\\/g, '').replace(/^\^|\$$/g, '')
+                conditions.push(`${col}.ilike.%${clean}%`)
+              } else if (v === null) {
+                conditions.push(`${col}.is.null`)
+              } else {
+                const val = (k === 'id' || k === '_id' || k === 'account' || k === 'business') ? objectIdToUuid(v) : v
+                conditions.push(`${col}.eq.${val}`)
+              }
+            }
+          }
+          if (conditions.length > 0) {
+            query = query.or(conditions.join(','))
+          }
+          continue
+        }
+
+        if (key.startsWith('$')) continue
+
         const col = camelToSnake(key)
         let val = value
         if (key === '_id' || key === 'id' || key === 'business' || key === 'businessId') {
@@ -817,12 +926,15 @@ export function createSupabaseModel(tableName, { idField = 'id', methods = {}, s
 
         if (val === null) {
           query = query.is(col, null)
-        } else if (typeof val === 'object' && !Array.isArray(val)) {
+        } else if (typeof val === 'object' && !Array.isArray(val) && !(val instanceof RegExp)) {
           if (val.$ne !== undefined) {
             query = val.$ne === null ? query.not(col, 'is', null) : query.neq(col, val.$ne)
           } else if (val.$in !== undefined) {
             query = query.in(col, val.$in)
           }
+        } else if (val instanceof RegExp) {
+          const clean = val.source.replace(/\\/g, '').replace(/^\^|\$$/g, '')
+          query = query.ilike(col, `%${clean}%`)
         } else {
           query = query.eq(col, val)
         }

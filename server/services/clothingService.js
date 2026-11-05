@@ -10,9 +10,9 @@ const toPlain = (val) => (typeof val?.toObject === 'function' ? val.toObject() :
 const clean = (v) => String(v || '').trim()
 
 export async function listVariants(businessId, query = {}) {
-  const products = await Product.find(scoped(businessId, { 'variants.0': { $exists: true } })).sort('name')
+  const products = await Product.find(scoped(businessId)).sort('name')
   const search = clean(query.search).toLowerCase()
-  return products.flatMap((product) => product.variants.map((variant) => ({ productId: String(product._id), productName: product.name, category: product.category, variantId: String(variant._id), ...toPlain(variant), sellingPrice: variant.sellingPrice ?? product.sellingPrice, purchasePrice: variant.purchasePrice ?? product.purchasePrice }))).filter((row) => (!search || `${row.productName} ${row.sku} ${row.barcode}`.toLowerCase().includes(search)) && (!query.size || query.size === 'all' || row.size === query.size) && (!query.color || query.color === 'all' || row.color === query.color) && (!query.stock || query.stock === 'all' || (query.stock === 'out' ? row.currentStock === 0 : query.stock === 'low' ? row.currentStock > 0 && row.currentStock <= row.reorderPoint : row.currentStock > row.reorderPoint)))
+  return products.flatMap((product) => (product.variants || []).map((variant) => ({ productId: String(product._id), productName: product.name, category: product.category, variantId: String(variant._id), ...toPlain(variant), sellingPrice: variant.sellingPrice ?? product.sellingPrice, purchasePrice: variant.purchasePrice ?? product.purchasePrice }))).filter((row) => (!search || `${row.productName} ${row.sku} ${row.barcode}`.toLowerCase().includes(search)) && (!query.size || query.size === 'all' || row.size === query.size) && (!query.color || query.color === 'all' || row.color === query.color) && (!query.stock || query.stock === 'all' || (query.stock === 'out' ? row.currentStock === 0 : query.stock === 'low' ? row.currentStock > 0 && row.currentStock <= row.reorderPoint : row.currentStock > row.reorderPoint)))
 }
 
 export async function bulkUpsertVariants(businessId, productId, rows, actor) {
@@ -41,9 +41,11 @@ export async function bulkUpsertVariants(businessId, productId, rows, actor) {
 
 export async function changeVariantStock(businessId, productId, variantId, payload, actor) {
   return withTransaction(async (session) => {
-    const product = await Product.findOne(scoped(businessId, { _id: oid(productId, 'product'), 'variants._id': oid(variantId, 'variant') })).session(session)
+    const product = await Product.findOne(scoped(businessId, { _id: oid(productId, 'product') })).session(session)
     if (!product) throw ApiError.notFound('Product variant not found.')
-    const variant = product.variants.id(variantId), quantity = toNumber(payload.quantity, 'Quantity', { min: 0, integer: true }), previousStock = variant.currentStock
+    const variant = product.variants?.id ? product.variants.id(variantId) : (product.variants || []).find((v) => String(v._id || v.id) === String(variantId))
+    if (!variant) throw ApiError.notFound('Product variant not found.')
+    const quantity = toNumber(payload.quantity, 'Quantity', { min: 0, integer: true }), previousStock = variant.currentStock
     const type = payload.type
     assert(['stock_in', 'stock_out', 'adjustment', 'sales_return'].includes(type), 'Unsupported variant stock operation.')
     const next = type === 'adjustment' ? quantity : previousStock + (['stock_in', 'sales_return'].includes(type) ? quantity : -quantity)
@@ -55,16 +57,25 @@ export async function changeVariantStock(businessId, productId, variantId, paylo
 }
 
 export async function resolveBarcode(businessId, value) {
-  const code = clean(value); const product = await Product.findOne(scoped(businessId, { $or: [{ barcode: code }, { 'variants.barcode': code }] }))
-  if (!product) throw ApiError.notFound('No product or variant found for this barcode.')
-  const variant = product.variants.find((v) => v.barcode === code)
-  return { product: product.toJSON(), variant: variant ? toPlain(variant) : null }
+  const code = clean(value)
+  const products = await Product.find(scoped(businessId))
+  for (const product of products) {
+    if (product.barcode === code) {
+      const variant = (product.variants || []).find((v) => v.barcode === code)
+      return { product: product.toJSON ? product.toJSON() : product, variant: variant ? toPlain(variant) : null }
+    }
+    const variant = (product.variants || []).find((v) => v.barcode === code)
+    if (variant) {
+      return { product: product.toJSON ? product.toJSON() : product, variant: toPlain(variant) }
+    }
+  }
+  throw ApiError.notFound('No product or variant found for this barcode.')
 }
 
 export async function replenishment(businessId, query = {}) {
   const openStatuses = ['Draft', 'Pending', 'Approved', 'Ordered', 'Partially Received']
   const [products, suppliers, purchaseOrders, receivings] = await Promise.all([
-    Product.find(scoped(businessId, { 'variants.replenishmentEnabled': true })),
+    Product.find(scoped(businessId)),
     Supplier.find(scoped(businessId)),
     PurchaseOrder.find(scoped(businessId, { status: { $in: openStatuses } })),
     Receiving.find(scoped(businessId)),
@@ -126,7 +137,7 @@ export async function clothingReport(businessId) {
   const recentCutoff = Date.now() - 90 * 86400000
   const recentlySoldVariantIds = new Set(sold.filter((item) => new Date(item.orderDate).getTime() >= recentCutoff).map((item) => String(item.variantId || '')).filter(Boolean))
   const productMap = new Map(products.map((product) => [String(product._id), product]))
-  const profitability = sold.reduce((map, item) => { const product = productMap.get(String(item.productId)); const variant = product?.variants.id(item.variantId); const revenue = Number(item.total || 0); const cost = Number(variant?.purchasePrice ?? product?.purchasePrice ?? 0) * item.quantity; const key = item.variantSku || item.productName; const row = map.get(key) || { label: key, revenue: 0, cost: 0, margin: 0 }; row.revenue += revenue; row.cost += cost; row.margin = round2(row.revenue - row.cost); map.set(key, row); return map }, new Map())
+  const profitability = sold.reduce((map, item) => { const product = productMap.get(String(item.productId)); const variant = product?.variants?.id ? product.variants.id(item.variantId) : (product?.variants || []).find((v) => String(v._id || v.id) === String(item.variantId)); const revenue = Number(item.total || 0); const cost = Number(variant?.purchasePrice ?? product?.purchasePrice ?? 0) * item.quantity; const key = item.variantSku || item.productName; const row = map.get(key) || { label: key, revenue: 0, cost: 0, margin: 0 }; row.revenue += revenue; row.cost += cost; row.margin = round2(row.revenue - row.cost); map.set(key, row); return map }, new Map())
   const returnBy = (field) => sumBy(returns.map((record) => ({ [field]: record[field], quantity: record.quantity })), field)
   return {
     totalVariants: variants.length, lowStockVariants: variants.filter(({ variant }) => variant.active && variant.currentStock <= variant.reorderPoint).length, outOfStockVariants: variants.filter(({ variant }) => variant.active && variant.currentStock === 0).length,
