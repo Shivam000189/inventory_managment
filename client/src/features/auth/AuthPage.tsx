@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import {
   Car,
+  Check,
   Cpu,
   Eye,
   EyeOff,
@@ -85,6 +86,7 @@ export default function AuthPage({ onAuthenticated, onBackToHome }: AuthPageProp
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [rememberMe, setRememberMe] = useState(true)
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [activeDemoId, setActiveDemoId] = useState<string | null>(null)
@@ -94,7 +96,7 @@ export default function AuthPage({ onAuthenticated, onBackToHome }: AuthPageProp
     if (submitting) return
     const normalizedEmail = email.trim().toLowerCase()
     if (!normalizedEmail || !password) {
-      setError('Enter your email and password.')
+      setError('Please enter your email and password.')
       return
     }
     setSubmitting(true)
@@ -104,7 +106,7 @@ export default function AuthPage({ onAuthenticated, onBackToHome }: AuthPageProp
       setPassword('')
       onAuthenticated({ user: session.user, business: session.business })
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Unable to sign in. Please try again.')
+      setError(caught instanceof Error ? caught.message : 'Unable to sign in. Please verify your credentials.')
     } finally {
       setSubmitting(false)
     }
@@ -130,145 +132,189 @@ export default function AuthPage({ onAuthenticated, onBackToHome }: AuthPageProp
   }
 
   return (
-    <main className="auth-single-stage">
-      <div className="auth-single-card">
-        {/* Top Header Row with Brand & Return Link */}
-        <div className="auth-single-header">
-          <div className="aflix-brand-header" aria-label="Stockroom">
-            <span className="aflix-brand-mark" aria-hidden="true">S</span>
-            <span className="aflix-brand-text">
-              <span className="aflix-name">STOCKROOM</span>
-              <span className="aflix-sub">INVENTORY MANAGEMENT</span>
-            </span>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <a href="/pricing" className="auth-single-back-link">
-              Plans &amp; Pricing →
-            </a>
-            {onBackToHome && (
-              <button type="button" onClick={onBackToHome} className="auth-single-back-link">
-                ← Back to Home
-              </button>
-            )}
+    <main className="auth-modern-stage">
+      <div className="auth-modern-card" role="region" aria-label="Sign in card">
+        {/* Left Side: 3D Supply Chain & Automated Warehouse Illustration */}
+        <div className="auth-card-media" aria-hidden="true">
+          <img
+            src="/images/auth-supply-chain.png"
+            alt="Stockroom Automated Logistics & Supply Chain"
+            className="auth-media-img"
+            loading="eager"
+          />
+          <div className="auth-media-blend-overlay" />
+          <div className="auth-media-badge">
+            <span className="auth-badge-dot" />
+            <span>Autonomous Warehouse Hub</span>
           </div>
         </div>
 
-        {/* Welcome Heading */}
-        <div className="auth-card-header">
-          <h1 className="auth-title" id="auth-title">Welcome</h1>
-          <p className="auth-subtitle">Sign in to your account or choose a demo below.</p>
-        </div>
-
-        {/* Credentials Form */}
-        <form onSubmit={submit} className="auth-form">
-          <div className="auth-field">
-            <label htmlFor="auth-email">Email</label>
-            <div className="auth-input-wrap with-leading-icon">
-              <span className="auth-input-leading-icon email-icon" aria-hidden="true">
-                <Mail />
-              </span>
-              <input
-                id="auth-email"
-                name="email"
-                type="email"
-                value={email}
-                onChange={(event) => {
-                  setEmail(event.target.value)
-                  setError('')
-                }}
-                autoComplete="username"
-                required
-                maxLength={254}
-                placeholder="you@company.com"
-              />
+        {/* Right Side: Authentication Form & Quick Demos */}
+        <div className="auth-card-body">
+          {/* Header Bar */}
+          <div className="auth-body-top-bar">
+            <div className="stockroom-brand-mark" aria-label="Stockroom">
+              <span className="stockroom-brand-icon">S</span>
+              <div className="stockroom-brand-labels">
+                <span className="stockroom-brand-title">STOCKROOM</span>
+                <span className="stockroom-brand-sub">SUPPLY CHAIN &amp; POS</span>
+              </div>
             </div>
-          </div>
 
-          <div className="auth-field">
-            <label htmlFor="auth-password">Password</label>
-            <div className="auth-input-wrap with-leading-icon has-toggle">
-              <span className="auth-input-leading-icon lock-icon" aria-hidden="true">
-                <LockKeyhole />
-              </span>
-              <input
-                id="auth-password"
-                name="password"
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(event) => {
-                  setPassword(event.target.value)
-                  setError('')
-                }}
-                autoComplete="current-password"
-                required
-                placeholder="••••••••••••"
-              />
-              <button
-                type="button"
-                className="auth-eye-toggle"
-                onClick={() => setShowPassword((visible) => !visible)}
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
-              >
-                {showPassword ? <EyeOff /> : <Eye />}
-              </button>
-            </div>
-          </div>
-
-          {error && <p className="form-status error" role="alert">{error}</p>}
-
-          <div className="auth-action-row">
-            <button className="auth-submit-btn" type="submit" disabled={submitting}>
-              {submitting && !activeDemoId ? 'Signing in…' : 'LOG IN'}
-            </button>
-          </div>
-        </form>
-
-        {/* Quick Demo Logins Section */}
-        <div className="auth-demo-section" aria-labelledby="demo-logins-heading">
-          <div className="auth-demo-divider">
-            <span className="auth-demo-divider-line" />
-            <span className="auth-demo-divider-text" id="demo-logins-heading">
-              <Sparkles className="auth-demo-sparkle" /> Quick Demo Login (1-Click)
-            </span>
-            <span className="auth-demo-divider-line" />
-          </div>
-
-          <p className="auth-demo-hint">
-            Click any industry to log in instantly:
-          </p>
-
-          <div className="auth-demo-grid">
-            {DEMO_ACCOUNTS.map((account) => {
-              const Icon = account.icon
-              const isLoggingIn = activeDemoId === account.id && submitting
-              return (
+            <div className="auth-top-actions">
+              <a href="/pricing" className="auth-aux-link">
+                Pricing →
+              </a>
+              {onBackToHome && (
                 <button
-                  key={account.id}
                   type="button"
-                  className={`auth-demo-card ${activeDemoId === account.id ? 'active' : ''}`}
-                  onClick={() => handleDemoLogin(account)}
-                  disabled={submitting}
-                  style={{ '--account-accent': account.accent } as React.CSSProperties}
-                  title={`Click to log in as ${account.name} (${account.email})`}
+                  onClick={onBackToHome}
+                  className="auth-aux-btn"
+                  title="Return to homepage"
                 >
-                  <span className="auth-demo-card-icon" style={{ color: account.accent }}>
-                    {isLoggingIn ? <Loader2 className="auth-spinner" /> : <Icon />}
-                  </span>
-                  <div className="auth-demo-card-info">
-                    <span className="auth-demo-card-title">{account.name}</span>
-                    <span className="auth-demo-card-email">{account.email}</span>
-                  </div>
+                  Home
                 </button>
-              )
-            })}
+              )}
+            </div>
+          </div>
+
+          {/* Heading */}
+          <div className="auth-hero-heading">
+            <h1 className="auth-title">Sign in</h1>
+            <p className="auth-description">
+              Welcome to logistics supply chain platform.<br />
+              Sign in to manage your inventory and sales.
+            </p>
+          </div>
+
+          {/* Error Banner */}
+          {error && (
+            <div className="auth-error-banner" role="alert">
+              <span>{error}</span>
+            </div>
+          )}
+
+          {/* Login Form */}
+          <form onSubmit={submit} className="auth-input-form" noValidate>
+            <div className="auth-input-group">
+              <label htmlFor="auth-email">E-mail</label>
+              <div className="auth-field-wrapper">
+                <Mail className="auth-field-icon" size={17} />
+                <input
+                  id="auth-email"
+                  name="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value)
+                    setError('')
+                  }}
+                  autoComplete="username"
+                  required
+                  maxLength={254}
+                  placeholder="name@company.com"
+                />
+              </div>
+            </div>
+
+            <div className="auth-input-group">
+              <label htmlFor="auth-password">Password</label>
+              <div className="auth-field-wrapper">
+                <LockKeyhole className="auth-field-icon" size={17} />
+                <input
+                  id="auth-password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value)
+                    setError('')
+                  }}
+                  autoComplete="current-password"
+                  required
+                  placeholder="••••••••••••"
+                />
+                <button
+                  type="button"
+                  className="auth-password-toggle"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </div>
+
+            {/* Checkbox Row */}
+            <div className="auth-options-row">
+              <label className="auth-checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="auth-checkbox"
+                />
+                <span>Remember this terminal session</span>
+              </label>
+            </div>
+
+            {/* Submit Button */}
+            <button
+              className="auth-primary-submit-btn"
+              type="submit"
+              disabled={submitting}
+            >
+              {submitting && !activeDemoId ? (
+                <span className="auth-btn-spinner-wrap">
+                  <Loader2 className="auth-spin" size={18} />
+                  <span>Signing in…</span>
+                </span>
+              ) : (
+                <span>Sign In</span>
+              )}
+            </button>
+          </form>
+
+          {/* Compact 1-Click Demo Section */}
+          <div className="auth-demo-wrapper" aria-labelledby="demo-heading">
+            <div className="auth-demo-header">
+              <span className="auth-demo-rule" />
+              <span className="auth-demo-badge" id="demo-heading">
+                <Sparkles size={12} className="auth-sparkle" /> Quick 1-Click Demo
+              </span>
+              <span className="auth-demo-rule" />
+            </div>
+
+            <div className="auth-demo-pill-grid">
+              {DEMO_ACCOUNTS.map((account) => {
+                const Icon = account.icon
+                const isLoggingIn = activeDemoId === account.id && submitting
+                return (
+                  <button
+                    key={account.id}
+                    type="button"
+                    className={`auth-demo-pill ${activeDemoId === account.id ? 'active' : ''}`}
+                    onClick={() => handleDemoLogin(account)}
+                    disabled={submitting}
+                    title={`Instant login as ${account.name} (${account.email})`}
+                    style={{ '--demo-accent': account.accent } as React.CSSProperties}
+                  >
+                    <span className="auth-demo-pill-icon" style={{ color: account.accent }}>
+                      {isLoggingIn ? <Loader2 className="auth-spin" size={14} /> : <Icon size={14} />}
+                    </span>
+                    <span className="auth-demo-pill-label">{account.name}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Footer Subtext */}
+          <div className="auth-card-footer">
+            <span>Accounts are provisioned by your Business Administrator.</span>
           </div>
         </div>
-
-        {/* Footer Note */}
-        <p className="auth-switch-line">
-          Accounts are provisioned by your Super Admin or Business Admin.
-        </p>
       </div>
     </main>
   )

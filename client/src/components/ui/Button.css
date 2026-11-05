@@ -66,17 +66,17 @@
 /* Variant: Secondary / Outline */
 .ui-btn-secondary,
 .ui-btn-outline {
-  color: var(--text);
-  background: var(--surface);
-  border-color: var(--line);
+  color: #ffffff !important;
+  background: #381e12 !important;
+  border-color: #381e12 !important;
   box-shadow: var(--shadow-sm);
 }
 
 .ui-btn-secondary:hover:not(:disabled),
 .ui-btn-outline:hover:not(:disabled) {
-  color: var(--orange);
-  border-color: var(--orange);
-  background: var(--orange-soft);
+  color: #ffffff !important;
+  border-color: #26140c !important;
+  background: #26140c !important;
   transform: translateY(-1px);
 }
 

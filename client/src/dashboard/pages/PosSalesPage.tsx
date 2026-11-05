@@ -445,7 +445,7 @@ export const PosSalesPage: React.FC = () => {
                       <span className="font-bold text-[13px] text-[#1C1B18] tabular-nums">
                         {formatINR(p.sellingPrice)}
                       </span>
-                      <span className="text-[10px] text-[#381e12] font-semibold">
+                      <span className="px-2 py-0.5 rounded-md bg-[#381e12] text-white text-[10px] font-semibold">
                         + Add
                       </span>
                     </div>
@@ -513,7 +513,7 @@ export const PosSalesPage: React.FC = () => {
                         setCustName(suggestedCustomer.name);
                         setCustPhone(suggestedCustomer.phone !== '—' ? suggestedCustomer.phone : '');
                       }}
-                      className="ml-2 text-[#381e12] font-semibold hover:underline cursor-pointer shrink-0"
+                      className="ml-2 px-2 py-0.5 rounded-md bg-[#381e12] hover:bg-[#26140c] text-white text-[11px] font-semibold cursor-pointer shrink-0"
                     >
                       Fill
                     </button>
@@ -772,7 +772,7 @@ export const PosSalesPage: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => setSelectedBillDetail(b)}
-                          className="px-2.5 py-1 rounded-lg border border-[#EEE6DA] text-xs font-semibold text-[#1C1B18] hover:bg-[#FAF6EF]"
+                          className="px-2.5 py-1 rounded-lg bg-[#381e12] hover:bg-[#26140c] text-xs font-semibold text-white"
                         >
                           View
                         </button>
@@ -857,7 +857,7 @@ export const PosSalesPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => window.print()}
-                className="py-2 border border-[#EEE6DA] rounded-xl text-xs font-semibold text-[#1C1B18] hover:bg-[#FAF6EF] flex items-center justify-center gap-1.5 cursor-pointer"
+                className="py-2 bg-[#381e12] hover:bg-[#26140c] text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
               >
                 <Printer size={14} />
                 <span>Print Slip</span>
@@ -868,7 +868,7 @@ export const PosSalesPage: React.FC = () => {
                 onClick={() => {
                   alert(`WhatsApp receipt link created for ${receiptBill.customerPhone || 'customer'}!`);
                 }}
-                className="py-2 bg-[#E8F5EC] text-[#2E8B57] rounded-xl text-xs font-semibold hover:bg-[#d8eedd] flex items-center justify-center gap-1.5 cursor-pointer"
+                className="py-2 bg-[#381e12] hover:bg-[#26140c] text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
               >
                 <Share2 size={14} />
                 <span>WhatsApp</span>

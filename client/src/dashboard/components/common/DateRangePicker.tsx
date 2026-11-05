@@ -48,11 +48,11 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-[#EEE6DA] bg-white text-[13px] font-medium text-[#1C1B18] hover:border-[#DDD3C4] transition-colors cursor-pointer shadow-2xs"
+        className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#381e12] hover:bg-[#26140c] text-[13px] font-medium text-white transition-colors cursor-pointer shadow-2xs"
       >
-        <Calendar size={14} className="text-[#6B665E]" />
+        <Calendar size={14} className="text-white" />
         <span>{value}</span>
-        <ChevronDown size={14} className="text-[#6B665E]" />
+        <ChevronDown size={14} className="text-white" />
       </button>
 
       {isOpen && (

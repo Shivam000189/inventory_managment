@@ -190,7 +190,7 @@ export const OverviewPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => navigate('/expiry')}
-                className="px-3 py-1.5 rounded-xl border border-[#EEE6DA] hover:bg-[#FAF6EF] text-xs font-semibold text-[#1C1B18] transition-all cursor-pointer shadow-2xs"
+                className="px-3 py-1.5 rounded-xl bg-[#381e12] hover:bg-[#26140c] text-xs font-semibold text-white transition-all cursor-pointer shadow-2xs"
               >
                 Open Expiry Radar
               </button>

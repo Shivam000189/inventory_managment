@@ -578,7 +578,7 @@ export const BatchManagementPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
-                  className="px-4 py-2 rounded-xl border border-[#EEE6DA] text-xs font-semibold text-[#6B665E] hover:bg-[#FAF6EF]"
+                  className="px-4 py-2 rounded-xl text-xs font-semibold bg-[#381e12] hover:bg-[#26140c] text-white cursor-pointer"
                 >
                   Cancel
                 </button>

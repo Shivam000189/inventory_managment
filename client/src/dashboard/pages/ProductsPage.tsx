@@ -346,7 +346,7 @@ export const ProductsPage: React.FC = () => {
           <button
             type="button"
             onClick={handleExportCSV}
-            className="inline-flex items-center justify-center gap-1 sm:gap-1.5 px-1.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl border border-[#EEE6DA] bg-white text-[11px] sm:text-xs font-semibold text-[#1C1B18] hover:bg-[#FAF6EF] transition-all cursor-pointer shadow-2xs whitespace-nowrap active:scale-95"
+            className="inline-flex items-center justify-center gap-1 sm:gap-1.5 px-1.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl bg-[#381e12] hover:bg-[#26140c] text-white text-[11px] sm:text-xs font-semibold transition-all cursor-pointer shadow-2xs whitespace-nowrap active:scale-95"
           >
             <Download size={15} />
             <span>Export</span>
@@ -355,7 +355,7 @@ export const ProductsPage: React.FC = () => {
           <button
             type="button"
             onClick={() => setIsImportModalOpen(true)}
-            className="inline-flex items-center justify-center gap-1 sm:gap-1.5 px-1.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl border border-[#EEE6DA] bg-white text-[11px] sm:text-xs font-semibold text-[#1C1B18] hover:bg-[#FAF6EF] transition-all cursor-pointer shadow-2xs whitespace-nowrap active:scale-95"
+            className="inline-flex items-center justify-center gap-1 sm:gap-1.5 px-1.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl bg-[#381e12] hover:bg-[#26140c] text-white text-[11px] sm:text-xs font-semibold transition-all cursor-pointer shadow-2xs whitespace-nowrap active:scale-95"
           >
             <Upload size={15} />
             <span>Bulk Import</span>
@@ -800,7 +800,7 @@ export const ProductsPage: React.FC = () => {
                   type="button"
                   disabled={currentPage === 1}
                   onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  className="px-2.5 py-1 rounded-lg border border-[#EEE6DA] bg-white text-xs font-semibold text-[#1C1B18] hover:bg-[#FAF6EF] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer active:scale-95"
+                  className="px-2.5 py-1 rounded-lg bg-[#381e12] hover:bg-[#26140c] text-xs font-semibold text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer active:scale-95"
                 >
                   Previous
                 </button>
@@ -843,7 +843,7 @@ export const ProductsPage: React.FC = () => {
                   type="button"
                   disabled={currentPage === totalPages}
                   onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  className="px-2.5 py-1 rounded-lg border border-[#EEE6DA] bg-white text-xs font-semibold text-[#1C1B18] hover:bg-[#FAF6EF] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer active:scale-95"
+                  className="px-2.5 py-1 rounded-lg bg-[#381e12] hover:bg-[#26140c] text-xs font-semibold text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer active:scale-95"
                 >
                   Next
                 </button>
@@ -965,7 +965,7 @@ export const ProductsPage: React.FC = () => {
                   type="button"
                   disabled={currentPage === 1}
                   onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  className="px-2.5 py-1 rounded-lg border border-[#EEE6DA] bg-white text-xs font-semibold text-[#1C1B18] hover:bg-[#FAF6EF] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer active:scale-95"
+                  className="px-2.5 py-1 rounded-lg bg-[#381e12] hover:bg-[#26140c] text-xs font-semibold text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer active:scale-95"
                 >
                   Previous
                 </button>
@@ -1008,7 +1008,7 @@ export const ProductsPage: React.FC = () => {
                   type="button"
                   disabled={currentPage === totalPages}
                   onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  className="px-2.5 py-1 rounded-lg border border-[#EEE6DA] bg-white text-xs font-semibold text-[#1C1B18] hover:bg-[#FAF6EF] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer active:scale-95"
+                  className="px-2.5 py-1 rounded-lg bg-[#381e12] hover:bg-[#26140c] text-xs font-semibold text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer active:scale-95"
                 >
                   Next
                 </button>
@@ -1588,7 +1588,7 @@ export const ProductsPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsAddDrawerOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-[#6B665E] hover:text-[#1C1B18] cursor-pointer"
+                  className="px-4 py-2 rounded-xl text-xs font-semibold bg-[#381e12] hover:bg-[#26140c] text-white cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -1666,7 +1666,7 @@ export const ProductsPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setAdjustingProduct(null)}
-                className="px-3 py-1.5 rounded-xl text-xs font-semibold text-[#6B665E] hover:text-[#1C1B18]"
+                className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-[#381e12] hover:bg-[#26140c] text-white cursor-pointer"
               >
                 Cancel
               </button>

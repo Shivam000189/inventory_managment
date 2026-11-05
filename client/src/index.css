@@ -98,3 +98,37 @@ table {
         scroll-behavior: auto !important;
     }
 }
+
+
+/* Universal Button Styling: #381e12 background and crisp white text */
+button[class*="bg-[#381e12]"],
+button[class*="bg-[#381E12]"],
+button[class*="bg-brand"],
+button.ui-btn,
+button.btn,
+.ui-btn-primary,
+.ui-btn-secondary,
+.ui-btn-outline,
+.submit-button,
+.product-add-button,
+.restock-button,
+.outline-button {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+button[class*="bg-[#381e12]"] *,
+button[class*="bg-[#381E12]"] *,
+button[class*="bg-brand"] *,
+button.ui-btn *,
+button.btn *,
+.ui-btn-primary *,
+.ui-btn-secondary *,
+.ui-btn-outline *,
+.submit-button *,
+.product-add-button *,
+.restock-button *,
+.outline-button * {
+  color: #ffffff !important;
+  stroke: #ffffff !important;
+}

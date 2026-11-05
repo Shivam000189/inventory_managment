@@ -640,7 +640,7 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClos
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-xl text-xs font-semibold text-[#6B665E] hover:text-[#1C1B18] transition-colors cursor-pointer"
+            className="px-4 py-2 rounded-xl text-xs font-semibold bg-[#381e12] hover:bg-[#26140c] text-white transition-colors cursor-pointer"
           >
             Cancel
           </button>

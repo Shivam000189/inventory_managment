@@ -3,8 +3,8 @@
   color-scheme: light;
   --bg: #f6ede1; --surface: #fff; --surface-raised: #fff; --surface-soft: #f7f2ec; --surface-muted: #efe3d3; --surface-overlay: rgba(42,31,22,.5);
   --ink: #2a1f16; --text: #2a221c; --text-soft: #6b5d4f; --muted: #8f8175; --text-faint: #ad9c8c;
-  --line: #e9ddd0; --line-strong: #ddc9b3; --orange: #5b371f; --orange-hover: #3d2414; --orange-soft: #f2ece3;
-  --auth-brand: #5b371f; --auth-brand-light: #8b5a34; --auth-brand-deep: #3d2414;
+  --line: #e9ddd0; --line-strong: #ddc9b3; --orange: #381e12; --orange-hover: #26140c; --orange-soft: #f2ece3;
+  --auth-brand: #381e12; --auth-brand-light: #522d1c; --auth-brand-deep: #26140c;
   --success: #10b981; --success-soft: #dcfce7; --warning: #f59e0b; --warning-soft: #fef3c7; --danger: #ef4444; --danger-soft: #fee2e2; --info: #0084ff; --info-soft: #e0f2fe;
   --purple: #8b5cf6; --purple-soft: #f3e8ff; --cyan: #06b6d4; --cyan-soft: #cffafe; --rose: #f43f5e; --rose-soft: #ffe4e6;
   --sr-font: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; --sr-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
@@ -88,8 +88,8 @@ form label,.password-label label { color: var(--text-soft); }
 .submit-button,.restock-button,.product-add-button { color: #fff; border-color: var(--orange); border-radius: var(--sr-radius); background: linear-gradient(180deg, var(--auth-brand-light) 0%, var(--orange) 50%, var(--orange-hover) 100%); box-shadow: inset 0 1px 0 rgba(255,255,255,.25), var(--sr-shadow-glow); font-weight: 700; letter-spacing: .2px; transition: transform .15s ease, box-shadow .15s ease, background .15s ease; }
 .submit-button:hover:not(:disabled),.restock-button:hover:not(:disabled),.product-add-button:hover:not(:disabled) { color: #fff; background: linear-gradient(180deg, var(--auth-brand-light) 0%, var(--orange-hover) 60%, var(--orange-hover) 100%); transform: translateY(-1px); box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 14px 28px -8px rgba(91,55,31,.45), var(--sr-shadow-glow); }
 .submit-button:active:not(:disabled),.restock-button:active:not(:disabled),.product-add-button:active:not(:disabled) { transform: translateY(1px); box-shadow: inset 0 2px 5px rgba(45,25,10,.35); }
-.outline-button { color: var(--text); border-color: var(--line); border-radius: var(--sr-radius-xs); background: var(--surface); font-weight: 600; }
-.outline-button:hover:not(:disabled) { color: var(--orange); border-color: var(--orange); background: var(--orange-soft); }
+.outline-button { color: #ffffff !important; border-color: #381e12; border-radius: var(--sr-radius-xs); background: #381e12; font-weight: 600; }
+.outline-button:hover:not(:disabled) { color: #ffffff !important; border-color: #26140c; background: #26140c; }
 button:disabled { cursor: not-allowed; opacity: .5; transform: none!important; box-shadow: none!important; }
 
 .summary-card,

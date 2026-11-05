@@ -584,7 +584,7 @@ export const PurchaseOrdersPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={handleAddLine}
-                    className="text-xs font-semibold text-[#7FAE82] hover:underline flex items-center gap-1 cursor-pointer"
+                    className="text-xs font-semibold bg-[#381e12] hover:bg-[#26140c] text-white px-2.5 py-1 rounded-lg flex items-center gap-1 cursor-pointer"
                   >
                     <Plus size={13} />
                     <span>Add Item</span>
@@ -708,7 +708,7 @@ export const PurchaseOrdersPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setIsCreateOpen(false)}
-                className="px-4 py-2 text-xs font-semibold text-[#6B665E] hover:bg-[#FAF6EF] rounded-xl"
+                className="px-4 py-2 text-xs font-semibold bg-[#381e12] hover:bg-[#26140c] text-white rounded-xl"
               >
                 Cancel
               </button>
@@ -779,7 +779,7 @@ export const PurchaseOrdersPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setReceivingPO(null)}
-                className="px-3.5 py-1.5 text-xs font-semibold text-[#6B665E]"
+                className="px-3.5 py-1.5 text-xs font-semibold bg-[#381e12] hover:bg-[#26140c] text-white rounded-xl"
               >
                 Cancel
               </button>
@@ -865,7 +865,7 @@ export const PurchaseOrdersPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => window.print()}
-                className="px-3.5 py-1.5 border border-[#EEE6DA] rounded-xl text-xs font-semibold text-[#1C1B18] hover:bg-[#FAF6EF] inline-flex items-center gap-1.5 cursor-pointer"
+                className="px-3.5 py-1.5 bg-[#381e12] hover:bg-[#26140c] rounded-xl text-xs font-semibold text-white inline-flex items-center gap-1.5 cursor-pointer"
               >
                 <Printer size={15} />
                 <span>Print PO</span>
@@ -874,7 +874,7 @@ export const PurchaseOrdersPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setViewingPO(null)}
-                className="px-4 py-1.5 bg-[#1C1B18] !text-white text-xs font-semibold rounded-xl hover:bg-black cursor-pointer"
+                className="px-4 py-1.5 bg-[#381e12] !text-white text-xs font-semibold rounded-xl hover:bg-[#26140c] cursor-pointer"
                 style={{ color: '#ffffff' }}
               >
                 Close
@@ -1060,7 +1060,7 @@ export const PurchaseOrdersPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsAddVendorOpen(false)}
-                  className="px-4 py-2 rounded-xl border border-[#EEE6DA] text-xs font-semibold text-[#6B665E] hover:bg-[#FAF6EF] cursor-pointer"
+                  className="px-4 py-2 rounded-xl text-xs font-semibold bg-[#381e12] hover:bg-[#26140c] text-white cursor-pointer"
                 >
                   Cancel
                 </button>
