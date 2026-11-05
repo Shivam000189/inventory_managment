@@ -25,17 +25,26 @@ import { Icon } from '../../components/ui/icons.jsx'
 import './ReturnsPage.css'
 
 export default function PurchaseReturnsPage({ business = {}, purchase = true }) {
+  const toList = (res) => (Array.isArray(res) ? res : Array.isArray(res?.items) ? res.items : Array.isArray(res?.data) ? res.data : [])
+
   const load = useCallback(
     () =>
       Promise.all([
         returnApi.list({ type: purchase ? 'purchase' : 'sale' }),
         productApi.list(),
         purchase ? purchaseOrderApi.list() : salesOrderApi.list(),
+      ]).then(([returnsRes, productsRes, ordersRes]) => [
+        toList(returnsRes),
+        toList(productsRes),
+        toList(ordersRes),
       ]),
     [purchase]
   )
   const { data, loading, error, refetch, setData } = useResource(load, [purchase], [[], [], []])
-  const [returns = [], products = [], orders = []] = data
+  const [rawReturns = [], rawProducts = [], rawOrders = []] = data
+  const returns = useMemo(() => toList(rawReturns), [rawReturns])
+  const products = useMemo(() => toList(rawProducts), [rawProducts])
+  const orders = useMemo(() => toList(rawOrders), [rawOrders])
   const [message, setMessage] = useState(null)
   const [saving, setSaving] = useState(false)
 
@@ -63,7 +72,7 @@ export default function PurchaseReturnsPage({ business = {}, purchase = true }) 
         returnApi.list({ type: payload.type }),
         productApi.list(),
       ])
-      setData((current) => [freshReturns, freshProducts, current[2]])
+      setData((current) => [toList(freshReturns), toList(freshProducts), current[2]])
       setMessage({ type: 'success', text: `${record.returnId || 'Return'} completed and inventory updated.` })
       form.reset()
     } catch (caught) {

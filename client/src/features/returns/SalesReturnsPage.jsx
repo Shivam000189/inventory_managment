@@ -44,13 +44,24 @@ const refundMethods = [
 ]
 const money = (currency = 'INR', value) => `${currency} ${Number(value || 0).toFixed(2)}`
 
+const toList = (res) => (Array.isArray(res) ? res : Array.isArray(res?.items) ? res.items : Array.isArray(res?.data) ? res.data : [])
+
 export default function SalesReturnsPage({ business = {}, account = {} }) {
   const load = useCallback(
-    () => Promise.all([returnApi.list({ type: 'sale' }), returnApi.eligibleOrders()]),
+    () =>
+      Promise.all([
+        returnApi.list({ type: 'sale' }),
+        returnApi.eligibleOrders(),
+      ]).then(([returnsRes, ordersRes]) => [
+        toList(returnsRes),
+        toList(ordersRes),
+      ]),
     []
   )
   const { data, loading, error, refetch } = useResource(load, [], [[], []])
-  const [returns = [], orders = []] = data
+  const [rawReturns = [], rawOrders = []] = data
+  const returns = useMemo(() => toList(rawReturns), [rawReturns])
+  const orders = useMemo(() => toList(rawOrders), [rawOrders])
 
   const [orderSearch, setOrderSearch] = useState('')
   const [orderId, setOrderId] = useState('')
@@ -89,7 +100,7 @@ export default function SalesReturnsPage({ business = {}, account = {} }) {
       .toLowerCase()
       .includes(orderSearch.toLowerCase())
   )
-  const order = orders.find((entry) => entry.orderId === orderId)
+  const order = orders.find((entry) => (entry.orderId || String(entry._id)) === orderId)
   const item = order?.items?.find((line) => line.productId === productId)
   const returnValue =
     item && quantity > 0
@@ -554,11 +565,14 @@ export default function SalesReturnsPage({ business = {}, account = {} }) {
                     required
                   >
                     <option value="">Select order</option>
-                    {visibleOrders.map((entry) => (
-                      <option key={entry.orderId} value={entry.orderId}>
-                        {entry.orderNumber} · {entry.customerName}
-                      </option>
-                    ))}
+                    {visibleOrders.map((entry) => {
+                      const id = entry.orderId || String(entry._id);
+                      return (
+                        <option key={id} value={id}>
+                          {entry.orderNumber || 'Order'} · {entry.customerName || 'Customer'}
+                        </option>
+                      );
+                    })}
                   </Select>
                 </Field>
               </div>
