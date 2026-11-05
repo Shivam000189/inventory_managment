@@ -681,10 +681,10 @@ function SalesOrders({ business = {}, creditSales = false, section = 'Credit Sal
           <button
             type="button"
             onClick={() => openForm()}
-            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-[#7FAE82] hover:bg-[#6C9C70] text-white text-xs font-semibold transition-all cursor-pointer shadow-2xs whitespace-nowrap active:scale-95"
+            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-[#381e12] hover:bg-[#26140c] text-white text-xs font-semibold transition-all cursor-pointer shadow-2xs whitespace-nowrap active:scale-95"
           >
-            <Plus size={16} />
-            <span>+ Create Order</span>
+            <Plus size={16} className="text-white" />
+            <span className="text-white">+ Create Order</span>
           </button>
         </div>
       </div>
@@ -712,7 +712,7 @@ function SalesOrders({ business = {}, creditSales = false, section = 'Credit Sal
           trend={`${stats.todayCount} today`}
           isPositive={true}
           onClick={() => setTab('all')}
-          className={tab === 'all' ? 'ring-2 ring-[#7FAE82]' : ''}
+          className={tab === 'all' ? 'ring-2 ring-[#381e12]' : ''}
         />
         <StatCard
           icon={<Truck size={18} strokeWidth={2} />}
@@ -722,7 +722,7 @@ function SalesOrders({ business = {}, creditSales = false, section = 'Credit Sal
           trend={`${stats.fulfilUnits} units`}
           isPositive={true}
           onClick={() => setTab('processing')}
-          className={tab === 'processing' ? 'ring-2 ring-[#7FAE82]' : ''}
+          className={tab === 'processing' ? 'ring-2 ring-[#381e12]' : ''}
         />
         <StatCard
           icon={<CheckCircle2 size={18} strokeWidth={2} />}
@@ -732,7 +732,7 @@ function SalesOrders({ business = {}, creditSales = false, section = 'Credit Sal
           trend={`${stats.fulfilRate}% rate`}
           isPositive={true}
           onClick={() => setTab('completed')}
-          className={tab === 'completed' ? 'ring-2 ring-[#7FAE82]' : ''}
+          className={tab === 'completed' ? 'ring-2 ring-[#381e12]' : ''}
         />
         <StatCard
           icon={<Clock size={18} strokeWidth={2} />}
@@ -742,7 +742,7 @@ function SalesOrders({ business = {}, creditSales = false, section = 'Credit Sal
           trend={stats.awaitingAmount ? money(stats.awaitingAmount) : 'Settled'}
           isPositive={false}
           onClick={() => setTab('pending')}
-          className={tab === 'pending' ? 'ring-2 ring-[#7FAE82]' : ''}
+          className={tab === 'pending' ? 'ring-2 ring-[#381e12]' : ''}
         />
       </div>
 
@@ -758,7 +758,7 @@ function SalesOrders({ business = {}, creditSales = false, section = 'Credit Sal
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by order #, invoice, customer, or product..."
-              className="w-full pl-9 pr-3 py-1.5 rounded-xl border border-[#EEE6DA] text-xs focus:border-[#7FAE82] outline-none"
+              className="w-full pl-9 pr-3 py-1.5 rounded-xl border border-[#EEE6DA] text-xs focus:border-[#381e12] outline-none"
             />
           </div>
 
@@ -831,9 +831,9 @@ function SalesOrders({ business = {}, creditSales = false, section = 'Credit Sal
           <button
             type="button"
             onClick={() => openForm()}
-            className="mt-4 px-4 py-2 rounded-xl bg-[#7FAE82] hover:bg-[#6C9C70] text-white text-xs font-semibold transition-all cursor-pointer shadow-2xs active:scale-95"
+            className="mt-4 px-4 py-2 rounded-xl bg-[#381e12] hover:bg-[#26140c] text-white text-xs font-semibold transition-all cursor-pointer shadow-2xs active:scale-95"
           >
-            + Create New Order
+            <span className="text-white">+ Create New Order</span>
           </button>
         </div>
       ) : (
@@ -890,7 +890,7 @@ function SalesOrders({ business = {}, creditSales = false, section = 'Credit Sal
                       onClick={() => setViewingOrder(order)}
                     >
                       <td className="py-3 px-4">
-                        <div className="font-semibold text-[#1C1B18] text-[13px] group-hover:text-[#6C9C70] transition-colors">
+                        <div className="font-semibold text-[#1C1B18] text-[13px] group-hover:text-[#381e12] transition-colors">
                           #{order.invoiceNumber || order.orderNumber}
                         </div>
                         {order.orderNumber && order.invoiceNumber && (
