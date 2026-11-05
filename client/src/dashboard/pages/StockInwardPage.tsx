@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import {
+  Filter,
   Package,
   Layers,
   Search,
@@ -214,40 +215,62 @@ export const StockInwardPage: React.FC = () => {
         />
       </div>
 
-      {/* Filter and Search Bar */}
-      <div className="bg-white rounded-xl border border-[#EBE8E2] p-4 shadow-sm space-y-3">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-          {/* Movement Reason Filter Pills */}
-          <div className="flex flex-wrap items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
-            {filterPills.map((pill) => (
-              <button
-                key={pill}
-                onClick={() => setFilterReason(pill)}
-                className={`px-3 py-1.5 text-[12px] font-medium rounded-lg transition-all ${
-                  filterReason === pill
-                    ? 'bg-[#381e12] text-[#ffffff] shadow-sm'
-                    : 'bg-[#F7F5F0] text-[#6B665E] hover:bg-[#EFECE6] hover:text-[#1C1B18]'
-                }`}
+      {/* Filter and Search Bar (Dropdown alongside Search) */}
+      <div className="bg-white rounded-xl border border-[#EBE8E2] p-3.5 shadow-sm">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          {/* Search Box & Dropdown */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 flex-1 max-w-2xl">
+            {/* Search Box */}
+            <div className="relative flex-1 min-w-[240px]">
+              <Search
+                size={15}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8C827A]"
+              />
+              <input
+                type="text"
+                placeholder="Search product, SKU, reference, user..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 bg-[#FAF9F7] text-[13px] border border-[#EBE8E2] rounded-lg focus:outline-none focus:border-[#C4BAAE] focus:bg-white text-[#1C1B18] placeholder-[#8C827A] transition-all"
+              />
+            </div>
+
+            {/* Inward Reason Dropdown */}
+            <div className="relative sm:w-56">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8C827A] pointer-events-none">
+                <Filter size={14} />
+              </div>
+              <select
+                value={filterReason}
+                onChange={(e) => setFilterReason(e.target.value)}
+                className="w-full pl-8 pr-8 py-2 bg-[#FAF9F7] text-[13px] font-medium border border-[#EBE8E2] rounded-lg focus:outline-none focus:border-[#C4BAAE] focus:bg-white text-[#1C1B18] cursor-pointer transition-all appearance-none"
               >
-                {pill}
-              </button>
-            ))}
+                <option value="All">All Inward Types</option>
+                <option value="Supplier Receipt">Supplier Receipt</option>
+                <option value="Purchase Order">Purchase Order Delivery</option>
+                <option value="Customer Return">Customer Return</option>
+                <option value="Production Intake">Production Intake</option>
+                <option value="Transfer In">Transfer In</option>
+              </select>
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8C827A] pointer-events-none text-[9px]">
+                ▼
+              </div>
+            </div>
           </div>
 
-          {/* Search Box */}
-          <div className="relative min-w-[260px] max-w-sm">
-            <Search
-              size={15}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8C827A]"
-            />
-            <input
-              type="text"
-              placeholder="Search product, SKU, reference..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 bg-[#FAF9F7] text-[13px] border border-[#EBE8E2] rounded-lg focus:outline-none focus:border-[#C4BAAE] focus:bg-white text-[#1C1B18] placeholder-[#8C827A] transition-all"
-            />
-          </div>
+          {/* Reset button */}
+          {(searchQuery || filterReason !== 'All') && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearchQuery('');
+                setFilterReason('All');
+              }}
+              className="text-[12px] font-medium text-[#8C827A] hover:text-[#381e12] px-2 py-1 transition-colors self-end sm:self-center cursor-pointer"
+            >
+              Reset filters
+            </button>
+          )}
         </div>
       </div>
 
