@@ -23,6 +23,7 @@ const PrescriptionManagementPage = lazy(() => import('../dashboard/pages/Prescri
 const StockInwardPage = lazy(() => import('../dashboard/pages/StockInwardPage.tsx').then((m) => ({ default: m.StockInwardPage })));
 const StockOutwardPage = lazy(() => import('../dashboard/pages/StockOutwardPage.tsx').then((m) => ({ default: m.StockOutwardPage })));
 const StockAdjustmentsPage = lazy(() => import('../dashboard/pages/StockAdjustmentsPage.tsx').then((m) => ({ default: m.StockAdjustmentsPage })));
+const StockMovementAuditPage = lazy(() => import('../dashboard/pages/StockMovementAuditPage.tsx').then((m) => ({ default: m.StockMovementAuditPage })));
 
 // Feature Pages (Workflows)
 const ReceivingGrnPage = lazy(() => import('../features/purchasing/ReceivingGrnPage.jsx'));
@@ -214,7 +215,7 @@ export const DASHBOARD_CHILD_ROUTES = [
   { path: 'stock-in', element: <AdminRouteGuard><LazyRoute Component={StockInwardPage} /></AdminRouteGuard> },
   { path: 'stock-out', element: <AdminRouteGuard><LazyRoute Component={StockOutwardPage} /></AdminRouteGuard> },
   { path: 'adjustments', element: <AdminRouteGuard><LazyRoute Component={StockAdjustmentsPage} /></AdminRouteGuard> },
-  { path: 'stock-history', element: <AdminRouteGuard><FeaturePageWrapper Component={InventoryOperations} section="Stock History" /></AdminRouteGuard> },
+  { path: 'stock-history', element: <AdminRouteGuard><LazyRoute Component={StockMovementAuditPage} /></AdminRouteGuard> },
   { path: 'categories', element: <AdminRouteGuard><FeaturePageWrapper Component={InventoryOperations} section="Categories" /></AdminRouteGuard> },
   { path: 'product-import', element: <AdminRouteGuard><FeaturePageWrapper Component={ProductImportPage} /></AdminRouteGuard> },
   { path: 'orders', element: <AdminRouteGuard><FeaturePageWrapper Component={SalesOrdersPage} section="Orders" creditSales={false} /></AdminRouteGuard> },
