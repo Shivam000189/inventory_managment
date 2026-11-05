@@ -30,7 +30,7 @@ import { TableSkeleton, Skeleton } from '../../components/ui/Feedback';
 import { useApp } from '../context/AppContext';
 import { Product } from '../types';
 import { formatINR, downloadCSV } from '../lib/formatters';
-import { isPharmacyBusiness } from '../../shared/industryConfig';
+import { isPharmacyBusiness, getIndustryCategoryPresets } from '../../shared/industryConfig';
 
 export const ProductsPage: React.FC = () => {
   const { products, addProduct, updateProduct, deleteProduct, adjustStock, suppliers, isLoadingBackend, businessProfile } = useApp();
@@ -132,12 +132,22 @@ export const ProductsPage: React.FC = () => {
   const [adjustStockValue, setAdjustStockValue] = useState<number>(0);
   const [adjustReason, setAdjustReason] = useState('Correction');
 
+  const industryPresets = useMemo(() => getIndustryCategoryPresets(businessProfile), [businessProfile]);
+
+  const categories = useMemo(() => {
+    const existing = products.map((p) => p.category).filter(Boolean);
+    const set = new Set<string>(['All', ...industryPresets, ...existing]);
+    return Array.from(set);
+  }, [industryPresets, products]);
+
+  const [isCustomCategory, setIsCustomCategory] = useState(false);
+
   // Form State for Add/Edit
   const [formData, setFormData] = useState({
     name: '',
     sku: '',
     barcode: '',
-    category: isPharmacy ? 'Medicines' : isClothing ? 'Apparel' : isGrocery ? 'Groceries' : 'General',
+    category: industryPresets[0] || (isPharmacy ? 'Medicines' : isClothing ? 'Apparel' : isGrocery ? 'Groceries' : 'General'),
     unit: isPharmacy ? 'strip' : isClothing ? 'pcs' : isGrocery ? 'packet' : 'pcs',
     purchasePrice: 100,
     sellingPrice: 199,
@@ -170,8 +180,6 @@ export const ProductsPage: React.FC = () => {
     warehouse: '',
     rackLocation: '',
   });
-
-  const categories = ['All', 'Apparel', 'Pharmacy', 'Electronics', 'Footwear', 'Groceries', 'Home & Living', 'Stationery'];
 
   // Filtering
   const filteredProducts = products
@@ -216,11 +224,12 @@ export const ProductsPage: React.FC = () => {
 
   const handleOpenAdd = () => {
     setEditingProduct(null);
+    setIsCustomCategory(false);
     setFormData({
       name: '',
       sku: `SKU-${Math.floor(1000 + Math.random() * 9000)}`,
       barcode: `890${Math.floor(100000000 + Math.random() * 900000000)}`,
-      category: isPharmacy ? 'Medicines' : isClothing ? 'Apparel' : isGrocery ? 'Groceries' : 'General',
+      category: industryPresets[0] || (isPharmacy ? 'Medicines' : isClothing ? 'Apparel' : isGrocery ? 'Groceries' : 'General'),
       unit: isPharmacy ? 'strip' : isClothing ? 'pcs' : isGrocery ? 'packet' : 'pcs',
       purchasePrice: 200,
       sellingPrice: 399,
@@ -257,6 +266,8 @@ export const ProductsPage: React.FC = () => {
 
   const handleOpenEdit = (p: Product) => {
     setEditingProduct(p);
+    const isStandard = categories.filter((c) => c !== 'All').includes(p.category);
+    setIsCustomCategory(!isStandard && Boolean(p.category));
     setFormData({
       name: p.name,
       sku: p.sku,
@@ -1108,14 +1119,47 @@ export const ProductsPage: React.FC = () => {
                       Category
                     </label>
                     <select
-                      value={formData.category}
-                      onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs bg-white outline-none"
+                      value={isCustomCategory ? '__custom__' : formData.category}
+                      onChange={(e) => {
+                        if (e.target.value === '__custom__') {
+                          setIsCustomCategory(true);
+                          setFormData({ ...formData, category: '' });
+                        } else {
+                          setIsCustomCategory(false);
+                          setFormData({ ...formData, category: e.target.value });
+                        }
+                      }}
+                      className="w-full px-3 py-2 rounded-xl border border-[#EEE6DA] text-xs bg-white outline-none focus:border-[#381e12]"
                     >
                       {categories.filter((c) => c !== 'All').map((c) => (
                         <option key={c} value={c}>{c}</option>
                       ))}
+                      <option value="__custom__">+ Enter Custom Category...</option>
                     </select>
+                    {isCustomCategory && (
+                      <div className="flex items-center gap-1.5 mt-2">
+                        <input
+                          type="text"
+                          placeholder="Type custom category..."
+                          value={formData.category}
+                          onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                          className="flex-1 px-3 py-1.5 rounded-xl border border-[#381e12] text-xs bg-[#FAF6EF] outline-none"
+                          autoFocus
+                          required
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsCustomCategory(false);
+                            setFormData({ ...formData, category: industryPresets[0] || 'General' });
+                          }}
+                          className="px-2 py-1.5 text-xs text-[#9A948A] hover:text-[#1C1B18] rounded-lg hover:bg-[#FAF6EF]"
+                          title="Cancel custom category"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   <div>

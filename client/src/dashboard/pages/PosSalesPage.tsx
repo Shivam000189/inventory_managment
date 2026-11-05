@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   Search,
   Plus,
@@ -27,7 +27,7 @@ import { Product, PaymentMethod, Bill, BillItem } from '../types';
 import { formatINR } from '../lib/formatters';
 import { batchApi, ProductBatch } from '../../api/batchApi';
 import { prescriptionApi } from '../../api/prescriptionApi';
-import { isPharmacyBusiness } from '../../shared/industryConfig';
+import { isPharmacyBusiness, getIndustryCategoryPresets } from '../../shared/industryConfig';
 import { Stethoscope, Pill, AlertTriangle } from 'lucide-react';
 
 interface CartItem {
@@ -101,16 +101,13 @@ export const PosSalesPage: React.FC = () => {
   const [billSearch, setBillSearch] = useState('');
   const [billPaymentFilter, setBillPaymentFilter] = useState('All');
 
-  const categories = [
-    'All',
-    'Apparel',
-    'Pharmacy',
-    'Electronics',
-    'Footwear',
-    'Groceries',
-    'Home & Living',
-    'Stationery',
-  ];
+  const industryPresets = useMemo(() => getIndustryCategoryPresets(businessProfile), [businessProfile]);
+
+  const categories = useMemo(() => {
+    const existing = products.map((p) => p.category).filter(Boolean);
+    const set = new Set<string>(['All', ...industryPresets, ...existing]);
+    return Array.from(set);
+  }, [industryPresets, products]);
 
   // Autofocus POS search on mount
   useEffect(() => {

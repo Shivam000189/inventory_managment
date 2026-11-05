@@ -180,6 +180,104 @@ export function isPharmacyBusiness(business?: { industry?: string; businessType?
   return false;
 }
 
+export const INDUSTRY_CATEGORIES: Record<string, string[]> = {
+  pharmacy: [
+    'Analgesics & NSAIDs',
+    'Antibiotics & Antivirals',
+    'Cardiovascular Drugs',
+    'Antidepressants & Antianxiety Drugs',
+    'Antidiabetics',
+    'Respiratory Drugs',
+    'Gastrointestinal Drugs',
+    'Dermatologicals & Topicals',
+    'Vitamins & Nutritional Supplements',
+    'First Aid & Medical Supplies',
+  ],
+  clothing: [
+    'Upperwear',
+    'Lowerwear',
+    'Footwear',
+    'Outerwear',
+    'Ethnic & Traditional Wear',
+    'Innerwear & Loungewear',
+    'Accessories',
+  ],
+  electronics: [
+    'Smartphones & Mobile Accessories',
+    'Computers, Laptops & Peripherals',
+    'Audio, Headphones & Speakers',
+    'TV & Home Entertainment',
+    'Cameras & Photography',
+    'Smart Home & Wearables',
+    'Cables & Adapters',
+    'Components & Storage',
+  ],
+  grocery: [
+    'Staples, Flours & Grains',
+    'Edible Oils, Ghee & Spices',
+    'Dairy, Eggs & Bakery',
+    'Snacks & Packaged Foods',
+    'Beverages & Drinks',
+    'Fresh Fruits & Vegetables',
+    'Personal Care & Hygiene',
+    'Household Cleaning & Laundry',
+  ],
+  hardware: [
+    'Hand Tools & Instruments',
+    'Power Tools & Accessories',
+    'Fasteners, Screws & Bolts',
+    'Plumbing, Pipes & Fittings',
+    'Electricals & Wiring',
+    'Paints & Adhesives',
+    'Sanitaryware & Fittings',
+    'Safety Equipment & PPE',
+  ],
+  automobile: [
+    'Engine & Transmission Parts',
+    'Brake Systems & Pads',
+    'Suspension & Steering',
+    'Electricals, Lights & Batteries',
+    'Filters & Spark Plugs',
+    'Oils, Coolants & Lubricants',
+    'Tires, Tubes & Wheels',
+    'Body Parts & Accessories',
+  ],
+  restaurant: [
+    'Appetizers',
+    'Main Course',
+    'Beverages & Drinks',
+    'Desserts',
+    'Sides & Extras',
+    'Raw Ingredients',
+  ],
+  manufacturing: [
+    'Raw Materials',
+    'Finished Goods',
+    'Components & Assemblies',
+    'Packaging Materials',
+    'Consumables & Tools',
+  ],
+  wholesale: [
+    'Bulk Commodities',
+    'Packaged Goods',
+    'FMCG Bulk Packs',
+    'Commercial Supplies',
+  ],
+  other: [
+    'General',
+    'Office & Stationery Supplies',
+    'Packaging & Shipping',
+    'Miscellaneous',
+  ],
+};
+
+export function getIndustryCategoryPresets(business?: { industry?: string; businessType?: string; name?: string } | null): string[] {
+  if (!business) return INDUSTRY_CATEGORIES.other;
+  if (isPharmacyBusiness(business)) return INDUSTRY_CATEGORIES.pharmacy;
+  const industryKey = normalizeConfigValue(business.industry || business.businessType || business.name);
+  return INDUSTRY_CATEGORIES[industryKey] || INDUSTRY_CATEGORIES.other;
+}
+
 const unique = <T>(items: T[]): T[] => [...new Set(items)]
 
 function getIndustryConfig(industry: string): IndustrySetting {
