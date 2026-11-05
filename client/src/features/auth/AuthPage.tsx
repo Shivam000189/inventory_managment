@@ -90,7 +90,6 @@ export default function AuthPage({ onAuthenticated, onBackToHome }: AuthPageProp
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [activeDemoId, setActiveDemoId] = useState<string | null>(null)
-  const [mode, setMode] = useState<'signup' | 'signin'>('signup')
 
   const submit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -107,11 +106,7 @@ export default function AuthPage({ onAuthenticated, onBackToHome }: AuthPageProp
       setPassword('')
       onAuthenticated({ user: session.user, business: session.business })
     } catch (caught) {
-      if (mode === 'signup') {
-        setError('Accounts are provisioned by your Business Administrator. You can use any 1-click industry demo below.')
-      } else {
-        setError(caught instanceof Error ? caught.message : 'Unable to sign in. Please verify your credentials.')
-      }
+      setError(caught instanceof Error ? caught.message : 'Unable to sign in. Please verify your credentials.')
     } finally {
       setSubmitting(false)
     }
@@ -178,12 +173,10 @@ export default function AuthPage({ onAuthenticated, onBackToHome }: AuthPageProp
 
           {/* Heading */}
           <div className="auth-hero-heading">
-            <h1 className="auth-title">{mode === 'signup' ? 'Sign up' : 'Sign in'}</h1>
+            <h1 className="auth-title">Sign in</h1>
             <p className="auth-description">
               Welcome to logistics supply chain platform.<br />
-              {mode === 'signup'
-                ? 'Register as a member to experience.'
-                : 'Sign in to access your inventory and sales.'}
+              Sign in to access your inventory and sales.
             </p>
           </div>
 
@@ -268,10 +261,10 @@ export default function AuthPage({ onAuthenticated, onBackToHome }: AuthPageProp
               {submitting && !activeDemoId ? (
                 <span className="auth-btn-spinner-wrap">
                   <Loader2 className="auth-spin" size={18} />
-                  <span>{mode === 'signup' ? 'Creating account…' : 'Signing in…'}</span>
+                  <span>Signing in…</span>
                 </span>
               ) : (
-                <span>{mode === 'signup' ? 'Create Account' : 'Sign In'}</span>
+                <span>Sign In</span>
               )}
             </button>
           </form>
@@ -308,39 +301,6 @@ export default function AuthPage({ onAuthenticated, onBackToHome }: AuthPageProp
                 )
               })}
             </div>
-          </div>
-
-          {/* Footer Subtext */}
-          <div className="auth-card-footer">
-            {mode === 'signup' ? (
-              <span>
-                Already a member?{' '}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMode('signin')
-                    setError('')
-                  }}
-                  className="auth-mode-switch-btn"
-                >
-                  Sign in
-                </button>
-              </span>
-            ) : (
-              <span>
-                Don't have an account?{' '}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMode('signup')
-                    setError('')
-                  }}
-                  className="auth-mode-switch-btn"
-                >
-                  Sign up
-                </button>
-              </span>
-            )}
           </div>
         </div>
       </div>
