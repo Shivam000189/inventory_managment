@@ -143,7 +143,7 @@ export const ReportsPage: React.FC = () => {
             type="button"
             onClick={() => setActiveTab(tab.id as any)}
             className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${activeTab === tab.id
-              ? 'bg-[#1C1B18] !text-white'
+              ? 'bg-[#381e12] !text-white'
               : 'text-[#6B665E] hover:text-[#1C1B18] hover:bg-[#FAF6EF]'
               }`}
             style={{ color: activeTab === tab.id ? '#ffffff' : undefined }}

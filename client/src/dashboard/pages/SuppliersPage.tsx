@@ -120,7 +120,7 @@ export const SuppliersPage: React.FC = () => {
         <button
           type="button"
           onClick={handleOpenAdd}
-          className="inline-flex items-center gap-1 sm:gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl bg-[#7FAE82] hover:bg-[#6C9C70] text-white text-[11px] sm:text-xs font-semibold transition-all cursor-pointer shadow-2xs whitespace-nowrap active:scale-95 self-start"
+          className="inline-flex items-center gap-1 sm:gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl bg-[#381e12] hover:bg-[#26140c] text-white text-[11px] sm:text-xs font-semibold transition-all cursor-pointer shadow-2xs whitespace-nowrap active:scale-95 self-start"
         >
           <Plus size={16} />
           <span>Add supplier</span>
@@ -402,7 +402,7 @@ export const SuppliersPage: React.FC = () => {
                 <button
                   type="submit"
                   form="supplier-form"
-                  className="px-5 py-2 rounded-xl bg-[#7FAE82] hover:bg-[#6C9C70] text-white text-xs font-semibold cursor-pointer"
+                  className="px-5 py-2 rounded-xl bg-[#381e12] hover:bg-[#26140c] text-white text-xs font-semibold cursor-pointer"
                 >
                   {editingSupplier ? 'Update Supplier' : 'Save Supplier'}
                 </button>
@@ -544,7 +544,7 @@ export const SuppliersPage: React.FC = () => {
                     setViewingSupplier(null);
                     navigate('/purchase-orders');
                   }}
-                  className="px-4 py-2 rounded-xl bg-[#7FAE82] text-white text-xs font-semibold hover:bg-[#6C9C70]"
+                  className="px-4 py-2 rounded-xl bg-[#381e12] text-white text-xs font-semibold hover:bg-[#26140c]"
                 >
                   Create Purchase Order
                 </button>

@@ -300,7 +300,7 @@ export const PurchaseOrdersPage: React.FC = () => {
               setPoError('');
               setIsCreateOpen(true);
             }}
-            className="inline-flex items-center justify-center gap-1 sm:gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-[#7FAE82] hover:bg-[#6C9C70] !text-white text-[11px] sm:text-xs font-semibold transition-all cursor-pointer shadow-2xs whitespace-nowrap active:scale-95"
+            className="inline-flex items-center justify-center gap-1 sm:gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-[#381e12] hover:bg-[#26140c] !text-white text-[11px] sm:text-xs font-semibold transition-all cursor-pointer shadow-2xs whitespace-nowrap active:scale-95"
             style={{ color: '#ffffff' }}
           >
             <Plus size={16} />
@@ -716,7 +716,7 @@ export const PurchaseOrdersPage: React.FC = () => {
                 type="button"
                 onClick={handleCreateSubmit}
                 disabled={isSubmittingPO}
-                className="px-5 py-2 rounded-xl bg-[#7FAE82] hover:bg-[#6C9C70] !text-white text-xs font-semibold shadow-xs cursor-pointer disabled:opacity-50"
+                className="px-5 py-2 rounded-xl bg-[#381e12] hover:bg-[#26140c] !text-white text-xs font-semibold shadow-xs cursor-pointer disabled:opacity-50"
                 style={{ color: '#ffffff' }}
               >
                 {isSubmittingPO ? 'Sending PO...' : 'Send Purchase Order'}
@@ -786,7 +786,7 @@ export const PurchaseOrdersPage: React.FC = () => {
               <button
                 type="button"
                 onClick={handleReceiveConfirm}
-                className="px-4 py-1.5 bg-[#7FAE82] text-white text-xs font-semibold rounded-xl hover:bg-[#6C9C70] cursor-pointer"
+                className="px-4 py-1.5 bg-[#381e12] text-white text-xs font-semibold rounded-xl hover:bg-[#26140c] cursor-pointer"
               >
                 Confirm Goods Inward
               </button>
@@ -1067,7 +1067,7 @@ export const PurchaseOrdersPage: React.FC = () => {
                 <button
                   type="submit"
                   disabled={isSubmittingVendor}
-                  className="px-4 py-2 rounded-xl bg-[#7FAE82] hover:bg-[#6C9C70] !text-white text-xs font-semibold shadow-xs cursor-pointer disabled:opacity-50"
+                  className="px-4 py-2 rounded-xl bg-[#381e12] hover:bg-[#26140c] !text-white text-xs font-semibold shadow-xs cursor-pointer disabled:opacity-50"
                   style={{ color: '#ffffff' }}
                 >
                   {isSubmittingVendor ? 'Saving Vendor...' : 'Save & Select Vendor'}

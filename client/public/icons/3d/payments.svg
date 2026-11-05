@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="96" height="96" fill="none">
+  <defs>
+    <filter id="pay-shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="7" stdDeviation="5.5" flood-color="#1E3A8A" flood-opacity="0.28"/>
+    </filter>
+    <filter id="gold-glow" x="-25%" y="-25%" width="150%" height="150%">
+      <feDropShadow dx="0" dy="3.5" stdDeviation="3" flood-color="#D97706" flood-opacity="0.45"/>
+    </filter>
+
+    <!-- Wallet Gradients -->
+    <linearGradient id="wallet-back" x1="18" y1="36" x2="68" y2="78" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#3B82F6"/>
+      <stop offset="60%" stop-color="#1D4ED8"/>
+      <stop offset="100%" stop-color="#1E3A8A"/>
+    </linearGradient>
+    <linearGradient id="wallet-front" x1="18" y1="46" x2="68" y2="82" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#60A5FA"/>
+      <stop offset="50%" stop-color="#2563EB"/>
+      <stop offset="100%" stop-color="#1D4ED8"/>
+    </linearGradient>
+    <linearGradient id="wallet-clasp" x1="56" y1="52" x2="74" y2="72" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#3B82F6"/>
+      <stop offset="100%" stop-color="#1E40AF"/>
+    </linearGradient>
+
+    <!-- Cash / Bill Gradients -->
+    <linearGradient id="cash-bill" x1="28" y1="18" x2="52" y2="46" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#6EE7B7"/>
+      <stop offset="50%" stop-color="#10B981"/>
+      <stop offset="100%" stop-color="#047857"/>
+    </linearGradient>
+    <linearGradient id="credit-card" x1="38" y1="24" x2="76" y2="52" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#C084FC"/>
+      <stop offset="100%" stop-color="#7E22CE"/>
+    </linearGradient>
+
+    <!-- Gold Coin Gradients -->
+    <linearGradient id="coin-gold" x1="56" y1="48" x2="84" y2="84" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FEF08A"/>
+      <stop offset="40%" stop-color="#FACC15"/>
+      <stop offset="100%" stop-color="#CA8A04"/>
+    </linearGradient>
+    <linearGradient id="coin-face" x1="60" y1="54" x2="80" y2="78" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFFBEB"/>
+      <stop offset="40%" stop-color="#FDE047"/>
+      <stop offset="100%" stop-color="#EAB308"/>
+    </linearGradient>
+
+    <!-- Money Bag Gradients -->
+    <linearGradient id="money-sack" x1="54" y1="18" x2="84" y2="54" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FDE68A"/>
+      <stop offset="40%" stop-color="#F59E0B"/>
+      <stop offset="100%" stop-color="#B45309"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Ambient Floor Shadow -->
+  <ellipse cx="50" cy="86" rx="36" ry="6" fill="#0F172A" opacity="0.18"/>
+
+  <!-- Money Sack in Background -->
+  <g filter="url(#pay-shadow)">
+    <!-- Sack Top Fluff -->
+    <path d="M68 18 C64 16 62 19 65 23 C67 25 73 24 73 21 C73 18 70 17 68 18 Z" fill="#F59E0B"/>
+    <path d="M72 20 C76 17 78 21 76 24 C74 25 70 24 70 21 Z" fill="#D97706"/>
+    <!-- Sack Tie Cord -->
+    <path d="M64 24 Q69 26 75 23" stroke="#B45309" stroke-width="2.5" stroke-linecap="round"/>
+    <!-- Sack Main Body -->
+    <path d="M60 25 C50 29 48 40 50 49 C52 57 60 63 70 63 C80 63 87 56 87 47 C87 38 80 27 70 25 Z" fill="url(#money-sack)"/>
+    <!-- Sack Currency Symbol -->
+    <text x="68" y="47" font-family="Arial, sans-serif" font-weight="900" font-size="14" fill="#78350F" text-anchor="middle" opacity="0.75">$</text>
+  </g>
+
+  <!-- Emerging Cash & Card -->
+  <g>
+    <!-- Green Cash Banknote -->
+    <rect x="25" y="24" width="28" height="28" rx="3" transform="rotate(-14 25 24)" fill="url(#cash-bill)"/>
+    <circle cx="37" cy="38" r="4.5" fill="#A7F3D0" opacity="0.6"/>
+    <!-- Credit Card -->
+    <rect x="36" y="26" width="30" height="22" rx="3" transform="rotate(8 36 26)" fill="url(#credit-card)"/>
+    <rect x="38" y="32" width="28" height="4" fill="#581C87" transform="rotate(8 38 32)"/>
+    <rect x="54" y="40" width="8" height="5" rx="1" fill="#FDE047" transform="rotate(8 54 40)"/>
+  </g>
+
+  <!-- 3D Plump Wallet (Foreground) -->
+  <g filter="url(#pay-shadow)">
+    <!-- Back leather fold -->
+    <path d="M16 42 C16 38 19 35 24 35 H64 C68 35 72 38 72 42 V70 C72 75 68 78 63 78 H24 C19 78 16 75 16 70 Z" fill="url(#wallet-back)"/>
+    <!-- Front pocket curve -->
+    <path d="M16 50 C16 46 19 44 24 44 H64 C68 44 72 46 72 50 V72 C72 77 67 81 62 81 H24 C18 81 16 77 16 72 Z" fill="url(#wallet-front)"/>
+    <!-- Wallet edge stitching -->
+    <path d="M19 52 C19 48 21 47 24 47 H62 C65 47 67 48 67 52 V71 C67 74 65 77 61 77 H25 C21 77 19 74 19 71 Z" stroke="#93C5FD" stroke-width="0.8" stroke-dasharray="2 2" fill="none" opacity="0.7"/>
+
+    <!-- Clasp Strap with Gold Button -->
+    <path d="M54 55 H73 C76 55 78 57 78 61 C78 65 76 67 73 67 H54 Z" fill="url(#wallet-clasp)"/>
+    <circle cx="72" cy="61" r="3.5" fill="#FACC15"/>
+    <circle cx="71.5" cy="60.5" r="1.5" fill="#FEF08A"/>
+  </g>
+
+  <!-- 3D Gold Coins Spilling in Front -->
+  <g filter="url(#gold-glow)">
+    <!-- Coin 1 (Tilted base) -->
+    <ellipse cx="64" cy="78" rx="10" ry="6" fill="url(#coin-gold)"/>
+    <ellipse cx="64" cy="76" rx="9" ry="5.2" fill="url(#coin-face)"/>
+    <text x="64" y="79" font-family="Arial, sans-serif" font-weight="900" font-size="7" fill="#B45309" text-anchor="middle">$</text>
+
+    <!-- Coin 2 (Upright front) -->
+    <circle cx="76" cy="73" r="8.5" fill="url(#coin-gold)"/>
+    <circle cx="76" cy="73" r="6.8" fill="url(#coin-face)"/>
+    <text x="76" y="76.5" font-family="Arial, sans-serif" font-weight="900" font-size="9" fill="#B45309" text-anchor="middle">$</text>
+    <circle cx="73.5" cy="70" r="1.8" fill="#FFFFFF" opacity="0.8"/>
+  </g>
+</svg>

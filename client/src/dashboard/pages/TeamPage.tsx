@@ -87,7 +87,7 @@ export const TeamPage: React.FC = () => {
         <button
           type="button"
           onClick={() => setIsAddDrawerOpen(true)}
-          className="inline-flex items-center gap-1 sm:gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl bg-[#7FAE82] hover:bg-[#6C9C70] text-white text-[11px] sm:text-xs font-semibold transition-all cursor-pointer shadow-2xs whitespace-nowrap active:scale-95 self-start"
+          className="inline-flex items-center gap-1 sm:gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl bg-[#381e12] hover:bg-[#26140c] text-white text-[11px] sm:text-xs font-semibold transition-all cursor-pointer shadow-2xs whitespace-nowrap active:scale-95 self-start"
         >
           <Plus size={16} />
           <span>Add Member</span>
@@ -277,7 +277,7 @@ export const TeamPage: React.FC = () => {
                   type="submit"
                   form="team-form"
                   disabled={creating}
-                  className="px-5 py-2 rounded-xl bg-[#7FAE82] hover:bg-[#6C9C70] text-white text-xs font-semibold"
+                  className="px-5 py-2 rounded-xl bg-[#381e12] hover:bg-[#26140c] text-white text-xs font-semibold"
                 >
                   {creating ? 'Creating…' : 'Create Salesperson'}
                 </button>
@@ -330,7 +330,7 @@ export const TeamPage: React.FC = () => {
                   setCopied(false);
                   setCopyError('');
                 }}
-                className="rounded-xl bg-[#7FAE82] px-4 py-2 text-xs font-semibold text-white"
+                className="rounded-xl bg-[#381e12] hover:bg-[#26140c] px-4 py-2 text-xs font-semibold text-white"
               >
                 Done and dismiss
               </button>

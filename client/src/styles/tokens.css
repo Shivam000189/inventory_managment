@@ -30,13 +30,13 @@
   --line: #e9ddd0;
   --line-strong: #ddc9b3;
 
-  --orange: #5b371f;
-  --orange-hover: #3d2414;
+  --orange: #381e12;
+  --orange-hover: #26140c;
   --orange-soft: #f2ece3;
 
-  --auth-brand: #5b371f;
-  --auth-brand-light: #8b5a34;
-  --auth-brand-deep: #3d2414;
+  --auth-brand: #381e12;
+  --auth-brand-light: #522d1c;
+  --auth-brand-deep: #26140c;
 
   --success: #10b981;
   --success-soft: #dcfce7;
@@ -169,7 +169,7 @@
 
   --auth-brand: #caa06c;
   --auth-brand-light: #dab27e;
-  --auth-brand-deep: #8b5a34;
+  --auth-brand-deep: #522d1c;
 
   --success: #34d399;
   --success-soft: rgba(16, 185, 129, 0.16);

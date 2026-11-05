@@ -351,7 +351,7 @@ export const InventoryPage: React.FC = () => {
             <button
               type="button"
               onClick={() => navigate('/purchase-orders')}
-              className="px-4 py-2 rounded-xl bg-[#7FAE82] text-white text-xs font-semibold hover:bg-[#6C9C70] transition-colors"
+              className="px-4 py-2 rounded-xl bg-[#381e12] text-white text-xs font-semibold hover:bg-[#26140c] transition-colors"
             >
               + Create Master Purchase Order
             </button>

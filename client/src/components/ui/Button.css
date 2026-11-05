@@ -46,14 +46,14 @@
 /* Variant: Primary */
 .ui-btn-primary {
   color: #ffffff;
-  background: linear-gradient(180deg, var(--auth-brand-light) 0%, var(--orange) 50%, var(--orange-hover) 100%);
+  background: #381e12;
   border-color: var(--orange);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), var(--shadow-glow);
   font-weight: 700;
 }
 
 .ui-btn-primary:hover:not(:disabled) {
-  background: linear-gradient(180deg, var(--auth-brand-light) 0%, var(--orange-hover) 60%, var(--orange-hover) 100%);
+  background: #26140c;
   transform: translateY(-1px);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 14px 28px -8px rgba(91, 55, 31, 0.45), var(--shadow-glow);
 }

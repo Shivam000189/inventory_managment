@@ -291,11 +291,11 @@ export const PosSalesPage: React.FC = () => {
             onClick={() => setPosActiveTab('new_bill')}
             className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               posActiveTab === 'new_bill'
-                ? 'bg-[#1C1B18] !text-white shadow-xs'
+                ? 'bg-[#381e12] !text-white shadow-xs'
                 : 'bg-white border border-[#EEE6DA] text-[#6B665E] hover:text-[#1C1B18]'
             }`}
             style={{
-              backgroundColor: posActiveTab === 'new_bill' ? '#1C1B18' : '#ffffff',
+              backgroundColor: posActiveTab === 'new_bill' ? '#381e12' : '#ffffff',
               color: posActiveTab === 'new_bill' ? '#ffffff' : '#6B665E',
               WebkitTextFillColor: posActiveTab === 'new_bill' ? '#ffffff' : '#6B665E',
             }}
@@ -315,11 +315,11 @@ export const PosSalesPage: React.FC = () => {
             onClick={() => setPosActiveTab('bills')}
             className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               posActiveTab === 'bills'
-                ? 'bg-[#1C1B18] !text-white shadow-xs'
+                ? 'bg-[#381e12] !text-white shadow-xs'
                 : 'bg-white border border-[#EEE6DA] text-[#6B665E] hover:text-[#1C1B18]'
             }`}
             style={{
-              backgroundColor: posActiveTab === 'bills' ? '#1C1B18' : '#ffffff',
+              backgroundColor: posActiveTab === 'bills' ? '#381e12' : '#ffffff',
               color: posActiveTab === 'bills' ? '#ffffff' : '#6B665E',
               WebkitTextFillColor: posActiveTab === 'bills' ? '#ffffff' : '#6B665E',
             }}
@@ -361,7 +361,7 @@ export const PosSalesPage: React.FC = () => {
                 onChange={(e) => setProductSearch(e.target.value)}
                 onKeyDown={handleSearchKeyDown}
                 placeholder="Scan barcode or type product name, SKU (e.g. TS001, PM002)..."
-                className="w-full pl-10 pr-4 py-2.5 rounded-2xl border border-[#EEE6DA] bg-white text-xs focus:border-[#7FAE82] outline-none shadow-2xs text-[#1C1B18]"
+                className="w-full pl-10 pr-4 py-2.5 rounded-2xl border border-[#EEE6DA] bg-white text-xs focus:border-[#381e12] outline-none shadow-2xs text-[#1C1B18]"
               />
               {productSearch && (
                 <button
@@ -383,7 +383,7 @@ export const PosSalesPage: React.FC = () => {
                   onClick={() => setSelectedCategory(cat)}
                   className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer shrink-0 ${
                     selectedCategory === cat
-                      ? 'bg-[#1C1B18] !text-white'
+                      ? 'bg-[#381e12] !text-white'
                       : 'bg-white border border-[#EEE6DA] text-[#6B665E] hover:bg-[#FAF6EF]'
                   }`}
                   style={{ color: selectedCategory === cat ? '#ffffff' : '#6B665E' }}
@@ -407,12 +407,12 @@ export const PosSalesPage: React.FC = () => {
                     className={`bg-white rounded-2xl p-3 border transition-all flex flex-col justify-between text-left relative ${
                       isOutOfStock
                         ? 'opacity-40 cursor-not-allowed border-[#EEE6DA] bg-[#FAF6EF]/50'
-                        : 'border-[#EEE6DA] hover:border-[#7FAE82] hover:shadow-xs cursor-pointer active:scale-98'
+                        : 'border-[#EEE6DA] hover:border-[#381e12] hover:shadow-xs cursor-pointer active:scale-98'
                     }`}
                   >
                     {/* Cart counter badge if already in cart */}
                     {cartQty > 0 && (
-                      <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-[#7FAE82] text-white font-bold text-[10px] flex items-center justify-center shadow-xs">
+                      <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-[#381e12] text-white font-bold text-[10px] flex items-center justify-center shadow-xs">
                         {cartQty}
                       </span>
                     )}
@@ -445,7 +445,7 @@ export const PosSalesPage: React.FC = () => {
                       <span className="font-bold text-[13px] text-[#1C1B18] tabular-nums">
                         {formatINR(p.sellingPrice)}
                       </span>
-                      <span className="text-[10px] text-[#7FAE82] font-semibold">
+                      <span className="text-[10px] text-[#381e12] font-semibold">
                         + Add
                       </span>
                     </div>
@@ -488,7 +488,7 @@ export const PosSalesPage: React.FC = () => {
                     value={custName}
                     onChange={(e) => setCustName(e.target.value)}
                     placeholder="Customer Name (optional / Walk-in)"
-                    className="w-full pl-8 pr-3 py-1.5 rounded-xl border border-[#EEE6DA] text-xs bg-white text-[#1C1B18] placeholder:text-[#9A948A] outline-none focus:border-[#7FAE82] transition-colors"
+                    className="w-full pl-8 pr-3 py-1.5 rounded-xl border border-[#EEE6DA] text-xs bg-white text-[#1C1B18] placeholder:text-[#9A948A] outline-none focus:border-[#381e12] transition-colors"
                   />
                 </div>
                 <div className="relative">
@@ -498,7 +498,7 @@ export const PosSalesPage: React.FC = () => {
                     value={custPhone}
                     onChange={(e) => setCustPhone(e.target.value)}
                     placeholder="Mobile / Phone Number"
-                    className="w-full pl-8 pr-3 py-1.5 rounded-xl border border-[#EEE6DA] text-xs bg-white text-[#1C1B18] placeholder:text-[#9A948A] outline-none focus:border-[#7FAE82] transition-colors"
+                    className="w-full pl-8 pr-3 py-1.5 rounded-xl border border-[#EEE6DA] text-xs bg-white text-[#1C1B18] placeholder:text-[#9A948A] outline-none focus:border-[#381e12] transition-colors"
                   />
                 </div>
 
@@ -513,7 +513,7 @@ export const PosSalesPage: React.FC = () => {
                         setCustName(suggestedCustomer.name);
                         setCustPhone(suggestedCustomer.phone !== '—' ? suggestedCustomer.phone : '');
                       }}
-                      className="ml-2 text-[#7FAE82] font-semibold hover:underline cursor-pointer shrink-0"
+                      className="ml-2 text-[#381e12] font-semibold hover:underline cursor-pointer shrink-0"
                     >
                       Fill
                     </button>
@@ -670,7 +670,7 @@ export const PosSalesPage: React.FC = () => {
               className={`w-full py-3 rounded-2xl font-bold text-sm transition-all duration-150 cursor-pointer shadow-md ${
                 cart.length === 0
                   ? 'bg-[#DDD3C4] text-[#9A948A] cursor-not-allowed shadow-none'
-                  : 'bg-[#7FAE82] hover:bg-[#6C9C70] text-white active:scale-99'
+                  : 'bg-[#381e12] hover:bg-[#26140c] text-white active:scale-99'
               }`}
             >
               Create bill {cartTotal > 0 ? formatINR(cartTotal) : ''}
@@ -689,7 +689,7 @@ export const PosSalesPage: React.FC = () => {
                 value={billSearch}
                 onChange={(e) => setBillSearch(e.target.value)}
                 placeholder="Search bills by number or customer..."
-                className="w-full pl-9 pr-3 py-1.5 rounded-xl border border-[#EEE6DA] text-xs outline-none focus:border-[#7FAE82]"
+                className="w-full pl-9 pr-3 py-1.5 rounded-xl border border-[#EEE6DA] text-xs outline-none focus:border-[#381e12]"
               />
             </div>
 
@@ -878,7 +878,7 @@ export const PosSalesPage: React.FC = () => {
             <button
               type="button"
               onClick={() => setReceiptBill(null)}
-              className="w-full py-2.5 bg-[#7FAE82] text-white rounded-xl text-xs font-bold hover:bg-[#6C9C70] cursor-pointer shadow-xs"
+              className="w-full py-2.5 bg-[#381e12] text-white rounded-xl text-xs font-bold hover:bg-[#26140c] cursor-pointer shadow-xs"
             >
               Start Next Bill
             </button>
@@ -980,7 +980,7 @@ export const PosSalesPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => window.print()}
-                  className="px-4 py-1.5 bg-[#1C1B18] !text-white text-xs font-semibold rounded-xl hover:bg-black cursor-pointer ml-auto"
+                  className="px-4 py-1.5 bg-[#381e12] !text-white text-xs font-semibold rounded-xl hover:bg-[#26140c] cursor-pointer ml-auto"
                   style={{ color: '#ffffff' }}
                 >
                   Print Invoice

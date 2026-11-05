@@ -23,7 +23,7 @@ export const InventoryTrendChart: React.FC<{ className?: string }> = ({ classNam
   const monthCount = timeRange === 'Last 6 months' ? 6 : timeRange === 'Last 10 months' ? 10 : 12;
 
   // Build the time buckets across year boundaries
-  const { data, hasRealHistoricalData } = useMemo(() => {
+  const { data } = useMemo(() => {
     const buckets: { month: string; year: number; monthIndex: number; key: string }[] = [];
     for (let i = monthCount - 1; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
@@ -91,20 +91,18 @@ export const InventoryTrendChart: React.FC<{ className?: string }> = ({ classNam
           isEstimated: false,
         });
       } else {
-        // When no previous month transaction history is stored, generate an explicitly labeled estimate
-        const factor = Math.max(0.35, 1 - (buckets.length - 1 - i) * 0.08);
-        const estVal = Math.round(Math.max(1000, currentStockVal * factor));
+        // When no previous month transaction history exists in database, show clean 0 baseline
         points.unshift({
           month: b.month,
           year: b.year,
-          value: estVal,
+          value: 0,
           isCurrentMonth: false,
-          isEstimated: true,
+          isEstimated: false,
         });
       }
     }
 
-    return { data: points, hasRealHistoricalData: realHistoryAvailable };
+    return { data: points };
   }, [now, monthCount, metrics.totalStockValue, products, stockMovements]);
 
   // Keep selected month synchronized when range changes
@@ -126,14 +124,6 @@ export const InventoryTrendChart: React.FC<{ className?: string }> = ({ classNam
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <h3 className="text-[15px] font-semibold text-[#1C1B18]">Inventory Trend</h3>
-          {!hasRealHistoricalData && (
-            <span
-              className="text-[10px] font-medium text-[#8A847A] bg-[#FAF6EF] px-2 py-0.5 rounded-full border border-[#EEE6DA]"
-              title="Historical values are estimated from current inventory. Record inventory transactions to see live historical metrics."
-            >
-              Estimated
-            </span>
-          )}
         </div>
         <div className="relative">
           <button

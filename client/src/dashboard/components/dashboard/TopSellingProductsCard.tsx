@@ -144,7 +144,7 @@ export const TopSellingProductsCard: React.FC<{ className?: string }> = ({ class
             <button
               type="button"
               onClick={() => navigate('/products')}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#2E8B57] text-white text-xs font-semibold hover:bg-[#257247] transition-colors cursor-pointer shadow-2xs"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#381e12] text-white text-xs font-semibold hover:bg-[#26140c] transition-colors cursor-pointer shadow-2xs"
             >
               <PackagePlus size={14} />
               <span>Add First Product</span>

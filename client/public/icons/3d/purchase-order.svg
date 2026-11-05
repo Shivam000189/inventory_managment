@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="96" height="96" fill="none">
+  <defs>
+    <filter id="board-shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="7" stdDeviation="6" flood-color="#1E293B" flood-opacity="0.25"/>
+    </filter>
+    <filter id="pen-shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="2" dy="4" stdDeviation="3" flood-color="#000000" flood-opacity="0.3"/>
+    </filter>
+
+    <!-- Board Gradient -->
+    <linearGradient id="board-body" x1="16" y1="14" x2="76" y2="82" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#38BDF8"/>
+      <stop offset="50%" stop-color="#0284C7"/>
+      <stop offset="100%" stop-color="#0369A1"/>
+    </linearGradient>
+
+    <!-- Paper Sheet Gradient -->
+    <linearGradient id="paper-sheet" x1="24" y1="20" x2="68" y2="78" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="80%" stop-color="#F8FAFC"/>
+      <stop offset="100%" stop-color="#E2E8F0"/>
+    </linearGradient>
+
+    <!-- Metallic Clip Gradients -->
+    <linearGradient id="clip-metal" x1="34" y1="8" x2="58" y2="24" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#F1F5F9"/>
+      <stop offset="45%" stop-color="#CBD5E1"/>
+      <stop offset="100%" stop-color="#64748B"/>
+    </linearGradient>
+
+    <!-- 3D Pen Gradients -->
+    <linearGradient id="pen-body" x1="68" y1="36" x2="88" y2="76" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#F87171"/>
+      <stop offset="50%" stop-color="#DC2626"/>
+      <stop offset="100%" stop-color="#991B1B"/>
+    </linearGradient>
+  </defs>
+
+  <g filter="url(#board-shadow)">
+    <!-- Clipboard Wooden/Plastic Backing -->
+    <rect x="18" y="14" width="56" height="72" rx="10" fill="url(#board-body)" stroke="#0284C7" stroke-width="1.5"/>
+    <!-- Backing Bevel -->
+    <rect x="19" y="15" width="54" height="70" rx="9" stroke="#BAE6FD" stroke-width="1" opacity="0.5"/>
+
+    <!-- Paper Sheet -->
+    <rect x="23" y="22" width="46" height="60" rx="6" fill="url(#paper-sheet)"/>
+    <!-- Paper Shadow under clip -->
+    <path d="M23 22 L69 22 L69 26 L23 26 Z" fill="#94A3B8" opacity="0.3"/>
+
+    <!-- Checklist Rows & Checkmarks -->
+    <!-- Row 1 -->
+    <rect x="29" y="32" width="6" height="6" rx="2" fill="#22C55E"/>
+    <path d="M30.5 35 L32 36.5 L34 33.5" stroke="#FFFFFF" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="39" y="33.5" width="24" height="3" rx="1.5" fill="#94A3B8"/>
+
+    <!-- Row 2 -->
+    <rect x="29" y="44" width="6" height="6" rx="2" fill="#22C55E"/>
+    <path d="M30.5 47 L32 48.5 L34 45.5" stroke="#FFFFFF" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="39" y="45.5" width="18" height="3" rx="1.5" fill="#94A3B8"/>
+
+    <!-- Row 3 -->
+    <rect x="29" y="56" width="6" height="6" rx="2" fill="#E2E8F0" stroke="#CBD5E1"/>
+    <rect x="39" y="57.5" width="22" height="3" rx="1.5" fill="#CBD5E1"/>
+
+    <!-- Row 4 -->
+    <rect x="29" y="68" width="6" height="6" rx="2" fill="#E2E8F0" stroke="#CBD5E1"/>
+    <rect x="39" y="69.5" width="14" height="3" rx="1.5" fill="#CBD5E1"/>
+
+    <!-- Top Metal Clip Mechanism -->
+    <rect x="32" y="10" width="28" height="12" rx="4" fill="url(#clip-metal)" stroke="#475569" stroke-width="1.2"/>
+    <ellipse cx="46" cy="13" rx="5" ry="3" fill="#334155"/>
+    <path d="M34 11 L58 11" stroke="#FFFFFF" stroke-width="1" opacity="0.8"/>
+
+    <!-- 3D Slanted Writing Pen -->
+    <g filter="url(#pen-shadow)" transform="rotate(-30 74 60)">
+      <!-- Pen Barrel -->
+      <rect x="70" y="32" width="7" height="32" rx="3" fill="url(#pen-body)" stroke="#7F1D1D" stroke-width="1"/>
+      <rect x="71" y="33" width="2" height="30" rx="1" fill="#FFFFFF" opacity="0.5"/>
+      <!-- Pen Tip Metal -->
+      <path d="M70 64 L73.5 73 L77 64 Z" fill="#E2E8F0" stroke="#64748B" stroke-width="0.8"/>
+      <!-- Pen Nib -->
+      <circle cx="73.5" cy="73" r="1.2" fill="#0F172A"/>
+      <!-- Pen Top Button -->
+      <rect x="71" y="29" width="5" height="3.5" rx="1.5" fill="#FACC15"/>
+    </g>
+  </g>
+</svg>
+

@@ -429,7 +429,7 @@ export const SettingsPage: React.FC = () => {
             <div className="pt-4 border-t border-[#EEE6DA] flex justify-end">
               <button
                 type="submit"
-                className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-[#7FAE82] hover:bg-[#6C9C70] text-white text-xs font-semibold transition-colors cursor-pointer shadow-xs"
+                className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-[#381e12] hover:bg-[#26140c] text-white text-xs font-semibold transition-colors cursor-pointer shadow-xs"
               >
                 <Save size={15} />
                 <span>Save Settings</span>

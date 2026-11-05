@@ -31,55 +31,47 @@ import {
   notificationsApi,
   clearAuthSession,
 } from '../lib/api';
-import {
-  initialProducts,
-  initialSuppliers,
-  initialPurchaseOrders,
-  initialBills,
-  initialCustomers,
-  initialRecentTransactions,
-} from '../lib/mockData';
 
 const UUID_PATTERN = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 
 const defaultBusinessProfile: BusinessProfile = {
-  id: '00000000-6ade-f06e-2068-a3fe86739d2c',
-  name: 'aflix',
-  legalName: 'aflix pharma',
-  gstin: 'SKA',
+  id: '',
+  name: '',
+  legalName: '',
+  gstin: '',
   pan: '',
-  phone: '9999999999',
-  email: 'shivam12@gmail.com',
-  address: 'amita nagar 64, Agra, Uttar Pradesh, India',
-  city: 'Agra',
-  state: 'Uttar Pradesh',
-  pincode: '282001',
+  phone: '',
+  email: '',
+  address: '',
+  city: '',
+  state: '',
+  pincode: '',
   currency: 'INR',
   currencySymbol: '₹',
   financialYearStart: 'April',
-  invoicePrefix: 'AFLX-',
+  invoicePrefix: 'INV-',
   startingInvoiceNumber: 1001,
-  defaultPaymentTerms: 'Net 30',
-  defaultTaxRate: 12,
+  defaultPaymentTerms: 'Due on receipt',
+  defaultTaxRate: 18,
   allowNegativeStock: false,
-  enableBatchTracking: true,
+  enableBatchTracking: false,
   enableSerialTracking: false,
-  lowStockThreshold: 12,
-  businessType: 'Wholesale',
-  industry: 'pharmacy',
+  lowStockThreshold: 10,
+  businessType: 'Retail',
+  industry: 'general',
   taxEnabled: true,
-  defaultGstRate: 12,
-  upiId: 'aflixpharma@icici',
+  defaultGstRate: 18,
+  upiId: '',
 };
 
 const defaultUser: User = {
-  id: '00000000-6ade-f033-2068-a3fe86739d2b',
-  name: 'shivam12',
-  email: 'shivam12@gmail.com',
+  id: '',
+  name: '',
+  email: '',
   role: 'admin',
-  avatarInitials: 'SS',
+  avatarInitials: '',
   status: 'active',
-  lastLogin: 'Just now',
+  lastLogin: '',
 };
 
 // --- Mappers between Backend API payloads and Frontend models ---
@@ -130,31 +122,36 @@ function mapBackendProduct(p: any): Product {
 function mapBusinessProfileFromBackend(b: any, prev: BusinessProfile): BusinessProfile {
   if (!b) return prev;
   const settings = b.settings || {};
+  const currency = b.currency || prev.currency || 'INR';
   return {
     ...prev,
-    id: b.businessId || b.id || prev.id,
-    name: b.name || prev.name,
-    legalName: b.legalName || b.name || prev.legalName,
-    currency: b.currency || prev.currency || 'INR',
-    currencySymbol: b.currency === 'USD' ? '$' : '₹',
-    businessType: b.businessType || prev.businessType,
+    id: b.businessId || b.id || prev.id || '',
+    name: b.name ?? prev.name ?? '',
+    legalName: b.legalName || b.name || prev.legalName || '',
+    currency,
+    currencySymbol: currency === 'USD' ? '$' : '₹',
+    businessType: b.businessType || prev.businessType || 'Retail',
     industry: b.industry || prev.industry || '',
-    address: b.address || (b.city ? `${b.city}, India` : prev.address),
-    city: b.city || prev.city,
-    state: b.state || prev.state,
-    phone: b.phone || prev.phone,
-    email: b.email || prev.email,
-    taxNumber: b.gstin || b.taxNumber || settings.taxNumber || prev.taxNumber,
-    gstin: b.gstin || settings.gstin || prev.gstin,
-    upiId: b.upiId || settings.upiId || prev.upiId,
-    drugLicenseNumber: b.drugLicenseNumber || settings.drugLicenseNumber || prev.drugLicenseNumber,
-    drugLicense20B: b.drugLicense20B || settings.drugLicense20B || prev.drugLicense20B,
-    drugLicense21B: b.drugLicense21B || settings.drugLicense21B || prev.drugLicense21B,
-    pharmacistInCharge: b.pharmacistInCharge || settings.pharmacistInCharge || prev.pharmacistInCharge,
+    address: b.address || prev.address || '',
+    city: b.city || prev.city || '',
+    state: b.state || prev.state || '',
+    pincode: b.pincode || prev.pincode || '',
+    phone: b.phone || prev.phone || '',
+    email: b.email || prev.email || '',
+    taxNumber: b.gstin || b.taxNumber || settings.taxNumber || prev.taxNumber || '',
+    gstin: b.gstin || settings.gstin || prev.gstin || '',
+    pan: b.pan || settings.pan || prev.pan || '',
+    upiId: b.upiId || settings.upiId || prev.upiId || '',
+    invoicePrefix: b.invoicePrefix || settings.invoicePrefix || prev.invoicePrefix || 'INV-',
+    startingInvoiceNumber: Number(b.startingInvoiceNumber || settings.startingInvoiceNumber || prev.startingInvoiceNumber || 1001),
+    drugLicenseNumber: b.drugLicenseNumber || settings.drugLicenseNumber || prev.drugLicenseNumber || '',
+    drugLicense20B: b.drugLicense20B || settings.drugLicense20B || prev.drugLicense20B || '',
+    drugLicense21B: b.drugLicense21B || settings.drugLicense21B || prev.drugLicense21B || '',
+    pharmacistInCharge: b.pharmacistInCharge || settings.pharmacistInCharge || prev.pharmacistInCharge || '',
     taxEnabled: settings.taxEnabled !== undefined ? settings.taxEnabled : prev.taxEnabled,
-    defaultGstRate: settings.defaultGstRate !== undefined ? settings.defaultGstRate : prev.defaultGstRate,
+    defaultGstRate: settings.defaultGstRate !== undefined ? Number(settings.defaultGstRate) : prev.defaultGstRate,
     allowNegativeStock: settings.allowNegativeStock !== undefined ? settings.allowNegativeStock : prev.allowNegativeStock,
-    lowStockThreshold: settings.lowStockLimit !== undefined ? settings.lowStockLimit : prev.lowStockThreshold,
+    lowStockThreshold: settings.lowStockLimit !== undefined ? Number(settings.lowStockLimit) : prev.lowStockThreshold,
   };
 }
 
@@ -208,7 +205,7 @@ function mapBackendSupplier(s: any): Supplier {
     address: s.address || (s.city ? `${s.city}${s.state ? `, ${s.state}` : ''}` : ''),
     paymentTerms: (s.paymentTerms as any) || s.payment_terms || 'Net 30',
     outstandingBalance: Number(s.outstandingBalance || s.outstanding_balance || 0),
-    lastOrderDate: s.lastOrderDate || 'Recently',
+    lastOrderDate: s.lastOrderDate || '-',
     status: s.status === 'inactive' ? 'inactive' : 'active',
     notes: s.notes || '',
   };
@@ -229,46 +226,73 @@ function mapSupplierToBackend(s: Partial<Supplier>) {
 }
 
 function mapBackendCustomer(c: any): Customer {
+  const totalSpent = Number(
+    c.totalPurchases ??
+    c.total_purchases ??
+    c.totalSpent ??
+    c.total_spent ??
+    0
+  );
+  const outstanding = Number(
+    c.outstandingBalance ??
+    c.outstanding_balance ??
+    c.outstanding ??
+    0
+  );
+  const creditLimit = Number(
+    c.creditLimit ??
+    c.credit_limit ??
+    0
+  );
+
   return {
     id: String(c.customerId || c.id || c._id || `cust-${Date.now()}`),
     name: c.name || '',
     phone: c.phone || '',
     email: c.email || '',
-    type: (c.type as any) || 'Retail',
+    type: (c.customerType || c.customer_type || c.type || 'Retail') as any,
     gstin: c.gstin || c.gstNumber || '',
-    address: c.address || (c.city ? `${c.city}, ${c.country || 'India'}` : ''),
-    totalSpent: Number(c.totalSpent || c.total_spent || 0),
-    lastPurchase: c.lastPurchase || 'Recently',
-    outstanding: Number(c.outstanding || c.outstandingBalance || 0),
-    creditLimit: Number(c.creditLimit || 50000),
+    address: c.address || (c.city ? `${c.city}${c.state ? `, ${c.state}` : ''}` : ''),
+    totalSpent,
+    lastPurchase: c.lastPurchase || (totalSpent > 0 ? 'Recently' : 'Never'),
+    outstanding,
+    creditLimit,
   };
 }
 
 function mapBackendPurchaseOrder(po: any): PurchaseOrder {
+  const rawDate = po.orderDate || po.createdAt || po.created_at;
+  const parsedDate = rawDate ? new Date(rawDate) : null;
+  const orderDate = parsedDate && !isNaN(parsedDate.getTime())
+    ? parsedDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+    : (po.orderDate || '-');
+
+  const expectedDate = po.expectedDeliveryDate || po.expected_delivery_date || po.expectedDate || po.expectedDelivery || '-';
+
   return {
     id: String(po.purchaseOrderId || po.id || po._id || `po-${Date.now()}`),
-    poNumber: po.poNumber || `PO-${String(po.purchaseOrderId || po.id || '').slice(-6)}`,
-    supplierId: po.supplierId || '',
-    supplierName: po.supplierName || 'Supplier',
-    orderDate: po.orderDate || (po.createdAt ? new Date(po.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '26 Oct 2026'),
-    expectedDate: po.expectedDate || po.expectedDelivery || '28 Oct 2026',
+    poNumber: po.orderNumber || po.order_number || po.poNumber || `PO-${String(po.purchaseOrderId || po.id || '').slice(-6)}`,
+    supplierId: po.supplierId || po.supplier_id || '',
+    supplierName: po.supplierName || po.supplier_name || 'Supplier',
+    orderDate,
+    expectedDate,
     status: (po.status as POStatus) || 'Ordered',
     items: (po.items || []).map((item: any) => ({
-      productId: item.productId,
-      productName: item.productName || item.name || 'Item',
+      productId: item.productId || item.product_id,
+      productName: item.productName || item.product_name || item.name || 'Item',
       sku: item.sku || '',
-      orderedQty: Number(item.orderedQty || item.quantity || 0),
-      receivedQty: Number(item.receivedQty || 0),
-      unitCost: Number(item.unitCost || item.purchasePrice || 0),
-      taxRate: Number(item.taxRate || 18),
-      lineTotal: Number(item.lineTotal || item.total || 0),
+      orderedQty: Number(item.orderedQty ?? item.quantity ?? 0),
+      receivedQty: Number(item.receivedQty ?? 0),
+      unitCost: Number(item.unitCost ?? item.purchasePrice ?? item.purchase_price ?? 0),
+      taxRate: Number(item.taxRate ?? item.gstRate ?? item.gst_rate ?? 0),
+      lineTotal: Number(item.lineTotal ?? item.total ?? 0),
     })),
     subtotal: Number(po.subtotal || 0),
     discount: Number(po.discount || 0),
-    tax: Number(po.tax || po.taxTotal || 0),
-    shipping: Number(po.shipping || 0),
-    total: Number(po.total || po.grandTotal || 0),
-    paymentStatus: (po.paymentStatus as any) || 'Unpaid',
+    tax: Number(po.tax || po.taxTotal || po.tax_total || 0),
+    shipping: Number(po.shippingCharges ?? po.shipping_charges ?? po.shipping ?? 0),
+    total: Number(po.totalAmount ?? po.total_amount ?? po.total ?? po.grandTotal ?? 0),
+    paymentStatus: (po.paymentStatus || po.payment_status || 'Unpaid') as any,
     notes: po.notes || '',
   };
 }
@@ -323,7 +347,7 @@ function mapBackendSalesOrder(so: any): Bill {
       `INV-${String(so.salesOrderId || so.id || '').slice(-6)}`,
     date: dateStr,
     createdAt: isValidDate ? parsed.toISOString() : (typeof rawDate === 'string' ? rawDate : undefined),
-    customerId: so.customerId || so.customer_id || 'cust-01',
+    customerId: so.customerId || so.customer_id || '',
     customerName: so.customerName || so.customer_name || so.customerSnapshot?.name || 'Walk-in Customer',
     customerPhone: so.customerPhone || so.customer_phone || so.customerSnapshot?.phone,
     items: (so.items || []).map((item: any) => ({
@@ -333,7 +357,7 @@ function mapBackendSalesOrder(so: any): Bill {
       quantity: Number(item.quantity || 1),
       unitPrice: Number(item.unitPrice || item.sellingPrice || item.price || item.selling_price || 0),
       discountAmount: Number(item.discountAmount || item.discount || 0),
-      taxRate: Number(item.taxRate || item.gstRate || item.tax_rate || 18),
+      taxRate: Number(item.taxRate || item.gstRate || item.tax_rate || 0),
       total: Number(item.total || 0),
     })),
     subtotal,
@@ -342,8 +366,8 @@ function mapBackendSalesOrder(so: any): Bill {
     total,
     paymentMethod,
     status,
-    createdBy: so.createdBy || so.created_by || 'Shivam Sharma',
-    salespersonId: so.salespersonId || so.cashierId || so.cashier_id || 'user-01',
+    createdBy: so.createdBy || so.created_by || 'Staff',
+    salespersonId: so.salespersonId || so.cashierId || so.cashier_id || '',
     cashTendered: so.cashTendered || so.cash_tendered,
     changeDue: so.changeDue || so.change_due,
     notes: so.notes || '',
@@ -424,9 +448,9 @@ function mapBackendMovement(m: any, productsList: Product[] = []): StockMovement
     productName,
     sku,
     qtyDelta: resolvedType === 'Stock Out' || resolvedType === 'Sale' ? -Math.abs(qty) : Math.abs(qty),
-    balanceAfter: Number(m.balanceAfter || m.balance || 0),
-    reference: m.reference || m.reason || 'Movement',
-    user: m.user || m.createdBy || 'Admin',
+    balanceAfter: Number(m.newStock ?? m.new_stock ?? m.balanceAfter ?? m.balance ?? 0),
+    reference: m.referenceId || m.reference_id || m.reference || m.reason || 'Movement',
+    user: m.user || m.createdBy || m.created_by || 'User',
     amount: Number(m.amount || 0),
   };
 }
@@ -634,17 +658,19 @@ export const AppProvider: React.FC<AppProviderProps> = ({
           session = await authApi.me();
           if (session?.user) {
             setIsBackendConnected(true);
+            const u = session.user;
+            const initials = (u.name || u.email || 'US')
+              .split(' ')
+              .map((n: string) => n[0])
+              .join('')
+              .slice(0, 2)
+              .toUpperCase();
             setCurrentUser({
-              id: session.user.id || session.user.accountId || 'user-01',
-              name: session.user.name || 'User',
-              email: session.user.email || '',
-              role: session.user.role === 'owner' || session.user.role === 'admin' ? 'admin' : 'salesperson',
-              avatarInitials: (session.user.name || 'US')
-                .split(' ')
-                .map((n: string) => n[0])
-                .join('')
-                .slice(0, 2)
-                .toUpperCase(),
+              id: u.id || u.accountId || '',
+              name: u.name || u.email || 'User',
+              email: u.email || '',
+              role: u.role === 'owner' || u.role === 'admin' ? 'admin' : 'salesperson',
+              avatarInitials: initials,
               status: 'active',
               lastLogin: 'Just now',
             });
@@ -670,12 +696,20 @@ export const AppProvider: React.FC<AppProviderProps> = ({
         return [];
       };
 
-      // 2. Stage 1: Load critical overview datasets first for fast initial paint
-      const [prodsRes, bizRes, notifsRes] = await Promise.allSettled([
+      // 2. Fetch all live Supabase database collections in parallel for fast rendering
+      const results = await Promise.allSettled([
         productsApi.list(),
         initialBusiness ? Promise.resolve(initialBusiness) : businessApi.get(),
         notificationsApi.list(),
+        purchaseOrdersApi.list(),
+        salesOrdersApi.list(),
+        suppliersApi.list(),
+        customersApi.list(),
+        inventoryApi.history(),
+        usersApi.listMembers(),
       ]);
+
+      const [prodsRes, bizRes, notifsRes, posRes, sosRes, supsRes, custsRes, historyRes, usersRes] = results;
 
       if (bizRes.status === 'fulfilled' && bizRes.value) {
         setBusinessProfile((prev) => mapBusinessProfileFromBackend(bizRes.value, prev));
@@ -684,14 +718,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({
       let loadedProducts: Product[] = [];
       if (prodsRes.status === 'fulfilled') {
         const prods = extractArray(prodsRes.value);
-        if (prods.length > 0) {
-          loadedProducts = prods.map(mapBackendProduct);
-          setProducts(loadedProducts);
-          setIsBackendConnected(true);
-        } else if (session?.user || initialUser) {
-          setProducts([]);
-          setIsBackendConnected(true);
-        }
+        loadedProducts = prods.map(mapBackendProduct);
+        setProducts(loadedProducts);
+        setIsBackendConnected(true);
+      } else {
+        setProducts([]);
       }
 
       if (notifsRes.status === 'fulfilled') {
@@ -700,88 +731,92 @@ export const AppProvider: React.FC<AppProviderProps> = ({
           UUID_PATTERN.test(String(item.id || item.notificationId || item._id || '')),
         );
         setNotifications(validNotifications.map(mapBackendNotification));
+      } else {
+        setNotifications([]);
       }
 
-      // Immediately unblock the UI so the user sees the dashboard right away!
-      setIsLoadingBackend(false);
-      setLoadingStates((prev) => ({ ...prev, products: false, inventory: false }));
+      if (posRes.status === 'fulfilled') {
+        const pos = extractArray(posRes.value);
+        setPurchaseOrders(pos.map(mapBackendPurchaseOrder));
+      } else {
+        setPurchaseOrders([]);
+      }
 
-      // 3. Stage 2: Fetch remaining tab collections asynchronously in background
-      Promise.allSettled([
-        purchaseOrdersApi.list(),
-        salesOrdersApi.list(),
-        suppliersApi.list(),
-        customersApi.list(),
-        inventoryApi.history(),
-        usersApi.listMembers(),
-      ]).then(([posRes, sosRes, supsRes, custsRes, historyRes, usersRes]) => {
-        if (posRes.status === 'fulfilled') {
-          const pos = extractArray(posRes.value);
-          setPurchaseOrders(pos.map(mapBackendPurchaseOrder));
+      if (sosRes.status === 'fulfilled') {
+        const sos = extractArray(sosRes.value);
+        setBills(sos.map(mapBackendSalesOrder));
+      } else {
+        setBills([]);
+      }
+
+      if (supsRes.status === 'fulfilled') {
+        const sups = extractArray(supsRes.value);
+        setSuppliers(sups.map(mapBackendSupplier));
+      } else {
+        setSuppliers([]);
+      }
+
+      if (custsRes.status === 'fulfilled') {
+        const custs = extractArray(custsRes.value);
+        setCustomers(custs.map(mapBackendCustomer));
+      } else {
+        setCustomers([]);
+      }
+
+      if (historyRes.status === 'fulfilled') {
+        const txs = extractArray(historyRes.value);
+        setStockMovements(txs.map((tx: any) => mapBackendMovement(tx, loadedProducts)));
+      } else {
+        setStockMovements([]);
+      }
+
+      if (usersRes.status === 'fulfilled') {
+        const uList = extractArray(usersRes.value);
+        if (uList.length > 0) {
+          const mappedUsers: User[] = uList.map((m: any) => {
+            const initials = (m.name || m.email || 'US')
+              .split(' ')
+              .map((n: string) => n[0])
+              .join('')
+              .slice(0, 2)
+              .toUpperCase();
+            return {
+              id: String(m.id || m.memberId || m._id || m.userId || m.accountId || `user-${Date.now()}`),
+              memberId: String(m.memberId || m.id || m._id || ''),
+              accountId: String(m.accountId || m.userId || m.account_id || ''),
+              name: m.name || m.email,
+              email: m.email,
+              role: (m.roleId === 'ROLE-ADMIN' || m.role === 'admin' || m.role === 'owner') ? 'admin' : 'salesperson',
+              avatarInitials: initials,
+              status: m.status === 'inactive' || m.status === 'suspended' ? 'suspended' : 'active',
+              lastLogin: m.lastLogin || (m.createdAt ? new Date(m.createdAt).toLocaleDateString('en-IN') : '-'),
+            };
+          });
+          setUsers(mappedUsers);
         }
+      }
 
-        if (sosRes.status === 'fulfilled') {
-          const sos = extractArray(sosRes.value);
-          setBills(sos.map(mapBackendSalesOrder));
-        }
-
-        if (supsRes.status === 'fulfilled') {
-          const sups = extractArray(supsRes.value);
-          setSuppliers(sups.map(mapBackendSupplier));
-        }
-
-        if (custsRes.status === 'fulfilled') {
-          const custs = extractArray(custsRes.value);
-          setCustomers(custs.map(mapBackendCustomer));
-        }
-
-        if (historyRes.status === 'fulfilled') {
-          const txs = extractArray(historyRes.value);
-          if (txs.length > 0) {
-            setStockMovements(txs.map((tx: any) => mapBackendMovement(tx, loadedProducts)));
-          }
-        }
-
-        if (usersRes.status === 'fulfilled') {
-          const uList = extractArray(usersRes.value);
-          if (uList.length > 0) {
-            const mappedUsers: User[] = uList.map((m: any) => {
-              const initials = (m.name || m.email || 'US')
-                .split(' ')
-                .map((n: string) => n[0])
-                .join('')
-                .slice(0, 2)
-                .toUpperCase();
-              return {
-                id: String(m.id || m.memberId || m._id || m.userId || m.accountId || `user-${Date.now()}`),
-                memberId: String(m.memberId || m.id || m._id || ''),
-                accountId: String(m.accountId || m.userId || m.account_id || ''),
-                name: m.name || m.email,
-                email: m.email,
-                role: (m.roleId === 'ROLE-ADMIN' || m.role === 'admin' || m.role === 'owner') ? 'admin' : 'salesperson',
-                avatarInitials: initials,
-                status: m.status === 'inactive' || m.status === 'suspended' ? 'suspended' : 'active',
-                lastLogin: m.lastLogin || (m.createdAt ? new Date(m.createdAt).toLocaleDateString('en-IN') : 'Recently'),
-              };
-            });
-            setUsers(mappedUsers);
-          }
-        }
-
-        setLoadingStates({
-          products: false,
-          suppliers: false,
-          customers: false,
-          purchaseOrders: false,
-          salesOrders: false,
-          inventory: false,
-        });
+      setLoadingStates({
+        products: false,
+        suppliers: false,
+        customers: false,
+        purchaseOrders: false,
+        salesOrders: false,
+        inventory: false,
       });
 
     } catch (err) {
       console.warn('Backend live sync notice:', err);
     } finally {
       setIsLoadingBackend(false);
+      setLoadingStates({
+        products: false,
+        suppliers: false,
+        customers: false,
+        purchaseOrders: false,
+        salesOrders: false,
+        inventory: false,
+      });
     }
   };
 
@@ -811,16 +846,15 @@ export const AppProvider: React.FC<AppProviderProps> = ({
   }, []);
 
   const switchRole = (role: UserRole) => {
-    const targetUser = users.find((u) => u.role === role) || {
-      id: role === 'admin' ? 'user-01' : 'user-02',
-      name: role === 'admin' ? 'Shivam Sharma' : 'Rohan Mehra',
-      email: role === 'admin' ? 'shivam12@gmail.com' : 'rohan.pos@Inventory.app',
-      role,
-      avatarInitials: role === 'admin' ? 'SS' : 'RM',
-      status: 'active' as const,
-      lastLogin: 'Just now',
-    };
-    setCurrentUser(targetUser);
+    const targetUser = users.find((u) => u.role === role);
+    if (targetUser) {
+      setCurrentUser(targetUser);
+    } else {
+      setCurrentUser((prev) => ({
+        ...prev,
+        role,
+      }));
+    }
 
     if (role === 'salesperson') {
       setActiveRoute('/pos');

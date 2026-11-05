@@ -364,7 +364,7 @@ export const ProductsPage: React.FC = () => {
           <button
             type="button"
             onClick={handleOpenAdd}
-            className="inline-flex items-center justify-center gap-1 sm:gap-1.5 px-2 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-[#7FAE82] hover:bg-[#6C9C70] text-white text-[11px] sm:text-xs font-semibold transition-all cursor-pointer shadow-2xs whitespace-nowrap active:scale-95"
+            className="inline-flex items-center justify-center gap-1 sm:gap-1.5 px-2 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-[#381e12] hover:bg-[#26140c] text-white text-[11px] sm:text-xs font-semibold transition-all cursor-pointer shadow-2xs whitespace-nowrap active:scale-95"
           >
             <Plus size={16} />
             <span>Add {itemNoun}</span>
@@ -820,7 +820,7 @@ export const ProductsPage: React.FC = () => {
                           onClick={() => setCurrentPage(pageNum)}
                           className={`w-7 h-7 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                             currentPage === pageNum
-                              ? 'bg-[#7FAE82] text-white shadow-2xs'
+                              ? 'bg-[#381e12] text-white shadow-2xs'
                               : 'text-[#6B665E] hover:bg-[#FAF6EF] hover:text-[#1C1B18]'
                           }`}
                         >
@@ -985,7 +985,7 @@ export const ProductsPage: React.FC = () => {
                           onClick={() => setCurrentPage(pageNum)}
                           className={`w-7 h-7 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                             currentPage === pageNum
-                              ? 'bg-[#7FAE82] text-white shadow-2xs'
+                              ? 'bg-[#381e12] text-white shadow-2xs'
                               : 'text-[#6B665E] hover:bg-[#FAF6EF] hover:text-[#1C1B18]'
                           }`}
                         >
@@ -1595,7 +1595,7 @@ export const ProductsPage: React.FC = () => {
                 <button
                   type="submit"
                   form="product-form"
-                  className="px-5 py-2 rounded-xl bg-[#7FAE82] hover:bg-[#6C9C70] text-white text-xs font-semibold transition-colors cursor-pointer shadow-xs"
+                  className="px-5 py-2 rounded-xl bg-[#381e12] hover:bg-[#26140c] text-white text-xs font-semibold transition-colors cursor-pointer shadow-xs"
                 >
                   {editingProduct ? 'Save Changes' : 'Create Product'}
                 </button>
@@ -1676,7 +1676,7 @@ export const ProductsPage: React.FC = () => {
                   adjustStock(adjustingProduct.id, adjustStockValue, adjustReason);
                   setAdjustingProduct(null);
                 }}
-                className="px-4 py-1.5 rounded-xl bg-[#7FAE82] text-white text-xs font-semibold hover:bg-[#6C9C70] cursor-pointer"
+                className="px-4 py-1.5 rounded-xl bg-[#381e12] text-white text-xs font-semibold hover:bg-[#26140c] cursor-pointer"
               >
                 Apply Adjustment
               </button>
@@ -1833,7 +1833,7 @@ export const ProductsPage: React.FC = () => {
                   setAdjustingProduct(p);
                   setAdjustStockValue(p.stock);
                 }}
-                className="px-4 py-2 rounded-xl bg-[#7FAE82] text-white text-xs font-semibold hover:bg-[#6C9C70]"
+                className="px-4 py-2 rounded-xl bg-[#381e12] text-white text-xs font-semibold hover:bg-[#26140c]"
               >
                 Adjust Stock
               </button>

@@ -155,6 +155,19 @@ export default function SalesReturnsPage({ business = {}, account = {} }) {
     })
   }, [returns, filters])
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters]);
+
+  const totalPages = Math.ceil(filteredReturns.length / pageSize) || 1;
+  const paginatedReturns = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredReturns.slice(start, start + pageSize);
+  }, [filteredReturns, currentPage, pageSize]);
+
   const selectOrder = (value) => {
     setOrderId(value)
     setProductId('')

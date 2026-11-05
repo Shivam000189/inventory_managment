@@ -406,7 +406,7 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClos
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-5 py-2 rounded-xl text-xs font-bold bg-[#1C1B18] !text-white hover:bg-black transition-colors cursor-pointer shadow-xs"
+                  className="px-5 py-2 rounded-xl text-xs font-bold bg-[#381e12] !text-white hover:bg-[#26140c] transition-colors cursor-pointer shadow-xs"
                   style={{ color: '#ffffff' }}
                 >
                   View Products
@@ -650,7 +650,7 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClos
               type="button"
               disabled={isImporting}
               onClick={handleConfirmImport}
-              className="px-5 py-2.5 rounded-xl text-xs font-bold bg-[#7FAE82] hover:bg-[#6C9C70] !text-white transition-all cursor-pointer shadow-md inline-flex items-center gap-1.5 disabled:opacity-50"
+              className="px-5 py-2.5 rounded-xl text-xs font-bold bg-[#381e12] hover:bg-[#26140c] !text-white transition-all cursor-pointer shadow-md inline-flex items-center gap-1.5 disabled:opacity-50"
               style={{ color: '#ffffff' }}
             >
               {isImporting ? (

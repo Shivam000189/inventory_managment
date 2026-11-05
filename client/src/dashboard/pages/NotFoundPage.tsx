@@ -25,7 +25,7 @@ export const NotFoundPage: React.FC = () => {
           onClick={() =>
             navigate(currentUser.role === 'admin' ? '/overview' : '/pos')
           }
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#7FAE82] hover:bg-[#6C9C70] text-white text-xs font-semibold shadow-xs cursor-pointer"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#381e12] hover:bg-[#26140c] text-white text-xs font-semibold shadow-xs cursor-pointer"
         >
           <ArrowLeft size={15} />
           <span>Back to {currentUser.role === 'admin' ? 'Overview' : 'POS'}</span>
