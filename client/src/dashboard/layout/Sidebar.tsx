@@ -393,11 +393,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
             path: '/roles',
             matchPaths: ['/roles', '/roles'],
           },
-          {
-            label: 'Permissions',
-            path: '/permissions',
-            matchPaths: ['/permissions', '/permissions'],
-          },
         ],
       },
       {
