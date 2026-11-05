@@ -766,3 +766,4 @@ export const SerialNumbersPage: React.FC = () => {
     </div>
   );
 };
+

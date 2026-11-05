@@ -579,7 +579,7 @@ function UserManagement({ section = 'Roles', business = {}, account = {} }) {
                 }`}
               >
                 <Plus size={15} />
-                <span>+ Create New Role</span>
+                <span> Create New Role</span>
               </button>
             </div>
           </div>

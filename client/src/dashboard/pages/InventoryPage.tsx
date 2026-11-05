@@ -103,33 +103,30 @@ export const InventoryPage: React.FC = () => {
           <button
             type="button"
             onClick={() => setActiveTab('levels')}
-            className={`pb-3 text-sm font-semibold transition-colors cursor-pointer border-b-2 -mb-px ${
-              activeTab === 'levels'
+            className={`pb-3 text-sm font-semibold transition-colors cursor-pointer border-b-2 -mb-px ${activeTab === 'levels'
                 ? 'border-[#7FAE82] text-[#1C1B18]'
                 : 'border-transparent text-[#6B665E] hover:text-[#1C1B18]'
-            }`}
+              }`}
           >
             Stock Levels ({products.length})
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('movements')}
-            className={`pb-3 text-sm font-semibold transition-colors cursor-pointer border-b-2 -mb-px ${
-              activeTab === 'movements'
+            className={`pb-3 text-sm font-semibold transition-colors cursor-pointer border-b-2 -mb-px ${activeTab === 'movements'
                 ? 'border-[#7FAE82] text-[#1C1B18]'
                 : 'border-transparent text-[#6B665E] hover:text-[#1C1B18]'
-            }`}
+              }`}
           >
             Movements Ledger ({stockMovements.length})
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('low_stock')}
-            className={`pb-3 text-sm font-semibold transition-colors cursor-pointer border-b-2 -mb-px ${
-              activeTab === 'low_stock'
+            className={`pb-3 text-sm font-semibold transition-colors cursor-pointer border-b-2 -mb-px ${activeTab === 'low_stock'
                 ? 'border-[#E8772E] text-[#E8772E]'
                 : 'border-transparent text-[#6B665E] hover:text-[#1C1B18]'
-            }`}
+              }`}
           >
             Low Stock Alerts ({lowStockItems.length + outOfStockItems.length})
           </button>
@@ -164,76 +161,75 @@ export const InventoryPage: React.FC = () => {
             rows={7}
           />
         ) : (
-        <div className="bg-white rounded-2xl border border-[#EEE6DA] overflow-hidden shadow-2xs">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs min-w-[760px]">
-              <thead className="sticky top-0 z-10 bg-[#FAF6EF] border-b border-[#EEE6DA] text-[#8C867A] text-[11px] font-semibold uppercase tracking-wider">
-                <tr>
-                  <th className="py-3 px-4 font-medium">Product</th>
-                  <th className="py-3 px-3 font-medium">Category</th>
-                  <th className="py-3 px-3 font-medium text-center">On Hand</th>
-                  <th className="py-3 px-3 font-medium text-center">Reorder Level</th>
-                  <th className="py-3 px-3 font-medium text-center">Stock Level</th>
-                  <th className="py-3 px-3 font-medium text-right">Stock Value</th>
-                  <th className="py-3 px-4 font-medium text-center">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#EEE6DA]/80">
-                {filteredProducts.map((p) => {
-                  const isOut = p.stock === 0;
-                  const isLow = p.stock > 0 && p.stock <= p.reorderLevel;
+          <div className="bg-white rounded-2xl border border-[#EEE6DA] overflow-hidden shadow-2xs">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs min-w-[760px]">
+                <thead className="sticky top-0 z-10 bg-[#FAF6EF] border-b border-[#EEE6DA] text-[#8C867A] text-[11px] font-semibold uppercase tracking-wider">
+                  <tr>
+                    <th className="py-3 px-4 font-medium">Product</th>
+                    <th className="py-3 px-3 font-medium">Category</th>
+                    <th className="py-3 px-3 font-medium text-center">On Hand</th>
+                    <th className="py-3 px-3 font-medium text-center">Reorder Level</th>
+                    <th className="py-3 px-3 font-medium text-center">Stock Level</th>
+                    <th className="py-3 px-3 font-medium text-right">Stock Value</th>
+                    <th className="py-3 px-4 font-medium text-center">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#EEE6DA]/80">
+                  {filteredProducts.map((p) => {
+                    const isOut = p.stock === 0;
+                    const isLow = p.stock > 0 && p.stock <= p.reorderLevel;
 
-                  return (
-                    <tr key={p.id} className="hover:bg-[#FAF6EF]/60 transition-colors">
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-3">
-                          <ProductIcon name={p.name} type={p.iconType} />
-                          <div>
-                            <div className="font-semibold text-[#1C1B18] text-[13px]">{p.name}</div>
-                            <div className="text-[11px] text-[#9A948A]">SKU: {p.sku}</div>
+                    return (
+                      <tr key={p.id} className="hover:bg-[#FAF6EF]/60 transition-colors">
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-3">
+                            <ProductIcon name={p.name} type={p.iconType} />
+                            <div>
+                              <div className="font-semibold text-[#1C1B18] text-[13px]">{p.name}</div>
+                              <div className="text-[11px] text-[#9A948A]">SKU: {p.sku}</div>
+                            </div>
                           </div>
-                        </div>
-                      </td>
-                      <td className="py-3 px-3 text-[#6B665E]">{p.category}</td>
-                      <td className="py-3 px-3 text-center font-bold text-sm text-[#1C1B18] tabular-nums">
-                        {p.stock} <span className="text-xs font-normal text-[#6B665E]">{p.unit}</span>
-                      </td>
-                      <td className="py-3 px-3 text-center text-[#6B665E] tabular-nums">
-                        {p.reorderLevel} {p.unit}
-                      </td>
-                      <td className="py-3 px-3 text-center">
-                        <div className="flex flex-col items-center justify-center">
-                          <span
-                            className={`font-bold text-sm tabular-nums ${
-                              isOut
-                                ? 'text-[#D64545]'
-                                : isLow
-                                  ? 'text-[#E8772E]'
-                                  : 'text-[#7FAE82]'
-                            }`}
-                          >
-                            {p.stock} <span className="text-xs font-normal opacity-80">{p.unit}</span>
-                          </span>
-                          <span className="text-[10.5px] text-[#9A948A] tabular-nums">
-                            Min {p.reorderLevel}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="py-3 px-3 text-right font-bold text-[#1C1B18] tabular-nums">
-                        {formatINR(p.stock * p.purchasePrice)}
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        <Badge variant={isOut ? 'danger' : isLow ? 'warning' : 'success'}>
-                          {isOut ? 'Out of stock' : isLow ? 'Low stock' : 'In stock'}
-                        </Badge>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                        </td>
+                        <td className="py-3 px-3 text-[#6B665E]">{p.category}</td>
+                        <td className="py-3 px-3 text-center font-bold text-sm text-[#1C1B18] tabular-nums">
+                          {p.stock} <span className="text-xs font-normal text-[#6B665E]">{p.unit}</span>
+                        </td>
+                        <td className="py-3 px-3 text-center text-[#6B665E] tabular-nums">
+                          {p.reorderLevel} {p.unit}
+                        </td>
+                        <td className="py-3 px-3 text-center">
+                          <div className="flex flex-col items-center justify-center">
+                            <span
+                              className={`font-bold text-sm tabular-nums ${isOut
+                                  ? 'text-[#D64545]'
+                                  : isLow
+                                    ? 'text-[#E8772E]'
+                                    : 'text-[#7FAE82]'
+                                }`}
+                            >
+                              {p.stock} <span className="text-xs font-normal opacity-80">{p.unit}</span>
+                            </span>
+                            <span className="text-[10.5px] text-[#9A948A] tabular-nums">
+                              Min {p.reorderLevel}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="py-3 px-3 text-right font-bold text-[#1C1B18] tabular-nums">
+                          {formatINR(p.stock * p.purchasePrice)}
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <Badge variant={isOut ? 'danger' : isLow ? 'warning' : 'success'}>
+                            {isOut ? 'Out of stock' : isLow ? 'Low stock' : 'In stock'}
+                          </Badge>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
         )
       )}
 
@@ -248,11 +244,10 @@ export const InventoryPage: React.FC = () => {
                   key={type}
                   type="button"
                   onClick={() => setMovementTypeFilter(type)}
-                  className={`px-3 py-1 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
-                    movementTypeFilter === type
+                  className={`px-3 py-1 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${movementTypeFilter === type
                       ? 'bg-[#FAF6EF] text-[#1C1B18] border border-[#DDD3C4]'
                       : 'text-[#6B665E] hover:text-[#1C1B18]'
-                  }`}
+                    }`}
                 >
                   {type}
                 </button>
@@ -274,64 +269,63 @@ export const InventoryPage: React.FC = () => {
               rows={6}
             />
           ) : (
-          <div className="bg-white rounded-2xl border border-[#EEE6DA] overflow-hidden shadow-2xs">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs min-w-[760px]">
-                <thead className="sticky top-0 z-10 bg-[#FAF6EF] border-b border-[#EEE6DA] text-[#8C867A] text-[11px] font-semibold uppercase tracking-wider">
-                  <tr>
-                    <th className="py-3 px-4 font-medium">Date & Time</th>
-                    <th className="py-3 px-3 font-medium">Type</th>
-                    <th className="py-3 px-3 font-medium">Product</th>
-                    <th className="py-3 px-3 font-medium text-right">Quantity Delta</th>
-                    <th className="py-3 px-3 font-medium text-right">Balance After</th>
-                    <th className="py-3 px-3 font-medium">Reference</th>
-                    <th className="py-3 px-4 font-medium text-right">Recorded By</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#EEE6DA]/80">
-                  {filteredMovements.map((m) => (
-                    <tr key={m.id} className="hover:bg-[#FAF6EF]/60 transition-colors">
-                      <td className="py-3 px-4 text-[#6B665E] whitespace-nowrap">{m.date}</td>
-                      <td className="py-3 px-3">
-                        <Badge
-                          variant={
-                            m.type === 'Sale'
-                              ? 'success'
-                              : m.type === 'Purchase'
-                              ? 'primary'
-                              : m.type === 'Stock In'
-                              ? 'success'
-                              : m.type === 'Return'
-                              ? 'info'
-                              : 'warning'
-                          }
-                        >
-                          {m.type}
-                        </Badge>
-                      </td>
-                      <td className="py-3 px-3 font-semibold text-[#1C1B18]">{m.productName}</td>
-                      <td
-                        className={`py-3 px-3 text-right font-bold tabular-nums text-sm ${
-                          m.qtyDelta > 0 ? 'text-[#2E8B57]' : 'text-[#D64545]'
-                        }`}
-                      >
-                        {m.qtyDelta > 0 ? `+${m.qtyDelta}` : m.qtyDelta}
-                      </td>
-                      <td className="py-3 px-3 text-right text-[#1C1B18] font-semibold tabular-nums">
-                        {m.balanceAfter}
-                      </td>
-                      <td className="py-3 px-3">
-                        <span className="font-mono bg-[#FAF6EF] px-2 py-0.5 rounded border border-[#EEE6DA] text-[11px] text-[#1C1B18]">
-                          {m.reference}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-right text-[#6B665E] font-medium">{m.user}</td>
+            <div className="bg-white rounded-2xl border border-[#EEE6DA] overflow-hidden shadow-2xs">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs min-w-[760px]">
+                  <thead className="sticky top-0 z-10 bg-[#FAF6EF] border-b border-[#EEE6DA] text-[#8C867A] text-[11px] font-semibold uppercase tracking-wider">
+                    <tr>
+                      <th className="py-3 px-4 font-medium">Date & Time</th>
+                      <th className="py-3 px-3 font-medium">Type</th>
+                      <th className="py-3 px-3 font-medium">Product</th>
+                      <th className="py-3 px-3 font-medium text-right">Quantity Delta</th>
+                      <th className="py-3 px-3 font-medium text-right">Balance After</th>
+                      <th className="py-3 px-3 font-medium">Reference</th>
+                      <th className="py-3 px-4 font-medium text-right">Recorded By</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-[#EEE6DA]/80">
+                    {filteredMovements.map((m) => (
+                      <tr key={m.id} className="hover:bg-[#FAF6EF]/60 transition-colors">
+                        <td className="py-3 px-4 text-[#6B665E] whitespace-nowrap">{m.date}</td>
+                        <td className="py-3 px-3">
+                          <Badge
+                            variant={
+                              m.type === 'Sale'
+                                ? 'success'
+                                : m.type === 'Purchase'
+                                  ? 'primary'
+                                  : m.type === 'Stock In'
+                                    ? 'success'
+                                    : m.type === 'Return'
+                                      ? 'info'
+                                      : 'warning'
+                            }
+                          >
+                            {m.type}
+                          </Badge>
+                        </td>
+                        <td className="py-3 px-3 font-semibold text-[#1C1B18]">{m.productName}</td>
+                        <td
+                          className={`py-3 px-3 text-right font-bold tabular-nums text-sm ${m.qtyDelta > 0 ? 'text-[#2E8B57]' : 'text-[#D64545]'
+                            }`}
+                        >
+                          {m.qtyDelta > 0 ? `+${m.qtyDelta}` : m.qtyDelta}
+                        </td>
+                        <td className="py-3 px-3 text-right text-[#1C1B18] font-semibold tabular-nums">
+                          {m.balanceAfter}
+                        </td>
+                        <td className="py-3 px-3">
+                          <span className="font-mono bg-[#FAF6EF] px-2 py-0.5 rounded border border-[#EEE6DA] text-[11px] text-[#1C1B18]">
+                            {m.reference}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-right text-[#6B665E] font-medium">{m.user}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
           )}
         </div>
       )}
@@ -353,7 +347,7 @@ export const InventoryPage: React.FC = () => {
               onClick={() => navigate('/purchase-orders')}
               className="px-4 py-2 rounded-xl bg-[#381e12] text-white text-xs font-semibold hover:bg-[#26140c] transition-colors"
             >
-              + Create Master Purchase Order
+              Create Master Purchase Order
             </button>
           </div>
 

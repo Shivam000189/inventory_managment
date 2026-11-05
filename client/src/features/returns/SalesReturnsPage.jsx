@@ -8,6 +8,7 @@ import {
   Plus,
   Eye,
   Package,
+  Check,
 } from 'lucide-react'
 import { StatCard } from '../../dashboard/components/common/StatCard.tsx'
 import { Badge } from '../../dashboard/components/common/Badge.tsx'
@@ -462,7 +463,7 @@ export default function SalesReturnsPage({ business = {}, account = {} }) {
               className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-[#7FAE82] hover:bg-[#6C9C70] text-white text-xs font-semibold transition-all cursor-pointer shadow-2xs whitespace-nowrap active:scale-95"
             >
               <Plus size={16} />
-              <span>+ Create Return</span>
+              <span> Create Return</span>
             </button>
           </div>
         )}
@@ -521,19 +522,77 @@ export default function SalesReturnsPage({ business = {}, account = {} }) {
         />
       </div>
 
-      {/* Progress chips */}
-      <div className="ret-progress-bar">
-        {STEPS.map(([label, state], idx) => (
-          <div className={`ret-step-chip ${state}`} key={label}>
-            <div className="ret-step-chip-number">
-              {state === 'completed' ? '✓' : idx + 1}
-            </div>
-            <div className="ret-step-chip-label">
-              <small>Step {idx + 1} · {state === 'completed' ? 'completed' : state === 'active' ? 'in progress' : 'next'}</small>
-              <strong>{label}</strong>
-            </div>
-          </div>
-        ))}
+      {/* 3-Step Progress Stepper */}
+      <div className="bg-white rounded-2xl p-3 sm:p-4 border border-[#EEE6DA] shadow-2xs">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {STEPS.map(([label, state], idx) => {
+            const isCompleted = state === 'completed'
+            const isActive = state === 'active'
+            return (
+              <div
+                key={label}
+                className={`relative flex items-center gap-3.5 p-3.5 sm:p-4 rounded-xl border transition-all duration-200 overflow-hidden ${
+                  isActive
+                    ? 'bg-[#FDFBF7] border-[#381e12] ring-2 ring-[#381e12]/10 shadow-xs'
+                    : isCompleted
+                    ? 'bg-[#F4FAF4] border-[#7FAE82]/60'
+                    : 'bg-[#FAF8F5]/60 border-[#EBE4DC]'
+                }`}
+              >
+                {/* Step number / check badge */}
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 transition-colors ${
+                    isActive
+                      ? 'bg-[#381e12] text-white shadow-xs ring-2 ring-[#381e12]/15'
+                      : isCompleted
+                      ? 'bg-[#2E7D32] text-white shadow-xs'
+                      : 'bg-[#EDE8E1] text-[#8C7E74] border border-[#DDD5CC]'
+                  }`}
+                >
+                  {isCompleted ? <Check size={14} strokeWidth={2.8} /> : idx + 1}
+                </div>
+
+                {/* Step text labels */}
+                <div className="min-w-0 flex-1">
+                  <div
+                    className={`text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 ${
+                      isActive
+                        ? 'text-[#381e12]'
+                        : isCompleted
+                        ? 'text-[#2E7D32]'
+                        : 'text-[#9A948A]'
+                    }`}
+                  >
+                    <span>
+                      Step {idx + 1} · {isCompleted ? 'Completed' : isActive ? 'In Progress' : 'Next'}
+                    </span>
+                    {isActive && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#381e12] animate-pulse" />
+                    )}
+                  </div>
+                  <div
+                    className={`text-xs sm:text-sm font-semibold truncate mt-0.5 ${
+                      isActive || isCompleted ? 'text-[#1C1B18]' : 'text-[#7C746B]'
+                    }`}
+                  >
+                    {label}
+                  </div>
+                </div>
+
+                {/* Visual bottom accent indicator */}
+                <div
+                  className={`absolute bottom-0 left-3 right-3 h-[2.5px] rounded-full transition-all ${
+                    isActive
+                      ? 'bg-[#381e12]'
+                      : isCompleted
+                      ? 'bg-[#2E7D32]/60'
+                      : 'bg-transparent'
+                  }`}
+                />
+              </div>
+            )
+          })}
+        </div>
       </div>
 
       {canCreate && (

@@ -78,7 +78,7 @@ export const PosSalesPage: React.FC = () => {
 
   useEffect(() => {
     if (isPharmacy) {
-      batchApi.list().then(setAvailableBatches).catch(() => {});
+      batchApi.list().then(setAvailableBatches).catch(() => { });
     }
   }, [isPharmacy]);
 
@@ -298,11 +298,10 @@ export const PosSalesPage: React.FC = () => {
           <button
             type="button"
             onClick={() => setPosActiveTab('new_bill')}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-              posActiveTab === 'new_bill'
+            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${posActiveTab === 'new_bill'
                 ? 'bg-[#381e12] !text-white shadow-xs'
                 : 'bg-white border border-[#EEE6DA] text-[#6B665E] hover:text-[#1C1B18]'
-            }`}
+              }`}
             style={{
               backgroundColor: posActiveTab === 'new_bill' ? '#381e12' : '#ffffff',
               color: posActiveTab === 'new_bill' ? '#ffffff' : '#6B665E',
@@ -322,11 +321,10 @@ export const PosSalesPage: React.FC = () => {
           <button
             type="button"
             onClick={() => setPosActiveTab('bills')}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-              posActiveTab === 'bills'
+            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${posActiveTab === 'bills'
                 ? 'bg-[#381e12] !text-white shadow-xs'
                 : 'bg-white border border-[#EEE6DA] text-[#6B665E] hover:text-[#1C1B18]'
-            }`}
+              }`}
             style={{
               backgroundColor: posActiveTab === 'bills' ? '#381e12' : '#ffffff',
               color: posActiveTab === 'bills' ? '#ffffff' : '#6B665E',
@@ -390,11 +388,10 @@ export const PosSalesPage: React.FC = () => {
                   key={cat}
                   type="button"
                   onClick={() => setSelectedCategory(cat)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer shrink-0 ${
-                    selectedCategory === cat
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer shrink-0 ${selectedCategory === cat
                       ? 'bg-[#381e12] !text-white'
                       : 'bg-white border border-[#EEE6DA] text-[#6B665E] hover:bg-[#FAF6EF]'
-                  }`}
+                    }`}
                   style={{ color: selectedCategory === cat ? '#ffffff' : '#6B665E' }}
                 >
                   <span style={{ color: selectedCategory === cat ? '#ffffff' : 'inherit' }}>{cat}</span>
@@ -413,11 +410,10 @@ export const PosSalesPage: React.FC = () => {
                   <div
                     key={p.id}
                     onClick={() => !isOutOfStock && addToCart(p)}
-                    className={`bg-white rounded-2xl p-3 border transition-all flex flex-col justify-between text-left relative ${
-                      isOutOfStock
+                    className={`bg-white rounded-2xl p-3 border transition-all flex flex-col justify-between text-left relative ${isOutOfStock
                         ? 'opacity-40 cursor-not-allowed border-[#EEE6DA] bg-[#FAF6EF]/50'
                         : 'border-[#EEE6DA] hover:border-[#381e12] hover:shadow-xs cursor-pointer active:scale-98'
-                    }`}
+                      }`}
                   >
                     {/* Cart counter badge if already in cart */}
                     {cartQty > 0 && (
@@ -430,13 +426,12 @@ export const PosSalesPage: React.FC = () => {
                       <div className="flex items-start justify-between mb-2">
                         <ProductIcon name={p.name} type={p.iconType} size={16} className="w-8 h-8 rounded-xl bg-[#FAF6EF] text-[#6B665E] flex items-center justify-center border border-[#EEE6DA]" />
                         <span
-                          className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${
-                            isOutOfStock
+                          className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${isOutOfStock
                               ? 'bg-[#FDECEC] text-[#D64545]'
                               : isLow
-                              ? 'bg-[#FFF4DC] text-[#D98E0B]'
-                              : 'bg-[#E8F5EC] text-[#2E8B57]'
-                          }`}
+                                ? 'bg-[#FFF4DC] text-[#D98E0B]'
+                                : 'bg-[#E8F5EC] text-[#2E8B57]'
+                            }`}
                         >
                           {isOutOfStock ? '0 stock' : `${p.stock} left`}
                         </span>
@@ -611,11 +606,10 @@ export const PosSalesPage: React.FC = () => {
                       key={method}
                       type="button"
                       onClick={() => setPaymentMethod(method)}
-                      className={`py-1 text-xs font-semibold rounded-lg transition-colors cursor-pointer text-center ${
-                        paymentMethod === method
+                      className={`py-1 text-xs font-semibold rounded-lg transition-colors cursor-pointer text-center ${paymentMethod === method
                           ? 'bg-white text-[#1C1B18] shadow-2xs'
                           : 'text-[#6B665E] hover:text-[#1C1B18]'
-                      }`}
+                        }`}
                     >
                       {method}
                     </button>
@@ -684,11 +678,10 @@ export const PosSalesPage: React.FC = () => {
                 type="button"
                 disabled={cart.length === 0}
                 onClick={handleCreateBill}
-                className={`w-full py-2.5 sm:py-3 rounded-2xl font-bold text-sm transition-all duration-150 cursor-pointer shadow-md ${
-                  cart.length === 0
+                className={`w-full py-2.5 sm:py-3 rounded-2xl font-bold text-sm transition-all duration-150 cursor-pointer shadow-md ${cart.length === 0
                     ? 'bg-[#DDD3C4] text-[#9A948A] cursor-not-allowed shadow-none'
                     : 'bg-[#381e12] hover:bg-[#26140c] text-white active:scale-99'
-                }`}
+                  }`}
               >
                 Create bill {cartTotal > 0 ? formatINR(cartTotal) : ''}
               </button>
@@ -738,11 +731,10 @@ export const PosSalesPage: React.FC = () => {
                   key={method}
                   type="button"
                   onClick={() => setBillPaymentFilter(method)}
-                  className={`px-3 py-1 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
-                    billPaymentFilter === method
+                  className={`px-3 py-1 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${billPaymentFilter === method
                       ? 'bg-white text-[#1C1B18] shadow-2xs'
                       : 'text-[#6B665E] hover:text-[#1C1B18]'
-                  }`}
+                    }`}
                 >
                   {method}
                 </button>
@@ -796,8 +788,8 @@ export const PosSalesPage: React.FC = () => {
                             b.status === 'Paid'
                               ? 'success'
                               : b.status === 'Credit'
-                              ? 'warning'
-                              : 'danger'
+                                ? 'warning'
+                                : 'danger'
                           }
                         >
                           {b.status}
