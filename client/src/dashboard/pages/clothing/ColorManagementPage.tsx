@@ -344,23 +344,16 @@ export const ColorManagementPage: React.FC = () => {
         {loading ? (
           <TableSkeleton rows={6} />
         ) : filteredColors.length === 0 ? (
-          <div className="py-16 text-center">
-            <div className="w-12 h-12 rounded-full bg-[#F3E8FF] text-[#9333EA] flex items-center justify-center mx-auto mb-3">
+          <div className="py-16 text-center flex flex-col items-center justify-center">
+            <div className="w-12 h-12 rounded-full bg-[#F3E8FF] text-[#9333EA] flex items-center justify-center mb-3">
               <Palette size={22} />
             </div>
-            <h3 className="text-[16px] font-semibold text-[#1C1B18]">No Colors Found</h3>
-            <p className="text-[13px] text-[#8C827A] mt-1 max-w-sm mx-auto">
+            <h3 className="text-[16px] font-semibold text-[#1C1B18] text-center w-full">No Colors Found</h3>
+            <p className="text-[13px] text-[#8C827A] mt-1.5 max-w-md mx-auto text-center w-full leading-relaxed">
               {searchQuery || statusFilter !== 'All'
                 ? 'Try adjusting your search query or status filter.'
-                : 'No color swatches configured yet. Click "Add New Color" to define your first apparel shade.'}
+                : 'No color swatches configured yet.'}
             </p>
-            <button
-              onClick={() => handleOpenDrawer()}
-              className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-[#381e12] hover:bg-[#2a160d] text-[#ffffff] font-medium text-[13px] rounded-lg transition-colors cursor-pointer"
-            >
-              <Plus size={15} className="text-[#ffffff]" />
-              <span className="text-[#ffffff]">Define First Color</span>
-            </button>
           </div>
         ) : (
           <div className="overflow-x-auto">

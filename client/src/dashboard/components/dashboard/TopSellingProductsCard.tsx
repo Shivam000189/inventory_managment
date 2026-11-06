@@ -1,80 +1,128 @@
-import React, { useState, useMemo } from 'react';
-import { ArrowRight, PackagePlus } from 'lucide-react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { ProductIcon } from '../common/ProductIcon';
+import { productsApi, salesOrdersApi } from '../../lib/api';
 import { useApp } from '../../context/AppContext';
+import { Skeleton } from '../../../components/ui/Feedback';
+
+interface RankedProduct {
+  id: string;
+  name: string;
+  sku: string;
+  stock: number;
+  reorderLevel: number;
+  unit: string;
+  sold: number;
+  iconType?: string;
+}
 
 export const TopSellingProductsCard: React.FC<{ className?: string }> = ({ className = '' }) => {
-  const { products, bills, stockMovements, loadingStates, navigate } = useApp();
+  const { navigate, products: contextProducts } = useApp();
   const [viewMode, setViewMode] = useState<'stock' | 'selling'>('stock');
+  const [dbProducts, setDbProducts] = useState<RankedProduct[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
 
-  const isProductsLoading = loadingStates?.products;
+  const fetchDatabaseProducts = useCallback(async (isSilent = false) => {
+    if (!isSilent) setIsLoading(true);
+    else setIsRefreshing(true);
 
-  // Calculate sold quantities per product from the primary source without double-counting
-  const salesMap = useMemo(() => {
-    const map = new Map<string, number>();
+    try {
+      const [prodsRes, salesRes] = await Promise.allSettled([
+        productsApi.list(),
+        salesOrdersApi.list(),
+      ]);
 
-    // If bills (sales orders) are present, use bills exclusively as the primary source of sales data
-    const nonCancelledBills = (bills || []).filter((b) => b.status !== 'Cancelled');
-    if (nonCancelledBills.length > 0) {
-      nonCancelledBills.forEach((bill) => {
-        (bill.items || []).forEach((item) => {
-          const qty = Number(item.quantity || 0);
+      const rawProducts: any[] =
+        prodsRes.status === 'fulfilled'
+          ? Array.isArray(prodsRes.value)
+            ? prodsRes.value
+            : Array.isArray((prodsRes.value as any)?.items)
+            ? (prodsRes.value as any).items
+            : Array.isArray((prodsRes.value as any)?.products)
+            ? (prodsRes.value as any).products
+            : []
+          : [];
+
+      const rawSales: any[] =
+        salesRes.status === 'fulfilled'
+          ? Array.isArray(salesRes.value)
+            ? salesRes.value
+            : Array.isArray((salesRes.value as any)?.items)
+            ? (salesRes.value as any).items
+            : Array.isArray((salesRes.value as any)?.orders)
+            ? (salesRes.value as any).orders
+            : []
+          : [];
+
+      // Calculate sold quantities from live sales orders
+      const salesMap = new Map<string, number>();
+      rawSales.forEach((order) => {
+        if (order.status === 'Cancelled') return;
+        (order.items || []).forEach((item: any) => {
+          const qty = Number(item.quantity ?? item.qty ?? 0);
           if (qty > 0) {
-            if (item.productId) {
-              const idKey = String(item.productId);
-              map.set(idKey, (map.get(idKey) || 0) + qty);
+            if (item.productId || item.product_id) {
+              const idKey = String(item.productId || item.product_id);
+              salesMap.set(idKey, (salesMap.get(idKey) || 0) + qty);
             }
-            if (item.productName) {
-              const nameKey = String(item.productName).trim().toLowerCase();
-              map.set(nameKey, (map.get(nameKey) || 0) + qty);
+            if (item.productName || item.name) {
+              const nameKey = String(item.productName || item.name).trim().toLowerCase();
+              salesMap.set(nameKey, (salesMap.get(nameKey) || 0) + qty);
             }
           }
         });
       });
-      return map;
+
+      // Map real database products
+      const mapped: RankedProduct[] = rawProducts.map((p: any) => {
+        const id = String(p.productId || p.id || p._id || '');
+        const name = p.name || 'Unnamed Product';
+        const nameKey = name.trim().toLowerCase();
+        const stock = Number(p.currentStock ?? p.current_stock ?? p.stock ?? 0);
+        const reorderLevel = Number(p.minimumStock ?? p.minimum_stock ?? p.reorderLevel ?? 10);
+        const sold = (salesMap.get(id) || 0) + (salesMap.get(nameKey) || 0);
+
+        return {
+          id,
+          name,
+          sku: p.sku || '',
+          stock,
+          reorderLevel,
+          unit: p.unit || 'pcs',
+          sold,
+          iconType: p.iconType,
+        };
+      });
+
+      setDbProducts(mapped);
+    } catch (err) {
+      console.warn('Failed to fetch top products from database API:', err);
+      setDbProducts([]);
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
     }
+  }, []);
 
-    // Fallback: If no bills exist, inspect stock movements for sales
-    (stockMovements || []).forEach((movement) => {
-      if (movement.type === 'Sale' && movement.qtyDelta < 0) {
-        const qty = Math.abs(movement.qtyDelta);
-        if (movement.productId) {
-          const idKey = String(movement.productId);
-          map.set(idKey, (map.get(idKey) || 0) + qty);
-        }
-        if (movement.productName) {
-          const nameKey = String(movement.productName).trim().toLowerCase();
-          map.set(nameKey, (map.get(nameKey) || 0) + qty);
-        }
-      }
-    });
+  // Fetch from database on component mount
+  useEffect(() => {
+    fetchDatabaseProducts();
+  }, [fetchDatabaseProducts]);
 
-    return map;
-  }, [bills, stockMovements]);
+  // Keep synced silently if contextProducts changes (e.g. user added or edited a product in UI)
+  useEffect(() => {
+    if (contextProducts && contextProducts.length > 0) {
+      fetchDatabaseProducts(true);
+    }
+  }, [contextProducts, fetchDatabaseProducts]);
 
-  // Derive ranked products
+  // Sort and pick top 4 products
   const displayProducts = useMemo(() => {
-    if (!products || products.length === 0) return [];
+    if (dbProducts.length === 0) return [];
 
-    const enriched = products.map((p) => {
-      const idKey = String(p.id);
-      const nameKey = String(p.name || '').trim().toLowerCase();
-      const soldQty = mapGetEither(salesMap, idKey, nameKey);
-
-      return {
-        id: p.id,
-        name: p.name,
-        sku: p.sku,
-        stock: Number(p.stock ?? 0),
-        reorderLevel: Number(p.reorderLevel ?? 10),
-        unit: p.unit || 'pcs',
-        sold: soldQty,
-        iconType: p.iconType,
-      };
-    });
-
+    const copy = [...dbProducts];
     if (viewMode === 'selling') {
-      return enriched
+      return copy
         .sort((a, b) => {
           if (b.sold !== a.sold) return b.sold - a.sold;
           return b.stock - a.stock;
@@ -83,72 +131,77 @@ export const TopSellingProductsCard: React.FC<{ className?: string }> = ({ class
     }
 
     // Default 'stock': sort by highest on-hand stock
-    return enriched
+    return copy
       .sort((a, b) => {
         if (b.stock !== a.stock) return b.stock - a.stock;
         return b.sold - a.sold;
       })
       .slice(0, 4);
-  }, [products, salesMap, viewMode]);
+  }, [dbProducts, viewMode]);
 
   return (
-    <div className={`bg-white rounded-[20px] p-5 border border-[#EEE6DA] h-full flex flex-col justify-between shadow-2xs hover:shadow-xs transition-all min-h-[300px] ${className}`.trim()}>
+    <div
+      className={`bg-white rounded-[20px] p-5 border border-[#EEE6DA] h-full flex flex-col justify-between shadow-2xs hover:shadow-xs transition-all min-h-[300px] ${className}`.trim()}
+    >
       <div className="flex-1 flex flex-col">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <h3 className="text-[15px] font-semibold text-[#1C1B18]">
-              {viewMode === 'stock' ? 'Top Stock' : 'Top Selling'}
-            </h3>
-            <div className="flex items-center bg-[#FAF6EF] p-0.5 rounded-lg border border-[#EEE6DA]" role="tablist" aria-label="Inventory ranking criteria">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={viewMode === 'stock'}
-                onClick={() => setViewMode('stock')}
-                className={`px-2 py-0.5 text-[11px] font-semibold rounded-md transition-all cursor-pointer ${
-                  viewMode === 'stock'
-                    ? 'bg-white text-[#1C1B18] shadow-2xs font-bold'
-                    : 'text-[#6B665E] hover:text-[#1C1B18]'
-                }`}
-              >
-                Stock
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={viewMode === 'selling'}
-                onClick={() => setViewMode('selling')}
-                className={`px-2 py-0.5 text-[11px] font-semibold rounded-md transition-all cursor-pointer ${
-                  viewMode === 'selling'
-                    ? 'bg-white text-[#1C1B18] shadow-2xs font-bold'
-                    : 'text-[#6B665E] hover:text-[#1C1B18]'
-                }`}
-              >
-                Sales
-              </button>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => navigate(viewMode === 'stock' ? '/inventory' : '/reports')}
-            className="text-xs font-semibold text-[#1C1B18] hover:text-[#6C9C70] inline-flex items-center gap-1 cursor-pointer transition-colors"
+        {/* Header & Controls */}
+        <div className="flex items-center gap-2.5 mb-3">
+          <h3 className="text-[15px] font-semibold text-[#1C1B18]">
+            {viewMode === 'stock' ? 'Top Stock' : 'Top Selling'}
+          </h3>
+          <div
+            className="flex items-center bg-[#FAF6EF] p-0.5 rounded-lg border border-[#EEE6DA]"
+            role="tablist"
+            aria-label="Inventory ranking criteria"
           >
-            <span>View all</span>
-            <ArrowRight size={13} />
-          </button>
-        </div>
-
-        {displayProducts.length === 0 && !isProductsLoading ? (
-          <div className="flex-1 flex flex-col items-center justify-center py-8 text-center">
-            <p className="text-xs text-[#9A948A] mb-3">No products found for this business.</p>
             <button
               type="button"
-              onClick={() => navigate('/products')}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#381e12] text-white text-xs font-semibold hover:bg-[#26140c] transition-colors cursor-pointer shadow-2xs"
+              role="tab"
+              aria-selected={viewMode === 'stock'}
+              onClick={() => setViewMode('stock')}
+              className={`px-2 py-0.5 text-[11px] font-semibold rounded-md transition-all cursor-pointer ${
+                viewMode === 'stock'
+                  ? 'bg-white text-[#1C1B18] shadow-2xs font-bold'
+                  : 'text-[#6B665E] hover:text-[#1C1B18]'
+              }`}
             >
-              <PackagePlus size={14} />
-              <span>Add First Product</span>
+              Stock
             </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={viewMode === 'selling'}
+              onClick={() => setViewMode('selling')}
+              className={`px-2 py-0.5 text-[11px] font-semibold rounded-md transition-all cursor-pointer ${
+                viewMode === 'selling'
+                  ? 'bg-white text-[#1C1B18] shadow-2xs font-bold'
+                  : 'text-[#6B665E] hover:text-[#1C1B18]'
+              }`}
+            >
+              Sales
+            </button>
+          </div>
+        </div>
+
+        {/* Content State: Loading, Empty, or List */}
+        {isLoading ? (
+          <div className="divide-y divide-[#EEE6DA] flex-1 flex flex-col justify-around">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="py-2.5 flex items-center justify-between">
+                <div className="flex items-center gap-3 flex-1 min-w-0 pr-3">
+                  <Skeleton width={36} height={36} borderRadius={12} />
+                  <div className="space-y-1.5 flex-1 min-w-0">
+                    <Skeleton width="75%" height={14} borderRadius={4} />
+                    <Skeleton width="45%" height={12} borderRadius={4} />
+                  </div>
+                </div>
+                <Skeleton width={60} height={16} borderRadius={4} />
+              </div>
+            ))}
+          </div>
+        ) : displayProducts.length === 0 ? (
+          <div className="flex-1 flex flex-col items-center justify-center py-12 text-center">
+            <p className="text-xs text-[#9A948A]">No products recorded in database.</p>
           </div>
         ) : (
           <div className="divide-y divide-[#EEE6DA] flex-1 flex flex-col justify-around">
@@ -221,9 +274,3 @@ export const TopSellingProductsCard: React.FC<{ className?: string }> = ({ class
     </div>
   );
 };
-
-function mapGetEither(map: Map<string, number>, key1: string, key2: string): number {
-  if (key1 && map.has(key1)) return map.get(key1) || 0;
-  if (key2 && map.has(key2)) return map.get(key2) || 0;
-  return 0;
-}

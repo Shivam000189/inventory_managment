@@ -51,12 +51,22 @@ export const CustomersPage: React.FC = () => {
     creditLimit: 10000,
   });
 
-  const totalSpentAll = customers.reduce((acc, c) => acc + c.totalSpent, 0);
-  const totalOutstanding = customers.reduce((acc, c) => acc + c.outstanding, 0);
-  const creditCustomers = customers.filter((c) => c.outstanding > 0);
+  const TWO_WEEKS_MS = 14 * 24 * 60 * 60 * 1000;
+  const twoWeeksAgoTime = Date.now() - TWO_WEEKS_MS;
+
+  // Only show customers from the last 2 weeks
+  const activeRecentCustomers = customers.filter((c) => {
+    if (!c.createdAt) return true;
+    const t = new Date(c.createdAt).getTime();
+    return isNaN(t) || t >= twoWeeksAgoTime;
+  });
+
+  const totalSpentAll = activeRecentCustomers.reduce((acc, c) => acc + c.totalSpent, 0);
+  const totalOutstanding = activeRecentCustomers.reduce((acc, c) => acc + c.outstanding, 0);
+  const creditCustomers = activeRecentCustomers.filter((c) => c.outstanding > 0);
 
   const filteredCustomers = (
-    customersActiveTab === 'credit' ? creditCustomers : customers
+    customersActiveTab === 'credit' ? creditCustomers : activeRecentCustomers
   ).filter((c) => {
     const q = searchQuery.toLowerCase();
     return (
@@ -98,7 +108,7 @@ export const CustomersPage: React.FC = () => {
             {customersActiveTab === 'credit' ? 'Credit & Dues Ledger' : 'Customers'}
           </h1>
           <p className="text-[13px] text-[#6B665E] mt-0.5">
-            Manage your customer database, wholesale credits, and payment receivables.
+            Manage your customer database (showing customers from the last 2 weeks; older records auto-cleared).
           </p>
         </div>
 
@@ -121,8 +131,8 @@ export const CustomersPage: React.FC = () => {
             icon={<UserCheck size={18} strokeWidth={2} />}
             iconBgColor="bg-[#E6F1E6] text-[#2E8B57]"
             label="Total Customers"
-            value={customers.length}
-            trend="+15% this quarter"
+            value={activeRecentCustomers.length}
+            trend="Last 14 days"
             isPositive={true}
           />
           <StatCard
@@ -206,6 +216,18 @@ export const CustomersPage: React.FC = () => {
           ]}
           rows={6}
         />
+      ) : filteredCustomers.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-[#EEE6DA] p-12 flex flex-col items-center justify-center text-center shadow-2xs">
+          <div className="w-12 h-12 rounded-2xl bg-[#FAF6EF] border border-[#EEE6DA] flex items-center justify-center text-[#9A948A] mb-3">
+            <UserCheck size={22} className="stroke-[1.75]" />
+          </div>
+          <h3 className="text-sm font-semibold text-[#1C1B18] text-center">No customers found</h3>
+          <p className="text-xs text-[#6B665E] mt-1 max-w-md text-center">
+            {searchQuery
+              ? 'No customers match your search criteria.'
+              : 'No customers recorded in the last 2 weeks.'}
+          </p>
+        </div>
       ) : (
         <div className="bg-white rounded-2xl border border-[#EEE6DA] overflow-hidden shadow-2xs">
           <div className="overflow-x-auto">

@@ -927,26 +927,27 @@ export default function SalesReturnsPage({ business = {}, account = {} }) {
 
       {/* Audit History */}
       <div className="space-y-3">
-        {/* Toolbar matching Product Page */}
+        {/* Toolbar */}
         <div className="bg-white rounded-2xl p-3 border border-[#EEE6DA] flex flex-col md:flex-row items-center justify-between gap-3 shadow-2xs">
-          <div className="flex items-center gap-3 flex-1 w-full md:w-auto">
-            {/* Search */}
-            <div className="relative flex-1 max-w-md">
-              <Search size={15} className="absolute left-3 top-2.5 text-[#9A948A]" />
-              <input
-                type="text"
-                value={filters.search}
-                onChange={(e) => updateFilter('search', e.target.value)}
-                placeholder="Search return ID, order, customer, product..."
-                className="w-full pl-9 pr-3 py-1.5 rounded-xl border border-[#EEE6DA] text-xs focus:border-[#7FAE82] outline-none"
-              />
-            </div>
+          {/* Search - expanded and flexible */}
+          <div className="relative flex-1 w-full md:w-auto min-w-[260px]">
+            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9A948A]" />
+            <input
+              type="text"
+              value={filters.search}
+              onChange={(e) => updateFilter('search', e.target.value)}
+              placeholder="Search return ID, order, customer, product..."
+              className="w-full pl-9 pr-4 py-2 rounded-xl border border-[#EEE6DA] text-xs text-[#1C1B18] placeholder-[#9A948A] focus:border-[#381e12] outline-none transition-colors"
+            />
+          </div>
 
+          {/* Dropdown Filters */}
+          <div className="flex items-center gap-2.5 w-full md:w-auto shrink-0 flex-wrap sm:flex-nowrap">
             {/* Refund Status Dropdown */}
             <select
               value={filters.refundStatus}
               onChange={(e) => updateFilter('refundStatus', e.target.value)}
-              className="px-3 py-1.5 rounded-xl border border-[#EEE6DA] text-xs text-[#1C1B18] bg-white cursor-pointer outline-none"
+              className="px-3.5 py-2 rounded-xl border border-[#EEE6DA] text-xs text-[#1C1B18] bg-white cursor-pointer outline-none focus:border-[#381e12] transition-colors"
             >
               <option value="all">All Refund Statuses</option>
               <option value="Not Required">Not Required</option>
@@ -960,31 +961,25 @@ export default function SalesReturnsPage({ business = {}, account = {} }) {
             <select
               value={filters.reason}
               onChange={(e) => updateFilter('reason', e.target.value)}
-              className="px-3 py-1.5 rounded-xl border border-[#EEE6DA] text-xs text-[#1C1B18] bg-white cursor-pointer outline-none"
+              className="px-3.5 py-2 rounded-xl border border-[#EEE6DA] text-xs text-[#1C1B18] bg-white cursor-pointer outline-none focus:border-[#381e12] transition-colors"
             >
               <option value="all">All Reasons</option>
               {reasons.map((r) => (
                 <option key={r} value={r}>{r}</option>
               ))}
             </select>
-          </div>
 
-          {/* Status Filter Pills */}
-          <div className="flex items-center gap-1 bg-[#FAF6EF] p-1 rounded-xl border border-[#EEE6DA]/80 overflow-x-auto w-full md:w-auto">
-            {['all', 'Pending', 'Completed', 'Cancelled'].map((st) => (
-              <button
-                key={st}
-                type="button"
-                onClick={() => updateFilter('status', st)}
-                className={`px-3 py-1 text-xs font-semibold rounded-lg transition-colors cursor-pointer whitespace-nowrap ${
-                  filters.status === st
-                    ? 'bg-white text-[#1C1B18] shadow-2xs'
-                    : 'text-[#6B665E] hover:text-[#1C1B18]'
-                }`}
-              >
-                {st === 'all' ? 'All Statuses' : st}
-              </button>
-            ))}
+            {/* Return Status Dropdown */}
+            <select
+              value={filters.status}
+              onChange={(e) => updateFilter('status', e.target.value)}
+              className="px-3.5 py-2 rounded-xl border border-[#EEE6DA] text-xs text-[#1C1B18] bg-white cursor-pointer outline-none focus:border-[#381e12] transition-colors font-medium"
+            >
+              <option value="all">All Statuses</option>
+              <option value="Pending">Pending</option>
+              <option value="Completed">Completed</option>
+              <option value="Cancelled">Cancelled</option>
+            </select>
           </div>
         </div>
 
@@ -1002,10 +997,12 @@ export default function SalesReturnsPage({ business = {}, account = {} }) {
             rows={6}
           />
         ) : filteredReturns.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-[#EEE6DA] p-12 text-center shadow-2xs">
-            <Package className="mx-auto text-[#9A948A] mb-3 opacity-60" size={36} />
-            <h3 className="text-sm font-semibold text-[#1C1B18]">No returns found</h3>
-            <p className="text-xs text-[#6B665E] mt-1 max-w-sm mx-auto">
+          <div className="bg-white rounded-2xl border border-[#EEE6DA] p-12 flex flex-col items-center justify-center text-center shadow-2xs">
+            <div className="w-12 h-12 rounded-2xl bg-[#FAF6EF] border border-[#EEE6DA] flex items-center justify-center text-[#9A948A] mb-3">
+              <Package size={22} className="stroke-[1.75]" />
+            </div>
+            <h3 className="text-sm font-semibold text-[#1C1B18] text-center">No returns found</h3>
+            <p className="text-xs text-[#6B665E] mt-1 max-w-md text-center">
               {returns.length ? 'No returns match your filter criteria.' : 'No customer returns recorded yet.'}
             </p>
           </div>

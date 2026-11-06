@@ -87,7 +87,6 @@ function SalesOrders({ business = {}, creditSales = false, section = 'Credit Sal
   const [search, setSearch] = useState('')
   const [tab, setTab] = useState('all')
   const [channelFilter, setChannelFilter] = useState('all')
-  const [statusFilter, setStatusFilter] = useState('all')
   const [message, setMessage] = useState(null)
   const [saving, setSaving] = useState(false)
   const searchRef = useRef(null)
@@ -355,7 +354,6 @@ function SalesOrders({ business = {}, creditSales = false, section = 'Credit Sal
     return orders.filter((order) => {
       if (!matchTab(order)) return false
       if (channelFilter !== 'all' && channelOf(order) !== channelFilter) return false
-      if (statusFilter !== 'all' && order.status !== statusFilter) return false
       if (
         query &&
         !`${order.orderNumber} ${order.invoiceNumber || ''} ${order.customerName || ''} ${order.status} ${(order.items || []).map((item) => item.productName || item.name || '').join(' ')}`
@@ -365,7 +363,7 @@ function SalesOrders({ business = {}, creditSales = false, section = 'Credit Sal
         return false
       return true
     })
-  }, [orders, tab, channelFilter, statusFilter, search])
+  }, [orders, tab, channelFilter, search])
 
   const exportCsv = () => {
     const escapeCell = (value) => {
@@ -592,7 +590,7 @@ function SalesOrders({ business = {}, creditSales = false, section = 'Credit Sal
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [tab, search, channelFilter, statusFilter]);
+  }, [tab, search, channelFilter]);
 
   const totalPages = Math.ceil(visibleOrders.length / pageSize) || 1;
   const paginatedOrders = useMemo(() => {
@@ -746,27 +744,28 @@ function SalesOrders({ business = {}, creditSales = false, section = 'Credit Sal
         />
       </div>
 
-      {/* Toolbar matching Product Page */}
+      {/* Toolbar */}
       <div className="bg-white rounded-2xl p-3 border border-[#EEE6DA] flex flex-col md:flex-row items-center justify-between gap-3 shadow-2xs">
-        <div className="flex items-center gap-3 flex-1 w-full md:w-auto">
-          {/* Search */}
-          <div className="relative flex-1 max-w-md">
-            <Search size={15} className="absolute left-3 top-2.5 text-[#9A948A]" />
-            <input
-              ref={searchRef}
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by order #, invoice, customer, or product..."
-              className="w-full pl-9 pr-3 py-1.5 rounded-xl border border-[#EEE6DA] text-xs focus:border-[#381e12] outline-none"
-            />
-          </div>
+        {/* Search - expanded and flexible */}
+        <div className="relative flex-1 w-full md:w-auto min-w-[280px]">
+          <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9A948A]" />
+          <input
+            ref={searchRef}
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by order #, invoice, customer, or product..."
+            className="w-full pl-9 pr-4 py-2 rounded-xl border border-[#EEE6DA] text-xs text-[#1C1B18] placeholder-[#9A948A] focus:border-[#381e12] outline-none transition-colors"
+          />
+        </div>
 
+        {/* Dropdowns */}
+        <div className="flex items-center gap-2.5 w-full md:w-auto shrink-0 flex-wrap sm:flex-nowrap">
           {/* Channel Dropdown */}
           <select
             value={channelFilter}
             onChange={(e) => setChannelFilter(e.target.value)}
-            className="px-3 py-1.5 rounded-xl border border-[#EEE6DA] text-xs text-[#1C1B18] bg-white cursor-pointer outline-none"
+            className="px-3.5 py-2 rounded-xl border border-[#EEE6DA] text-xs text-[#1C1B18] bg-white cursor-pointer outline-none focus:border-[#381e12] transition-colors"
           >
             {channels.map((ch) => (
               <option key={ch.id} value={ch.id}>
@@ -775,35 +774,18 @@ function SalesOrders({ business = {}, creditSales = false, section = 'Credit Sal
             ))}
           </select>
 
-          {/* Status Dropdown */}
+          {/* Orders / Status Dropdown */}
           <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-1.5 rounded-xl border border-[#EEE6DA] text-xs text-[#1C1B18] bg-white cursor-pointer outline-none"
+            value={tab}
+            onChange={(e) => setTab(e.target.value)}
+            className="px-3.5 py-2 rounded-xl border border-[#EEE6DA] text-xs text-[#1C1B18] bg-white cursor-pointer outline-none focus:border-[#381e12] transition-colors font-medium"
           >
-            <option value="all">All Statuses</option>
-            <option value="Pending">Pending</option>
-            <option value="Completed">Completed</option>
-            <option value="Cancelled">Cancelled</option>
+            {TABS.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.label}
+              </option>
+            ))}
           </select>
-        </div>
-
-        {/* Status Pills */}
-        <div className="flex items-center gap-1 bg-[#FAF6EF] p-1 rounded-xl border border-[#EEE6DA]/80 overflow-x-auto w-full md:w-auto">
-          {TABS.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => setTab(t.id)}
-              className={`px-3 py-1 text-xs font-semibold rounded-lg transition-colors cursor-pointer whitespace-nowrap ${
-                tab === t.id
-                  ? 'bg-white text-[#1C1B18] shadow-2xs'
-                  : 'text-[#6B665E] hover:text-[#1C1B18]'
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
         </div>
       </div>
 
@@ -822,19 +804,14 @@ function SalesOrders({ business = {}, creditSales = false, section = 'Credit Sal
           rows={6}
         />
       ) : visibleOrders.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-[#EEE6DA] p-12 text-center shadow-2xs">
-          <Package className="mx-auto text-[#9A948A] mb-3 opacity-60" size={36} />
-          <h3 className="text-sm font-semibold text-[#1C1B18]">No orders found</h3>
-          <p className="text-xs text-[#6B665E] mt-1 max-w-sm mx-auto">
-            {orders.length ? 'No orders match your filter criteria.' : 'No sales orders yet. Create your first order.'}
+        <div className="bg-white rounded-2xl border border-[#EEE6DA] p-12 flex flex-col items-center justify-center text-center shadow-2xs">
+          <div className="w-12 h-12 rounded-2xl bg-[#FAF6EF] border border-[#EEE6DA] flex items-center justify-center text-[#9A948A] mb-3">
+            <Package size={22} className="stroke-[1.75]" />
+          </div>
+          <h3 className="text-sm font-semibold text-[#1C1B18] text-center">No orders found</h3>
+          <p className="text-xs text-[#6B665E] mt-1 max-w-md text-center">
+            {orders.length ? 'No orders match your filter criteria.' : 'No sales orders recorded yet.'}
           </p>
-          <button
-            type="button"
-            onClick={() => openForm()}
-            className="mt-4 px-4 py-2 rounded-xl bg-[#381e12] hover:bg-[#26140c] text-white text-xs font-semibold transition-all cursor-pointer shadow-2xs active:scale-95"
-          >
-            <span className="text-white">+ Create New Order</span>
-          </button>
         </div>
       ) : (
         <div className="bg-white rounded-2xl border border-[#EEE6DA] overflow-hidden shadow-2xs">

@@ -369,14 +369,14 @@ export default function PurchaseReturnsPage({ business = {}, purchase = true }) 
       <div className="space-y-3">
         {/* Toolbar */}
         <div className="bg-white rounded-2xl p-3 border border-[#EEE6DA] flex items-center justify-between gap-3 shadow-2xs">
-          <div className="relative flex-1 max-w-md">
-            <Search size={15} className="absolute left-3 top-2.5 text-[#9A948A]" />
+          <div className="relative flex-1 min-w-[260px]">
+            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9A948A]" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by return ID, product, or reason..."
-              className="w-full pl-9 pr-3 py-1.5 rounded-xl border border-[#EEE6DA] text-xs focus:border-[#7FAE82] outline-none"
+              className="w-full pl-9 pr-4 py-2 rounded-xl border border-[#EEE6DA] text-xs text-[#1C1B18] placeholder-[#9A948A] focus:border-[#381e12] outline-none transition-colors"
             />
           </div>
         </div>
@@ -394,10 +394,12 @@ export default function PurchaseReturnsPage({ business = {}, purchase = true }) 
             rows={6}
           />
         ) : filteredReturns.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-[#EEE6DA] p-12 text-center shadow-2xs">
-            <Package className="mx-auto text-[#9A948A] mb-3 opacity-60" size={36} />
-            <h3 className="text-sm font-semibold text-[#1C1B18]">No returns found</h3>
-            <p className="text-xs text-[#6B665E] mt-1 max-w-sm mx-auto">
+          <div className="bg-white rounded-2xl border border-[#EEE6DA] p-12 flex flex-col items-center justify-center text-center shadow-2xs">
+            <div className="w-12 h-12 rounded-2xl bg-[#FAF6EF] border border-[#EEE6DA] flex items-center justify-center text-[#9A948A] mb-3">
+              <Package size={22} className="stroke-[1.75]" />
+            </div>
+            <h3 className="text-sm font-semibold text-[#1C1B18] text-center">No returns found</h3>
+            <p className="text-xs text-[#6B665E] mt-1 max-w-md text-center">
               {returns.length ? 'No returns match your search.' : 'No purchase returns recorded for this business yet.'}
             </p>
           </div>

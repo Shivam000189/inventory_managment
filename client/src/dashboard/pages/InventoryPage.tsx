@@ -5,6 +5,7 @@ import {
   AlertTriangle,
   ExternalLink,
   Search,
+  ChevronDown,
 } from 'lucide-react';
 import { StatCard } from '../components/common/StatCard';
 import { Badge } from '../components/common/Badge';
@@ -60,8 +61,8 @@ export const InventoryPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 4 StatCards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      {/* 4 StatCards in 2x2 Grid on Mobile, 4 columns on Desktop */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 md:gap-5">
         <StatCard
           icon={<Package size={18} strokeWidth={2} />}
           iconBgColor="bg-[#E6F1E6] text-[#2E8B57]"
@@ -98,12 +99,12 @@ export const InventoryPage: React.FC = () => {
       </div>
 
       {/* Tabs Bar */}
-      <div className="flex items-center justify-between border-b border-[#EEE6DA]">
-        <div className="flex items-center gap-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:border-b sm:border-[#EEE6DA]">
+        <div className="grid grid-cols-3 sm:flex sm:items-center sm:gap-6 border-b border-[#EEE6DA] sm:border-b-0 w-full sm:w-auto -mb-px">
           <button
             type="button"
             onClick={() => setActiveTab('levels')}
-            className={`pb-3 text-sm font-semibold transition-colors cursor-pointer border-b-2 -mb-px ${activeTab === 'levels'
+            className={`pb-2.5 sm:pb-3 text-[10px] min-[360px]:text-[11px] min-[400px]:text-xs sm:text-sm font-semibold transition-colors cursor-pointer border-b-2 -mb-px text-center sm:text-left ${activeTab === 'levels'
                 ? 'border-[#7FAE82] text-[#1C1B18]'
                 : 'border-transparent text-[#6B665E] hover:text-[#1C1B18]'
               }`}
@@ -113,7 +114,7 @@ export const InventoryPage: React.FC = () => {
           <button
             type="button"
             onClick={() => setActiveTab('movements')}
-            className={`pb-3 text-sm font-semibold transition-colors cursor-pointer border-b-2 -mb-px ${activeTab === 'movements'
+            className={`pb-2.5 sm:pb-3 text-[10px] min-[360px]:text-[11px] min-[400px]:text-xs sm:text-sm font-semibold transition-colors cursor-pointer border-b-2 -mb-px text-center sm:text-left ${activeTab === 'movements'
                 ? 'border-[#7FAE82] text-[#1C1B18]'
                 : 'border-transparent text-[#6B665E] hover:text-[#1C1B18]'
               }`}
@@ -123,7 +124,7 @@ export const InventoryPage: React.FC = () => {
           <button
             type="button"
             onClick={() => setActiveTab('low_stock')}
-            className={`pb-3 text-sm font-semibold transition-colors cursor-pointer border-b-2 -mb-px ${activeTab === 'low_stock'
+            className={`pb-2.5 sm:pb-3 text-[10px] min-[360px]:text-[11px] min-[400px]:text-xs sm:text-sm font-semibold transition-colors cursor-pointer border-b-2 -mb-px text-center sm:text-left ${activeTab === 'low_stock'
                 ? 'border-[#E8772E] text-[#E8772E]'
                 : 'border-transparent text-[#6B665E] hover:text-[#1C1B18]'
               }`}
@@ -133,7 +134,7 @@ export const InventoryPage: React.FC = () => {
         </div>
 
         {/* Tab Search */}
-        <div className="relative w-64 mb-2">
+        <div className="relative w-full sm:w-56 md:w-64 mb-1 sm:mb-2 shrink-0">
           <Search size={14} className="absolute left-3 top-2.5 text-[#9A948A]" />
           <input
             type="text"
@@ -236,15 +237,32 @@ export const InventoryPage: React.FC = () => {
       {/* Tab 2: Movements Immutable Ledger */}
       {activeTab === 'movements' && (
         <div className="space-y-3">
-          {/* Movement Type Filter Pills */}
-          <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-[#EEE6DA] w-fit">
+          {/* Movement Type Filter: Dropdown on Mobile, Pills on Desktop */}
+          {/* Mobile View: Dropdown */}
+          <div className="sm:hidden relative w-full">
+            <select
+              value={movementTypeFilter}
+              onChange={(e) => setMovementTypeFilter(e.target.value)}
+              className="w-full pl-3.5 pr-8 py-2 bg-white text-xs font-semibold border border-[#EEE6DA] rounded-xl text-[#1C1B18] appearance-none outline-none focus:border-[#7FAE82] shadow-2xs cursor-pointer"
+            >
+              {(['All', 'Sale', 'Purchase', 'Stock In', 'Stock Out', 'Adjustment', 'Return'] as const).map((type) => (
+                <option key={type} value={type}>
+                  {type === 'All' ? 'All Movement Types' : `${type} Movements`}
+                </option>
+              ))}
+            </select>
+            <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9A948A] pointer-events-none" />
+          </div>
+
+          {/* Desktop View: Pills */}
+          <div className="hidden sm:flex items-center gap-1 bg-white p-1 rounded-xl border border-[#EEE6DA] w-fit">
             {(['All', 'Sale', 'Purchase', 'Stock In', 'Stock Out', 'Adjustment', 'Return'] as const).map(
               (type) => (
                 <button
                   key={type}
                   type="button"
                   onClick={() => setMovementTypeFilter(type)}
-                  className={`px-3 py-1 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${movementTypeFilter === type
+                  className={`px-3 py-1 text-xs font-semibold rounded-lg transition-colors cursor-pointer whitespace-nowrap shrink-0 ${movementTypeFilter === type
                       ? 'bg-[#FAF6EF] text-[#1C1B18] border border-[#DDD3C4]'
                       : 'text-[#6B665E] hover:text-[#1C1B18]'
                     }`}

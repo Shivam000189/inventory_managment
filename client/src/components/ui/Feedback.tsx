@@ -82,16 +82,15 @@ export interface StatCardSkeletonProps {
 export function StatCardSkeleton({ className = '' }: StatCardSkeletonProps) {
   return (
     <div
-      className={`bg-white rounded-[20px] p-5 border border-[#EEE6DA] shadow-2xs space-y-3 ${className}`}
+      className={`bg-white rounded-2xl sm:rounded-[22px] p-3 sm:p-4 md:p-5 border border-[#EEE6DA] shadow-2xs ${className}`}
       aria-hidden="true"
     >
-      <div className="flex items-center justify-between">
-        <Skeleton width={36} height={36} borderRadius={12} />
-        <Skeleton width={48} height={20} borderRadius={10} />
-      </div>
-      <div className="space-y-1.5 pt-1">
-        <Skeleton width="45%" height={26} borderRadius={6} />
-        <Skeleton width="60%" height={14} borderRadius={4} />
+      <div className="flex items-center gap-2.5 sm:gap-3.5">
+        <Skeleton width={40} height={40} borderRadius={9999} />
+        <div className="flex-1 space-y-1.5 min-w-0">
+          <Skeleton width="55%" height={20} borderRadius={6} />
+          <Skeleton width="75%" height={12} borderRadius={4} />
+        </div>
       </div>
     </div>
   )
@@ -105,7 +104,7 @@ export interface StatGridSkeletonProps {
 export function StatGridSkeleton({ count = 4, className = '' }: StatGridSkeletonProps) {
   return (
     <div
-      className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 ${className}`}
+      className={`grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 md:gap-5 ${className}`}
       role="status"
       aria-busy="true"
     >
@@ -316,24 +315,40 @@ export function TablePageSkeleton({ className = '' }: { className?: string }) {
 export function InventoryTrendSkeleton({ className = '' }: { className?: string }) {
   return (
     <div
-      className={`bg-white rounded-[20px] p-5 border border-[#EEE6DA] shadow-2xs h-full flex flex-col justify-between min-h-[280px] ${className}`.trim()}
+      className={`bg-white rounded-[20px] p-5 sm:p-6 border border-[#EEE6DA] shadow-2xs h-full flex flex-col justify-between ${className}`.trim()}
       role="status"
       aria-busy="true"
     >
       <span className="sr-only">Loading inventory trend...</span>
+      {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <Skeleton width={140} height={20} borderRadius={6} />
+        <Skeleton width={130} height={20} borderRadius={6} />
         <Skeleton width={110} height={28} borderRadius={20} />
       </div>
-      <div className="relative pt-6 pb-2 flex-1 flex flex-col justify-end">
-        <div className="flex items-end justify-between px-2 sm:px-6 pb-4 h-[160px] sm:h-[180px] border-b border-[#EEE6DA]/70 gap-1.5 sm:gap-3">
-          {[45, 55, 65, 80, 70, 75].map((h, i) => (
-            <div key={i} className="flex-1 flex flex-col items-center gap-2 max-w-[40px]">
-              <Skeleton width="100%" height={`${h}%`} borderRadius="6px 6px 0 0" />
-              <Skeleton width={28} height={12} borderRadius={4} />
+
+      {/* Hero Highlight Card */}
+      <div className="bg-[#F0F5EE]/60 border border-[#DEEAD9]/60 rounded-2xl p-4 sm:p-5 mb-5 space-y-2">
+        <Skeleton width={150} height={12} borderRadius={4} />
+        <Skeleton width={180} height={32} borderRadius={6} />
+        <Skeleton width={220} height={14} borderRadius={4} />
+      </div>
+
+      {/* Monthly Breakdown Subheader */}
+      <div className="mb-3">
+        <Skeleton width={130} height={16} borderRadius={4} />
+      </div>
+
+      {/* Cards Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 flex-1">
+        {[1, 2, 3, 4, 5, 6].map((i) => (
+          <div key={i} className="p-3.5 rounded-xl border border-[#E8ECE6] bg-[#F7F9F6] flex flex-col justify-between space-y-3">
+            <div className="space-y-1.5">
+              <Skeleton width={32} height={12} borderRadius={4} />
+              <Skeleton width="80%" height={20} borderRadius={4} />
             </div>
-          ))}
-        </div>
+            <Skeleton width={50} height={12} borderRadius={4} />
+          </div>
+        ))}
       </div>
     </div>
   );

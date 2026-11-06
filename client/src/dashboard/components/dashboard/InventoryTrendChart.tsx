@@ -3,12 +3,12 @@ import { ChevronDown } from 'lucide-react';
 import { formatINR } from '../../lib/formatters';
 import { useApp } from '../../context/AppContext';
 
-interface ChartDataPoint {
+interface MonthlyBreakdownPoint {
   month: string;
+  fullMonth: string;
   year: number;
   value: number;
   isCurrentMonth: boolean;
-  isEstimated: boolean;
 }
 
 export const InventoryTrendChart: React.FC<{ className?: string }> = ({ className = '' }) => {
@@ -24,11 +24,12 @@ export const InventoryTrendChart: React.FC<{ className?: string }> = ({ classNam
 
   // Build the time buckets across year boundaries
   const { data } = useMemo(() => {
-    const buckets: { month: string; year: number; monthIndex: number; key: string }[] = [];
+    const buckets: { month: string; fullMonth: string; year: number; monthIndex: number; key: string }[] = [];
     for (let i = monthCount - 1; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       buckets.push({
         month: d.toLocaleString('en-US', { month: 'short' }),
+        fullMonth: d.toLocaleString('en-US', { month: 'long' }),
         year: d.getFullYear(),
         monthIndex: d.getMonth(),
         key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
@@ -39,13 +40,20 @@ export const InventoryTrendChart: React.FC<{ className?: string }> = ({ classNam
       ? metrics.totalStockValue
       : (products || []).reduce((acc, p) => acc + (Number(p.stock || 0) * Number(p.purchasePrice || p.sellingPrice || 0)), 0);
 
-    // Group real stock transaction deltas by bucket key
-    const monthDeltas = new Map<string, number>();
-    let matchedTransactionCount = 0;
+    // Map product prices for accurate movement amount calculation if movement.amount is absent
+    const productPriceMap = new Map<string, number>();
+    (products || []).forEach((p) => {
+      const price = Number(p.purchasePrice || p.sellingPrice || 0);
+      productPriceMap.set(p.id, price);
+      if (p.sku) productPriceMap.set(p.sku, price);
+    });
 
-    stockMovements.forEach((m) => {
+    // Group real stock transaction deltas by bucket key (YYYY-MM)
+    const monthDeltas = new Map<string, number>();
+
+    (stockMovements || []).forEach((m) => {
       let movementDate: Date | null = null;
-      const rawDate = (m as any).createdAt || m.date;
+      const rawDate = (m as any).createdAt || (m as any).created_at || (m as any).timestamp || m.date;
       if (rawDate) {
         const parsed = new Date(rawDate);
         if (!isNaN(parsed.getTime())) {
@@ -55,17 +63,13 @@ export const InventoryTrendChart: React.FC<{ className?: string }> = ({ classNam
 
       if (movementDate && !isNaN(movementDate.getTime())) {
         const key = `${movementDate.getFullYear()}-${String(movementDate.getMonth() + 1).padStart(2, '0')}`;
-        const val = Number(m.amount ?? 0) || (Math.abs(Number(m.qtyDelta ?? 0)) * 100);
+        const unitPrice = productPriceMap.get(m.productId) || (m.sku ? productPriceMap.get(m.sku) : 0) || 0;
+        const val = Number(m.amount ?? 0) || (Math.abs(Number(m.qtyDelta ?? 0)) * unitPrice);
         monthDeltas.set(key, (monthDeltas.get(key) || 0) + val);
-        matchedTransactionCount++;
       }
     });
 
-    const realHistoryAvailable = matchedTransactionCount > 0;
-
-    // Working backwards from current month stock value to reconstruct historical points
-    const points: ChartDataPoint[] = [];
-    let rollingVal = Math.max(0, currentStockVal);
+    const points: MonthlyBreakdownPoint[] = [];
 
     for (let i = buckets.length - 1; i >= 0; i--) {
       const b = buckets[i];
@@ -74,30 +78,20 @@ export const InventoryTrendChart: React.FC<{ className?: string }> = ({ classNam
       if (isCurrent) {
         points.unshift({
           month: b.month,
+          fullMonth: b.fullMonth,
           year: b.year,
-          value: Math.max(0, rollingVal),
+          value: Math.max(0, currentStockVal),
           isCurrentMonth: true,
-          isEstimated: false,
-        });
-      } else if (realHistoryAvailable) {
-        // If real delta exists for this month, adjust rolling inventory
-        const delta = monthDeltas.get(b.key) || 0;
-        rollingVal = Math.max(0, rollingVal - delta);
-        points.unshift({
-          month: b.month,
-          year: b.year,
-          value: rollingVal,
-          isCurrentMonth: false,
-          isEstimated: false,
         });
       } else {
-        // When no previous month transaction history exists in database, show clean 0 baseline
+        // If there are real transaction records in this month, show that month's value; otherwise strictly 0
+        const monthVal = monthDeltas.get(b.key) || 0;
         points.unshift({
           month: b.month,
+          fullMonth: b.fullMonth,
           year: b.year,
-          value: 0,
+          value: Math.max(0, monthVal),
           isCurrentMonth: false,
-          isEstimated: false,
         });
       }
     }
@@ -112,32 +106,45 @@ export const InventoryTrendChart: React.FC<{ className?: string }> = ({ classNam
     }
   }, [data, selectedMonth, currentMonthLabel]);
 
-  const rawMax = Math.max(...data.map((d) => d.value), 100000);
-  const maxValue = Math.ceil((rawMax * 1.15) / 100000) * 100000;
-  const chartHeight = 160;
-
-  const isCompletelyEmpty = data.every((d) => d.value === 0);
+  // Active item for the banner card
+  const activeItem = useMemo(() => {
+    return data.find((d) => d.month === selectedMonth) || data[data.length - 1] || {
+      month: currentMonthLabel,
+      fullMonth: now.toLocaleString('en-US', { month: 'long' }),
+      year: now.getFullYear(),
+      value: metrics.totalStockValue,
+      isCurrentMonth: true,
+    };
+  }, [data, selectedMonth, currentMonthLabel, now, metrics.totalStockValue]);
 
   return (
-    <div className={`bg-white rounded-[20px] p-5 border border-[#EEE6DA] h-full flex flex-col justify-between shadow-2xs hover:shadow-xs transition-all ${className}`.trim()}>
-      {/* Card Header */}
+    <div
+      className={`bg-white rounded-[20px] p-5 sm:p-6 border border-[#EEE6DA] h-full flex flex-col justify-between shadow-2xs hover:shadow-xs transition-all ${className}`.trim()}
+    >
+      {/* Top Header Row */}
       <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <h3 className="text-[15px] font-semibold text-[#1C1B18]">Inventory Trend</h3>
-        </div>
+        <h3 className="text-[15px] font-semibold text-[#1C1B18] tracking-tight">
+          Inventory Trend
+        </h3>
+
+        {/* Dropdown Selector */}
         <div className="relative">
           <button
             type="button"
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-[#EEE6DA] bg-white text-xs font-medium text-[#6B665E] hover:border-[#DDD3C4] transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#EEE6DA] bg-white text-xs font-medium text-[#6B665E] hover:border-[#DDD3C4] transition-colors cursor-pointer"
             aria-expanded={isDropdownOpen}
             aria-haspopup="listbox"
           >
             <span>{timeRange}</span>
-            <ChevronDown size={13} />
+            <ChevronDown size={13} className="text-[#6B665E]" />
           </button>
+
           {isDropdownOpen && (
-            <div className="absolute right-0 mt-1.5 w-36 bg-white border border-[#EEE6DA] rounded-xl shadow-lg p-1 z-30" role="listbox">
+            <div
+              className="absolute right-0 mt-1.5 w-36 bg-white border border-[#EEE6DA] rounded-xl shadow-lg p-1 z-30 animate-in fade-in zoom-in-95 duration-100"
+              role="listbox"
+            >
               {(['Last 6 months', 'Last 10 months', 'Last 12 months'] as const).map((r) => (
                 <button
                   key={r}
@@ -162,112 +169,76 @@ export const InventoryTrendChart: React.FC<{ className?: string }> = ({ classNam
         </div>
       </div>
 
-      {isCompletelyEmpty ? (
-        <div className="flex-1 flex flex-col items-center justify-center py-12 text-center text-[#9A948A] text-xs">
-          No inventory activity recorded yet.
+      {/* Hero Highlight Card: Total Inventory Value */}
+      <div className="bg-[#F0F5EE] border border-[#DEEAD9] rounded-2xl p-4 sm:p-5 mb-5 transition-all">
+        <div className="text-[11px] font-bold text-[#4B794E] tracking-wider uppercase mb-1.5">
+          TOTAL INVENTORY VALUE
         </div>
-      ) : (
-        /* Chart Canvas */
-        <div className="relative pt-6 pb-2">
-          {/* Y-axis and grid lines */}
-          <div className="absolute inset-0 flex flex-col justify-between pointer-events-none text-[11px] text-[#9A948A] tabular-nums" aria-hidden="true">
-            <div className="flex items-center w-full">
-              <span className="w-12 shrink-0 text-right pr-2">
-                {maxValue >= 100000 ? `${Math.round(maxValue / 1000)}K` : maxValue}
-              </span>
-              <div className="w-full border-b border-dashed border-[#EEE6DA]/80" />
-            </div>
-            <div className="flex items-center w-full">
-              <span className="w-12 shrink-0 text-right pr-2">
-                {maxValue >= 100000 ? `${Math.round((maxValue * 2) / 3000)}K` : Math.round((maxValue * 2) / 3)}
-              </span>
-              <div className="w-full border-b border-dashed border-[#EEE6DA]/80" />
-            </div>
-            <div className="flex items-center w-full">
-              <span className="w-12 shrink-0 text-right pr-2">
-                {maxValue >= 100000 ? `${Math.round(maxValue / 3000)}K` : Math.round(maxValue / 3)}
-              </span>
-              <div className="w-full border-b border-dashed border-[#EEE6DA]/80" />
-            </div>
-            <div className="flex items-center w-full">
-              <span className="w-12 shrink-0 text-right pr-2">0</span>
-              <div className="w-full border-b border-[#EEE6DA]" />
-            </div>
-          </div>
-
-          {/* Bars Container */}
-          <div
-            className="ml-12 flex items-end justify-between px-2 sm:px-4 relative"
-            style={{ height: `${chartHeight}px` }}
-          >
-            {data.map((item) => {
-              const barHeight = Math.max(4, Math.round((item.value / maxValue) * chartHeight));
-              const isSelected = selectedMonth === item.month;
-
-              return (
-                <div
-                  key={`${item.year}-${item.month}`}
-                  className="flex-1 flex flex-col items-center group relative cursor-pointer"
-                  onClick={() => setSelectedMonth(item.month)}
-                  onMouseEnter={() => setSelectedMonth(item.month)}
-                  tabIndex={0}
-                  role="button"
-                  aria-label={`${item.month} ${item.year}: ${formatINR(item.value)}${item.isEstimated ? ' (Estimated)' : ''}`}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      setSelectedMonth(item.month);
-                    }
-                  }}
-                >
-                  {/* Active Tooltip above bar */}
-                  {isSelected && (
-                    <div
-                      className="absolute z-20 flex flex-col items-center pointer-events-none animate-in fade-in duration-150"
-                      style={{ bottom: `${barHeight + 8}px` }}
-                    >
-                      <div className="bg-[#1C1B18] text-white text-[11px] font-semibold px-2 py-1 rounded-md shadow-md whitespace-nowrap tabular-nums">
-                        {formatINR(item.value)}
-                        {item.isEstimated && <span className="opacity-75 font-normal ml-1">(Est.)</span>}
-                      </div>
-                      {/* Tooltip triangle */}
-                      <div className="w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-[#1C1B18]" />
-                    </div>
-                  )}
-
-                  {/* Bar */}
-                  <div
-                    className={`w-3.5 sm:w-5 md:w-6 rounded-t-[5px] transition-all duration-200 ${
-                      isSelected
-                        ? 'bg-[#7FAE82]'
-                        : item.isCurrentMonth
-                        ? 'bg-[#98C49B]'
-                        : 'bg-[#B9D4BA] hover:bg-[#A6C8A7]'
-                    }`}
-                    style={{ height: `${barHeight}px` }}
-                  />
-                </div>
-              );
-            })}
-          </div>
-
-          {/* X-axis labels */}
-          <div className="ml-12 flex justify-between px-2 sm:px-4 pt-2 text-[11px] text-[#9A948A]">
-            {data.map((item) => (
-              <button
-                key={`${item.year}-${item.month}`}
-                type="button"
-                className={`flex-1 text-center font-medium transition-colors cursor-pointer ${
-                  selectedMonth === item.month ? 'text-[#1C1B18] font-bold' : 'hover:text-[#1C1B18]'
-                }`}
-                onClick={() => setSelectedMonth(item.month)}
-              >
-                {item.month}
-              </button>
-            ))}
-          </div>
+        <div className="text-2xl sm:text-3xl font-extrabold text-[#1C1B18] tracking-tight mb-1 tabular-nums">
+          {formatINR(activeItem.value)}
         </div>
-      )}
+        <div className="text-xs text-[#6B665E] font-medium">
+          {activeItem.isCurrentMonth
+            ? `Current inventory valuation · ${activeItem.fullMonth}`
+            : `Inventory valuation · ${activeItem.fullMonth} ${activeItem.year}`}
+        </div>
+      </div>
+
+      {/* Monthly Breakdown Subheader */}
+      <div className="mb-3">
+        <h4 className="text-sm font-semibold text-[#1C1B18]">Monthly breakdown</h4>
+      </div>
+
+      {/* Monthly Breakdown Cards Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 flex-1">
+        {data.map((item) => {
+          const isSelected = selectedMonth === item.month;
+          return (
+            <div
+              key={`${item.year}-${item.month}`}
+              role="button"
+              tabIndex={0}
+              onClick={() => setSelectedMonth(item.month)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setSelectedMonth(item.month);
+                }
+              }}
+              className={`p-3.5 rounded-xl border transition-all cursor-pointer flex flex-col justify-between text-left select-none ${
+                item.isCurrentMonth
+                  ? isSelected
+                    ? 'bg-[#EAF3E9] border-[#2E8B57] ring-1.5 ring-[#2E8B57] shadow-2xs'
+                    : 'bg-[#EDF5EC]/70 border-[#C4DFC1] hover:border-[#2E8B57]'
+                  : isSelected
+                  ? 'bg-white border-[#2E8B57] ring-1.5 ring-[#2E8B57] shadow-2xs'
+                  : 'bg-[#F7F9F6] border-[#E8ECE6] hover:border-[#CAD8C8] hover:bg-[#F2F5F0]'
+              }`}
+            >
+              <div>
+                <span className="text-xs font-semibold text-[#6B665E] block mb-1">
+                  {item.month}
+                </span>
+                <span className="text-[15px] sm:text-base font-bold text-[#1C1B18] tracking-tight block tabular-nums">
+                  {formatINR(item.value)}
+                </span>
+              </div>
+
+              <div className="mt-2.5">
+                {item.isCurrentMonth ? (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#D3EBD2] text-[#246A28]">
+                    Current
+                  </span>
+                ) : (
+                  <span className="text-[11px] text-[#9A948A] block">
+                    Monthly value
+                  </span>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 };

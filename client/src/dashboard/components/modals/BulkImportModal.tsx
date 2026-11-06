@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import {
   X,
   UploadCloud,
@@ -17,6 +17,10 @@ import { useApp } from '../../context/AppContext';
 import { productImportsApi } from '../../lib/api';
 import { formatINR } from '../../lib/formatters';
 import { Portal } from '../common/Portal';
+import {
+  generateIndustryCsvTemplate,
+  getIndustryImportTemplate,
+} from '../../../shared/industryImportTemplates';
 
 interface BulkImportModalProps {
   isOpen: boolean;
@@ -38,10 +42,32 @@ interface ExtractedRow {
   valid?: boolean;
   errors?: string[];
   warnings?: string[];
+  // Industry specific schema fields
+  genericName?: string;
+  manufacturer?: string;
+  batchNumber?: string;
+  manufacturingDate?: string;
+  expiryDate?: string;
+  mrp?: number;
+  gstRate?: number;
+  hsnCode?: string;
+  brand?: string;
+  size?: string;
+  color?: string;
+  model?: string;
+  serialNumber?: string;
+  warrantyMonths?: number;
+  weight?: string;
+  material?: string;
+  dimensions?: string;
+  rackLocation?: string;
+  parentSku?: string;
+  wholesalePrice?: number;
+  description?: string;
 }
 
 export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClose, onSuccess }) => {
-  const { suppliers, addProduct, refreshBackendData } = useApp();
+  const { suppliers, addProduct, refreshBackendData, businessProfile } = useApp();
 
   const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -49,6 +75,17 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClos
   const [isImporting, setIsImporting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successInfo, setSuccessInfo] = useState<{ count: number; updated: number } | null>(null);
+
+  // Industry template configuration strictly based on business industry
+  const templateConfig = useMemo(
+    () => getIndustryImportTemplate(businessProfile?.industry),
+    [businessProfile?.industry]
+  );
+  const isPharmacy = templateConfig.industry === 'pharmacy';
+  const isClothing = templateConfig.industry === 'clothing';
+  const isElectronics = templateConfig.industry === 'electronics';
+  const isGrocery = templateConfig.industry === 'grocery';
+  const isHardware = templateConfig.industry === 'hardware';
 
   // Extracted rows & configuration
   const [extractedRows, setExtractedRows] = useState<ExtractedRow[]>([]);
@@ -60,25 +97,14 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClos
 
   if (!isOpen) return null;
 
-  // Download a sample CSV template for the user
-  const handleDownloadSampleTemplate = () => {
-    const csvContent =
-      'SKU,Name,Category,Stock,Unit,PurchasePrice,SellingPrice,Barcode,Description\n' +
-      'SHIRT-001,Premium Cotton Shirt,Apparel,50,pcs,450,899,8901234567890,Comfortable 100% combed cotton shirt\n' +
-      'TAB-500,Paracetamol 500mg,Pharmacy,120,strip,18,35,8909876543210,Analgesic and antipyretic tablets\n' +
-      'MOUSE-W,Wireless Optical Mouse,Electronics,30,pcs,250,599,8905432167890,2.4GHz ergonomic wireless mouse\n' +
-      'RICE-5K,Basmati Rice 5kg,Groceries,40,bag,420,650,8906543210987,Aged premium fragrant basmati rice\n' +
-      'SHOE-RUN,Lightweight Running Shoes,Footwear,25,pair,850,1799,8907654321098,Breathable sports running sneakers\n';
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', 'products_bulk_import_template.csv');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+  // Download industry-specific sample Excel or PDF template
+  const handleDownloadTemplate = async (format: 'xlsx' | 'pdf' = 'xlsx') => {
+    try {
+      await productImportsApi.downloadTemplate(businessProfile?.industry, format, businessProfile?.name);
+    } catch (err: any) {
+      console.error('Failed to download template:', err);
+      setErrorMessage(err.message || 'Failed to download sample template. Please check your connection.');
+    }
   };
 
   // Local CSV parsing fallback if backend extraction fails
@@ -92,7 +118,15 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClos
     // Parse header row
     const headers = lines[0]
       .split(',')
-      .map((h) => h.trim().replace(/^["']|["']$/g, '').toLowerCase());
+      .map((h) =>
+        h
+          .trim()
+          .replace(/^["']|["']$/g, '')
+          .toLowerCase()
+          .replace(/[%._()-]/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim()
+      );
 
     const findIndex = (aliases: string[]) => {
       const exact = headers.findIndex((h) => aliases.some((a) => h === a));
@@ -100,17 +134,40 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClos
       return headers.findIndex((h) => aliases.some((a) => h.includes(a)));
     };
 
-    const skuIdx = findIndex(['sku', 'productcode', 'product_code', 'itemcode', 'item_code', 'code']);
-    const nameIdx = findIndex(['name', 'productname', 'product_name', 'product', 'itemname', 'item_name', 'item', 'title']);
-    const catIdx = findIndex(['category', 'productcategory', 'product_category', 'type', 'dept', 'department']);
-    const stockIdx = findIndex(['quantity', 'qty', 'stock', 'count', 'units']);
+    const skuIdx = findIndex(['sku', 'productcode', 'product code', 'itemcode', 'item code', 'code', 'variant sku', 'part number sku', 'part number']);
+    const nameIdx = findIndex(['name', 'productname', 'product name', 'product', 'itemname', 'item name', 'item', 'title', 'medicine name', 'style product name', 'part name']);
+    const catIdx = findIndex(['category', 'productcategory', 'product category', 'type', 'dept', 'department']);
+    const stockIdx = findIndex(['quantity', 'qty', 'stock', 'stock quantity', 'count', 'units']);
     const unitIdx = findIndex(['unit', 'uom', 'measurement']);
-    const buyIdx = findIndex(['purchaseprice', 'purchase_price', 'purchase', 'costprice', 'cost_price', 'cost', 'buyprice', 'buy']);
-    const sellIdx = findIndex(['sellingprice', 'selling_price', 'selling', 'retailprice', 'retail_price', 'retail', 'saleprice', 'sale_price', 'sale', 'mrp', 'price', 'rate']);
-    const barcodeIdx = findIndex(['barcode', 'bar_code', 'ean', 'upc', 'gtin']);
+    const buyIdx = findIndex(['purchaseprice', 'purchase price', 'purchase', 'costprice', 'cost price', 'cost', 'buyprice', 'buy price', 'rate']);
+    const sellIdx = findIndex(['sellingprice', 'selling price', 'selling', 'retailprice', 'retail price', 'retail', 'saleprice', 'sale price', 'sale', 'price']);
+    const mrpIdx = findIndex(['mrp', 'max retail price', 'maximum retail price']);
+    const barcodeIdx = findIndex(['barcode', 'bar code', 'ean', 'upc', 'gtin']);
+
+    // Industry-specific header lookups
+    const genericIdx = findIndex(['generic', 'generic name', 'generic salt name', 'salt', 'molecule', 'salt composition', 'active ingredient']);
+    const mfgIdx = findIndex(['manufacturer', 'mfg', 'pharma company', 'producer', 'company']);
+    const batchIdx = findIndex(['batch', 'batch no', 'batch number', 'lot', 'lot no', 'lot number']);
+    const mfgDateIdx = findIndex(['mfg date', 'manufacturing date', 'mfd', 'mfg dt', 'mfg date yyyy mm dd']);
+    const expDateIdx = findIndex(['expiry', 'expiry date', 'exp date', 'exp dt', 'expiration', 'expiry date yyyy mm dd']);
+    const gstIdx = findIndex(['gst', 'gst rate', 'tax', 'tax rate']);
+    const hsnIdx = findIndex(['hsn', 'hsn code', 'hsncode']);
+    const brandIdx = findIndex(['brand', 'make', 'brand make', 'brand oem']);
+    const sizeIdx = findIndex(['size', 'garment size']);
+    const colorIdx = findIndex(['color', 'colour', 'shade']);
+    const modelIdx = findIndex(['model', 'model number', 'model no', 'vehicle compatibility', 'grade']);
+    const serialIdx = findIndex(['serial', 'serial number', 'serial no', 'imei']);
+    const warrantyIdx = findIndex(['warranty', 'warranty months', 'warranty period']);
+    const weightIdx = findIndex(['weight', 'weight pack size', 'pack size']);
+    const materialIdx = findIndex(['material', 'material fabric', 'fabric']);
+    const dimensionsIdx = findIndex(['dimensions', 'dimension', 'dimensions size']);
+    const rackIdx = findIndex(['rack', 'rack location', 'warehouse rack location', 'shelf location', 'aisle bin location', 'bin location', 'aisle']);
+    const parentSkuIdx = findIndex(['parent sku', 'parent style sku', 'style sku', 'parent sku style code', 'style code']);
+    const wholesaleIdx = findIndex(['wholesale price', 'wholesale rate', 'bulk price']);
+    const descIdx = findIndex(['description', 'desc', 'details', 'storage instructions', 'storage', 'fabric fit', 'design and fit details', 'design fit details']);
 
     if (nameIdx === -1) {
-      throw new Error('CSV must contain a column for Product Name ("Name", "Product Name", or "Title").');
+      throw new Error('CSV must contain a column for Product / Medicine Name.');
     }
 
     const rows: ExtractedRow[] = [];
@@ -133,6 +190,7 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClos
       const unit = (unitIdx !== -1 && cols[unitIdx]) ? cols[unitIdx] : 'pcs';
       const purchasePrice = buyIdx !== -1 ? Math.max(0, parseFloat(cols[buyIdx]) || 0) : 100;
       const sellingPrice = sellIdx !== -1 ? Math.max(0, parseFloat(cols[sellIdx]) || 0) : Math.round(purchasePrice * 1.4);
+      const mrp = mrpIdx !== -1 ? Math.max(0, parseFloat(cols[mrpIdx]) || 0) : undefined;
       const barcode = barcodeIdx !== -1 ? cols[barcodeIdx] : '';
 
       rows.push({
@@ -144,8 +202,29 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClos
         unit,
         purchasePrice,
         sellingPrice,
+        mrp,
         barcode,
         valid: true,
+        genericName: genericIdx !== -1 ? cols[genericIdx] : undefined,
+        manufacturer: mfgIdx !== -1 ? cols[mfgIdx] : undefined,
+        batchNumber: batchIdx !== -1 ? cols[batchIdx] : undefined,
+        manufacturingDate: mfgDateIdx !== -1 ? cols[mfgDateIdx] : undefined,
+        expiryDate: expDateIdx !== -1 ? cols[expDateIdx] : undefined,
+        gstRate: gstIdx !== -1 ? parseFloat(cols[gstIdx]) || undefined : undefined,
+        hsnCode: hsnIdx !== -1 ? cols[hsnIdx] : undefined,
+        brand: brandIdx !== -1 ? cols[brandIdx] : undefined,
+        size: sizeIdx !== -1 ? cols[sizeIdx] : undefined,
+        color: colorIdx !== -1 ? cols[colorIdx] : undefined,
+        model: modelIdx !== -1 ? cols[modelIdx] : undefined,
+        serialNumber: serialIdx !== -1 ? cols[serialIdx] : undefined,
+        warrantyMonths: warrantyIdx !== -1 ? parseInt(cols[warrantyIdx], 10) || undefined : undefined,
+        weight: weightIdx !== -1 ? cols[weightIdx] : undefined,
+        material: materialIdx !== -1 ? cols[materialIdx] : undefined,
+        dimensions: dimensionsIdx !== -1 ? cols[dimensionsIdx] : undefined,
+        rackLocation: rackIdx !== -1 ? cols[rackIdx] : undefined,
+        parentSku: parentSkuIdx !== -1 ? cols[parentSkuIdx] : undefined,
+        wholesalePrice: wholesaleIdx !== -1 ? parseFloat(cols[wholesaleIdx]) || undefined : undefined,
+        description: descIdx !== -1 ? cols[descIdx] : undefined,
       });
     }
 
@@ -166,15 +245,15 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClos
     const ext = file.name.split('.').pop()?.toLowerCase();
     const isCsv = ext === 'csv';
     const isPdf = ext === 'pdf';
-    const isXlsx = ext === 'xlsx';
+    const isXlsx = ext === 'xlsx' || ext === 'xls';
 
     if (!isCsv && !isPdf && !isXlsx) {
       setIsExtracting(false);
-      setErrorMessage('Please upload a valid CSV (.csv) or PDF (.pdf) file.');
+      setErrorMessage('Please upload a valid Excel spreadsheet (.xlsx) or PDF (.pdf) file.');
       return;
     }
 
-    setDetectedFileType(isPdf ? 'pdf' : isXlsx ? 'xlsx' : 'csv');
+    setDetectedFileType(isPdf ? 'pdf' : 'xlsx');
 
     try {
       // 1. First attempt backend extraction (supports both PDF table detection and CSV)
@@ -195,6 +274,28 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClos
           valid: r.valid !== false,
           errors: r.errors || [],
           warnings: r.warnings || [],
+          // Industry fields
+          genericName: r.genericName || undefined,
+          manufacturer: r.manufacturer || undefined,
+          batchNumber: r.batchNumber || undefined,
+          manufacturingDate: r.manufacturingDate || undefined,
+          expiryDate: r.expiryDate || undefined,
+          mrp: r.mrp !== undefined && r.mrp !== null ? Number(r.mrp) : undefined,
+          gstRate: r.gstRate !== undefined && r.gstRate !== null ? Number(r.gstRate) : undefined,
+          hsnCode: r.hsnCode || undefined,
+          brand: r.brand || undefined,
+          size: r.size || undefined,
+          color: r.color || undefined,
+          model: r.model || undefined,
+          serialNumber: r.serialNumber || undefined,
+          warrantyMonths: r.warrantyMonths !== undefined && r.warrantyMonths !== null ? Number(r.warrantyMonths) : undefined,
+          weight: r.weight || undefined,
+          material: r.material || undefined,
+          dimensions: r.dimensions || undefined,
+          rackLocation: r.rackLocation || undefined,
+          parentSku: r.parentSku || undefined,
+          wholesalePrice: r.wholesalePrice !== undefined && r.wholesalePrice !== null ? Number(r.wholesalePrice) : undefined,
+          description: r.description || undefined,
         }));
         setExtractedRows(mappedRows);
       } else {
@@ -212,10 +313,10 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClos
           setExtractedRows([]);
         }
       } else {
-        // PDF error from backend
+        // File error from backend
         setErrorMessage(
           apiErr.message ||
-            'Could not extract product items from this PDF. Please ensure the PDF has a clear table with column headings (SKU, Name, Price, Quantity) or convert to CSV.'
+            'Could not extract product items from this file. Please ensure the file has a clear table with column headings (SKU, Name, Price, Quantity) or download our Excel template.'
         );
         setExtractedRows([]);
       }
@@ -258,7 +359,12 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClos
 
     const validRows = extractedRows.filter((r) => r.valid !== false);
     if (validRows.length === 0) {
-      setErrorMessage('No valid rows available to import.');
+      const firstError = extractedRows.find((r) => r.errors && r.errors.length > 0)?.errors?.[0];
+      setErrorMessage(
+        firstError
+          ? `No valid rows to import: ${firstError}`
+          : 'No valid rows available to import. Check your file formatting or download the sample template below.'
+      );
       setIsImporting(false);
       return;
     }
@@ -284,6 +390,28 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClos
             sellingPrice: r.sellingPrice,
             unit: r.unit || 'pcs',
             barcode: r.barcode || '',
+            // Industry specific parameters passed to backend
+            genericName: r.genericName,
+            manufacturer: r.manufacturer,
+            batchNumber: r.batchNumber,
+            manufacturingDate: r.manufacturingDate,
+            expiryDate: r.expiryDate,
+            mrp: r.mrp,
+            gstRate: r.gstRate,
+            hsnCode: r.hsnCode,
+            brand: r.brand,
+            size: r.size,
+            color: r.color,
+            model: r.model,
+            serialNumber: r.serialNumber,
+            warrantyMonths: r.warrantyMonths,
+            weight: r.weight,
+            material: r.material,
+            dimensions: r.dimensions,
+            rackLocation: r.rackLocation,
+            parentSku: r.parentSku,
+            wholesalePrice: r.wholesalePrice,
+            description: r.description,
           })),
         });
 
@@ -354,7 +482,7 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClos
               <h2 className="text-lg font-bold text-[#1C1B18]">Bulk Import Products</h2>
             </div>
             <p className="text-xs text-[#6B665E] mt-1">
-              Upload a <span className="font-semibold text-[#1C1B18]">CSV spreadsheet</span> or{' '}
+              Upload an <span className="font-semibold text-[#1C1B18]">Excel spreadsheet (.xlsx)</span> or{' '}
               <span className="font-semibold text-[#1C1B18]">PDF invoice/catalog</span> to import products in bulk.
             </p>
           </div>
@@ -419,7 +547,7 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClos
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".csv, .pdf, .xlsx, text/csv, application/pdf"
+                accept=".xlsx, .xls, .pdf, application/pdf, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel, text/csv, .csv"
                 className="hidden"
                 onChange={handleFileChange}
               />
@@ -455,14 +583,14 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClos
                       Click to upload or drag & drop file
                     </h3>
                     <p className="text-xs text-[#6B665E] mt-1 max-w-sm">
-                      Upload your spreadsheet or supplier invoice. Our system automatically extracts rows and prices.
+                      Upload your Excel spreadsheet or supplier invoice. Our system automatically extracts rows and prices.
                     </p>
 
                     {/* Supported Format Pills */}
                     <div className="flex items-center gap-2 mt-4">
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-[#EEE6DA] text-[11px] font-semibold text-[#1C1B18]">
-                        <FileSpreadsheet size={13} className="text-[#2E8B57]" />
-                        <span>.CSV Spreadsheets</span>
+                        <FileSpreadsheet size={13} className="text-[#107C41]" />
+                        <span>.Excel Spreadsheets (.xlsx)</span>
                       </span>
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-[#EEE6DA] text-[11px] font-semibold text-[#1C1B18]">
                         <FileText size={13} className="text-[#D64545]" />
@@ -480,20 +608,30 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClos
                 <div className="space-y-0.5">
                   <div className="text-xs font-bold text-[#1C1B18] flex items-center gap-1.5">
                     <Download size={14} className="text-[#7FAE82]" />
-                    <span>Need a starting format?</span>
+                    <span>Need a starting format for {templateConfig.label}?</span>
                   </div>
                   <p className="text-[11px] text-[#6B665E]">
-                    Download our ready-to-use CSV template with pre-filled sample items.
+                    Download our ready-to-use Excel template or PDF sample customized with schema fields for {templateConfig.label}.
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleDownloadSampleTemplate}
-                  className="px-3.5 py-1.5 rounded-xl border border-[#EEE6DA] bg-white text-xs font-semibold text-[#1C1B18] hover:bg-[#FAF6EF] transition-colors cursor-pointer shadow-2xs inline-flex items-center gap-1.5"
-                >
-                  <Download size={13} />
-                  <span>Download Sample CSV</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleDownloadTemplate('xlsx')}
+                    className="px-3.5 py-1.5 rounded-xl border border-[#EEE6DA] bg-white text-xs font-semibold text-[#1C1B18] hover:bg-[#FAF6EF] transition-colors cursor-pointer shadow-2xs inline-flex items-center gap-1.5"
+                  >
+                    <FileSpreadsheet size={13} className="text-[#107C41]" />
+                    <span>Download Excel Template (.xlsx)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDownloadTemplate('pdf')}
+                    className="px-3 py-1.5 rounded-xl border border-[#EEE6DA] bg-white text-xs font-semibold text-[#6B665E] hover:text-[#1C1B18] hover:bg-[#FAF6EF] transition-colors cursor-pointer shadow-2xs inline-flex items-center gap-1.5"
+                  >
+                    <FileText size={13} className="text-[#D64545]" />
+                    <span>Download PDF Sample</span>
+                  </button>
+                </div>
               </div>
             </div>
           ) : (
@@ -516,6 +654,9 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClos
                       </h4>
                       <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-white border border-[#EEE6DA] uppercase">
                         {detectedFileType}
+                      </span>
+                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-[#E8F5EC] text-[#2E8B57]">
+                        {templateConfig.label.split('&')[0].trim()}
                       </span>
                     </div>
                     <p className="text-[11px] text-[#6B665E] mt-0.5">
@@ -588,34 +729,236 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClos
                   <table className="w-full text-left text-xs border-collapse">
                     <thead className="bg-[#FAF6EF] text-[#6B665E] text-[11px] font-semibold sticky top-0 z-10 border-b border-[#EEE6DA]">
                       <tr>
-                        <th className="py-2 px-3">SKU</th>
-                        <th className="py-2 px-3">Product Name</th>
-                        <th className="py-2 px-3">Category</th>
-                        <th className="py-2 px-3 text-right">Qty</th>
-                        <th className="py-2 px-3 text-right">Purchase (₹)</th>
-                        <th className="py-2 px-3 text-right">Retail (₹)</th>
-                        <th className="py-2 px-3 text-center">Status</th>
+                        {isPharmacy ? (
+                          <>
+                            <th className="py-2 px-3">Medicine & Salt</th>
+                            <th className="py-2 px-3">Batch & Expiry</th>
+                            <th className="py-2 px-3">Category</th>
+                            <th className="py-2 px-3 text-right">Qty</th>
+                            <th className="py-2 px-3 text-right">Cost (₹)</th>
+                            <th className="py-2 px-3 text-right">Selling / MRP</th>
+                            <th className="py-2 px-3 text-center">Status</th>
+                          </>
+                        ) : isClothing ? (
+                          <>
+                            <th className="py-2 px-3">Garment & SKU</th>
+                            <th className="py-2 px-3">Size / Color</th>
+                            <th className="py-2 px-3">Category</th>
+                            <th className="py-2 px-3 text-right">Qty</th>
+                            <th className="py-2 px-3 text-right">Purchase (₹)</th>
+                            <th className="py-2 px-3 text-right">Retail (₹)</th>
+                            <th className="py-2 px-3 text-center">Status</th>
+                          </>
+                        ) : isElectronics ? (
+                          <>
+                            <th className="py-2 px-3">Product & SKU</th>
+                            <th className="py-2 px-3">Brand & Model</th>
+                            <th className="py-2 px-3">Warranty</th>
+                            <th className="py-2 px-3 text-right">Qty</th>
+                            <th className="py-2 px-3 text-right">Purchase (₹)</th>
+                            <th className="py-2 px-3 text-right">Retail (₹)</th>
+                            <th className="py-2 px-3 text-center">Status</th>
+                          </>
+                        ) : isGrocery ? (
+                          <>
+                            <th className="py-2 px-3">Item & SKU</th>
+                            <th className="py-2 px-3">Pack / Weight</th>
+                            <th className="py-2 px-3">Expiry</th>
+                            <th className="py-2 px-3 text-right">Qty</th>
+                            <th className="py-2 px-3 text-right">Purchase (₹)</th>
+                            <th className="py-2 px-3 text-right">Retail (₹)</th>
+                            <th className="py-2 px-3 text-center">Status</th>
+                          </>
+                        ) : isHardware ? (
+                          <>
+                            <th className="py-2 px-3">Item & Part #</th>
+                            <th className="py-2 px-3">Specs / Material</th>
+                            <th className="py-2 px-3">Rack Loc.</th>
+                            <th className="py-2 px-3 text-right">Qty</th>
+                            <th className="py-2 px-3 text-right">Purchase (₹)</th>
+                            <th className="py-2 px-3 text-right">Retail (₹)</th>
+                            <th className="py-2 px-3 text-center">Status</th>
+                          </>
+                        ) : (
+                          <>
+                            <th className="py-2 px-3">SKU</th>
+                            <th className="py-2 px-3">Product Name</th>
+                            <th className="py-2 px-3">Category</th>
+                            <th className="py-2 px-3 text-right">Qty</th>
+                            <th className="py-2 px-3 text-right">Purchase (₹)</th>
+                            <th className="py-2 px-3 text-right">Retail (₹)</th>
+                            <th className="py-2 px-3 text-center">Status</th>
+                          </>
+                        )}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#EEE6DA]">
                       {extractedRows.slice(0, 50).map((row, idx) => (
                         <tr key={`${row.sku}-${idx}`} className="hover:bg-[#FAF6EF]/40 transition-colors">
-                          <td className="py-2 px-3 font-mono text-[11px] text-[#6B665E]">{row.sku}</td>
-                          <td className="py-2 px-3 font-semibold text-[#1C1B18] max-w-[180px] truncate">
-                            {row.name}
-                          </td>
-                          <td className="py-2 px-3 text-[#6B665E]">{row.category}</td>
-                          <td className="py-2 px-3 text-right font-bold text-[#1C1B18] tabular-nums">
-                            {row.quantity} {row.unit || 'pcs'}
-                          </td>
-                          <td className="py-2 px-3 text-right text-[#6B665E] tabular-nums">
-                            {formatINR(row.purchasePrice)}
-                          </td>
-                          <td className="py-2 px-3 text-right font-bold text-[#2E8B57] tabular-nums">
-                            {formatINR(row.sellingPrice)}
-                          </td>
+                          {isPharmacy ? (
+                            <>
+                              <td className="py-2 px-3">
+                                <div className="font-semibold text-[#1C1B18] max-w-[200px] truncate">{row.name}</div>
+                                {row.genericName && (
+                                  <div className="text-[10px] text-[#2E8B57] font-medium truncate max-w-[200px]">
+                                    {row.genericName}
+                                  </div>
+                                )}
+                                <div className="text-[9.5px] text-[#8C827A] font-mono">{row.sku}</div>
+                              </td>
+                              <td className="py-2 px-3">
+                                {row.batchNumber ? (
+                                  <div className="font-mono text-[11px] font-semibold text-[#1C1B18]">
+                                    {row.batchNumber}
+                                  </div>
+                                ) : (
+                                  <span className="text-[#8C827A]">—</span>
+                                )}
+                                {row.expiryDate && (
+                                  <div className="text-[10px] text-[#D97706] font-medium">Exp: {row.expiryDate}</div>
+                                )}
+                              </td>
+                              <td className="py-2 px-3 text-[#6B665E]">{row.category}</td>
+                              <td className="py-2 px-3 text-right font-bold text-[#1C1B18] tabular-nums">
+                                {row.quantity} {row.unit || 'strip'}
+                              </td>
+                              <td className="py-2 px-3 text-right text-[#6B665E] tabular-nums">
+                                {formatINR(row.purchasePrice)}
+                              </td>
+                              <td className="py-2 px-3 text-right tabular-nums">
+                                <div className="font-bold text-[#2E8B57]">{formatINR(row.sellingPrice)}</div>
+                                {row.mrp ? (
+                                  <div className="text-[10px] text-[#8C827A]">MRP: {formatINR(row.mrp)}</div>
+                                ) : null}
+                              </td>
+                            </>
+                          ) : isClothing ? (
+                            <>
+                              <td className="py-2 px-3">
+                                <div className="font-semibold text-[#1C1B18] max-w-[200px] truncate">{row.name}</div>
+                                <div className="text-[9.5px] text-[#8C827A] font-mono">{row.sku}</div>
+                              </td>
+                              <td className="py-2 px-3">
+                                {row.size || row.color ? (
+                                  <span className="px-1.5 py-0.5 rounded bg-[#FAF6EF] border border-[#EEE6DA] text-[#381e12] font-semibold text-[10px]">
+                                    {[row.size, row.color].filter(Boolean).join(' / ')}
+                                  </span>
+                                ) : (
+                                  <span className="text-[#8C827A]">—</span>
+                                )}
+                              </td>
+                              <td className="py-2 px-3 text-[#6B665E]">{row.category}</td>
+                              <td className="py-2 px-3 text-right font-bold text-[#1C1B18] tabular-nums">
+                                {row.quantity} {row.unit || 'pcs'}
+                              </td>
+                              <td className="py-2 px-3 text-right text-[#6B665E] tabular-nums">
+                                {formatINR(row.purchasePrice)}
+                              </td>
+                              <td className="py-2 px-3 text-right font-bold text-[#2E8B57] tabular-nums">
+                                {formatINR(row.sellingPrice)}
+                              </td>
+                            </>
+                          ) : isElectronics ? (
+                            <>
+                              <td className="py-2 px-3">
+                                <div className="font-semibold text-[#1C1B18] max-w-[200px] truncate">{row.name}</div>
+                                <div className="text-[9.5px] text-[#8C827A] font-mono">{row.sku}</div>
+                              </td>
+                              <td className="py-2 px-3 text-[#6B665E]">
+                                {[row.brand, row.model].filter(Boolean).join(' · ') || '—'}
+                              </td>
+                              <td className="py-2 px-3">
+                                {row.warrantyMonths ? (
+                                  <span className="text-[10.5px] text-[#2563EB] font-medium">{row.warrantyMonths}m Warranty</span>
+                                ) : (
+                                  <span className="text-[#8C827A]">—</span>
+                                )}
+                              </td>
+                              <td className="py-2 px-3 text-right font-bold text-[#1C1B18] tabular-nums">
+                                {row.quantity} {row.unit || 'pcs'}
+                              </td>
+                              <td className="py-2 px-3 text-right text-[#6B665E] tabular-nums">
+                                {formatINR(row.purchasePrice)}
+                              </td>
+                              <td className="py-2 px-3 text-right font-bold text-[#2E8B57] tabular-nums">
+                                {formatINR(row.sellingPrice)}
+                              </td>
+                            </>
+                          ) : isGrocery ? (
+                            <>
+                              <td className="py-2 px-3">
+                                <div className="font-semibold text-[#1C1B18] max-w-[200px] truncate">{row.name}</div>
+                                <div className="text-[9.5px] text-[#8C827A] font-mono">{row.sku}</div>
+                              </td>
+                              <td className="py-2 px-3 text-[#6B665E] font-medium">
+                                {row.weight || row.unit || '—'}
+                              </td>
+                              <td className="py-2 px-3">
+                                {row.expiryDate ? (
+                                  <span className="text-[10.5px] text-[#D97706] font-medium">{row.expiryDate}</span>
+                                ) : (
+                                  <span className="text-[#8C827A]">—</span>
+                                )}
+                              </td>
+                              <td className="py-2 px-3 text-right font-bold text-[#1C1B18] tabular-nums">
+                                {row.quantity} {row.unit || 'pack'}
+                              </td>
+                              <td className="py-2 px-3 text-right text-[#6B665E] tabular-nums">
+                                {formatINR(row.purchasePrice)}
+                              </td>
+                              <td className="py-2 px-3 text-right font-bold text-[#2E8B57] tabular-nums">
+                                {formatINR(row.sellingPrice)}
+                              </td>
+                            </>
+                          ) : isHardware ? (
+                            <>
+                              <td className="py-2 px-3">
+                                <div className="font-semibold text-[#1C1B18] max-w-[200px] truncate">{row.name}</div>
+                                <div className="text-[9.5px] text-[#8C827A] font-mono">{row.sku}</div>
+                              </td>
+                              <td className="py-2 px-3 text-[#6B665E]">
+                                {[row.dimensions, row.material].filter(Boolean).join(' · ') || '—'}
+                              </td>
+                              <td className="py-2 px-3 font-mono text-[10px] text-[#6B665E]">
+                                {row.rackLocation || '—'}
+                              </td>
+                              <td className="py-2 px-3 text-right font-bold text-[#1C1B18] tabular-nums">
+                                {row.quantity} {row.unit || 'pcs'}
+                              </td>
+                              <td className="py-2 px-3 text-right text-[#6B665E] tabular-nums">
+                                {formatINR(row.purchasePrice)}
+                              </td>
+                              <td className="py-2 px-3 text-right font-bold text-[#2E8B57] tabular-nums">
+                                {formatINR(row.sellingPrice)}
+                              </td>
+                            </>
+                          ) : (
+                            <>
+                              <td className="py-2 px-3 font-mono text-[11px] text-[#6B665E]">{row.sku}</td>
+                              <td className="py-2 px-3 font-semibold text-[#1C1B18] max-w-[180px] truncate">
+                                {row.name}
+                              </td>
+                              <td className="py-2 px-3 text-[#6B665E]">{row.category}</td>
+                              <td className="py-2 px-3 text-right font-bold text-[#1C1B18] tabular-nums">
+                                {row.quantity} {row.unit || 'pcs'}
+                              </td>
+                              <td className="py-2 px-3 text-right text-[#6B665E] tabular-nums">
+                                {formatINR(row.purchasePrice)}
+                              </td>
+                              <td className="py-2 px-3 text-right font-bold text-[#2E8B57] tabular-nums">
+                                {formatINR(row.sellingPrice)}
+                              </td>
+                            </>
+                          )}
                           <td className="py-2 px-3 text-center">
-                            {row.duplicate ? (
+                            {row.valid === false ? (
+                              <span
+                                className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-[#FDECEC] text-[#D64545]"
+                                title={row.errors?.join(', ')}
+                              >
+                                Invalid
+                              </span>
+                            ) : row.duplicate ? (
                               <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-[#FFF4DC] text-[#D98E0B]">
                                 Update
                               </span>

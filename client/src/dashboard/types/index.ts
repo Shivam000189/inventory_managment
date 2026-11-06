@@ -209,6 +209,7 @@ export interface Customer {
   creditLimit: number;
   address?: string;
   gstin?: string;
+  createdAt?: string;
 }
 
 export interface AppNotification {

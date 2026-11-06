@@ -8,15 +8,21 @@ import { DataTable } from "../../components/ui/DataTable.jsx";
 import { Button } from "../../components/ui/Button.jsx";
 import { Field, Input, Select, Checkbox } from "../../components/ui/FormControls.jsx";
 import { Badge } from "../../components/ui/Badge.jsx";
+import { generateIndustryCsvTemplate } from "../../shared/industryImportTemplates";
 import "./ProductImportPage.css";
 
 const COLUMNS = [
   ["name", "Product name"],
+  ["genericName", "Generic / Salt"],
   ["parentSku", "Parent SKU"],
   ["sku", "SKU"],
   ["barcode", "Barcode"],
   ["category", "Category"],
   ["brand", "Brand"],
+  ["manufacturer", "Manufacturer"],
+  ["batchNumber", "Batch Number"],
+  ["expiryDate", "Expiry Date"],
+  ["mrp", "MRP"],
   ["size", "Size"],
   ["color", "Color"],
   ["quantity", "Qty"],
@@ -37,6 +43,7 @@ const NUMERIC = new Set([
   "purchasePrice",
   "sellingPrice",
   "wholesalePrice",
+  "mrp",
   "gstRate",
   "minimumStock",
   "reorderPoint",
@@ -68,27 +75,13 @@ function validate(row) {
   };
 }
 
-function downloadSampleTemplate() {
-  const header = COLUMNS.map(([, label]) => label).join(",");
-  const example = COLUMNS.map(([field]) => {
-    if (field === "name") return "Sample Cotton T-Shirt";
-    if (field === "sku") return "SKU-0001";
-    if (field === "category") return "Apparel";
-    if (field === "quantity") return "25";
-    if (field === "sellingPrice") return "499";
-    if (field === "purchasePrice") return "299";
-    if (NUMERIC.has(field)) return "0";
-    return "";
-  }).join(",");
-  const blob = new Blob([`${header}\n${example}\n`], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = "stockroom-import-template.csv";
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
+async function downloadSampleTemplate(industry, businessName, format = "xlsx") {
+  try {
+    await productImportApi.downloadTemplate(industry, format, businessName);
+  } catch (err) {
+    console.error("Failed to download template:", err);
+    alert(err?.message || "Failed to download template. Please check your connection.");
+  }
 }
 
 export default function ProductImport({
@@ -325,17 +318,23 @@ export default function ProductImport({
         kicker="Inventory / Bulk Import"
         title="Import Products"
         badge={isClothing ? "Clothing Workspace" : "Universal Catalog"}
-        description={`Validated PDF invoices, CSV sheets and Excel catalog sync for ${business.name || "your business"}.`}
+        description={`Validated PDF invoices and Excel catalog sync for ${business.name || "your business"}.`}
         actions={
           <div style={{ display: "flex", gap: "var(--space-2)" }}>
             {!preview && (
               <>
                 <Button
                   variant="secondary"
-                  onClick={downloadSampleTemplate}
+                  onClick={() => downloadSampleTemplate(business.industry, business.name, "xlsx")}
                   icon="download"
                 >
-                  Download Sample (.csv)
+                  Download Excel Template (.xlsx)
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => downloadSampleTemplate(business.industry, business.name, "pdf")}
+                >
+                  Download PDF Sample
                 </Button>
                 <Button
                   variant="secondary"
@@ -426,9 +425,8 @@ export default function ProductImport({
                 or <span className="import-browse-link">browse files</span> to upload
               </small>
               <div className="import-format-pills">
-                <span className="import-format-pill">▤ .CSV Table</span>
-                <span className="import-format-pill">▦ .XLSX Excel</span>
-                <span className="import-format-pill">▥ .PDF Invoices (OCR)</span>
+                <span className="import-format-pill">▦ .XLSX Excel Spreadsheets</span>
+                <span className="import-format-pill">▥ .PDF Invoices & Catalogs</span>
               </div>
               <small style={{ marginTop: "var(--space-2)" }}>Maximum 15 MB · up to 5,000 rows</small>
             </button>
@@ -437,7 +435,7 @@ export default function ProductImport({
               ref={inputRef}
               className="import-file-input"
               type="file"
-              accept=".pdf,.csv,.xlsx"
+              accept=".xlsx,.xls,.pdf,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,.csv"
               onChange={(event) => choose(event.target.files[0])}
             />
 

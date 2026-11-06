@@ -36,57 +36,6 @@ interface PromotionItem {
   active: boolean;
 }
 
-const SAMPLE_PROMOTIONS: PromotionItem[] = [
-  {
-    id: 'promo-1',
-    name: 'Festive Season Flat 20%',
-    code: 'FESTIVE20',
-    discountType: 'percentage',
-    discountValue: 20,
-    minimumOrderValue: 999,
-    startDate: '2026-10-01',
-    endDate: '2026-11-30',
-    redemptions: 142,
-    active: true,
-  },
-  {
-    id: 'promo-2',
-    name: 'Flat ₹500 Off Premium Apparel',
-    code: 'SAVE500',
-    discountType: 'fixed',
-    discountValue: 500,
-    minimumOrderValue: 2499,
-    startDate: '2026-10-15',
-    endDate: '2026-12-15',
-    redemptions: 68,
-    active: true,
-  },
-  {
-    id: 'promo-3',
-    name: 'Bulk Purchase Tier 15%',
-    code: 'BULK15',
-    discountType: 'bulk',
-    discountValue: 15,
-    minimumOrderValue: 5000,
-    startDate: '2026-09-01',
-    endDate: '2026-12-31',
-    redemptions: 29,
-    active: true,
-  },
-  {
-    id: 'promo-4',
-    name: 'Monsoon Clearance 30%',
-    code: 'RAIN30',
-    discountType: 'percentage',
-    discountValue: 30,
-    minimumOrderValue: 1200,
-    startDate: '2026-07-01',
-    endDate: '2026-08-31',
-    redemptions: 215,
-    active: false,
-  },
-];
-
 export const PromotionsPage: React.FC = () => {
   const { businessProfile, isLoadingBackend } = useApp();
 
@@ -129,11 +78,11 @@ export const PromotionsPage: React.FC = () => {
           }))
         );
       } else {
-        setPromotions(SAMPLE_PROMOTIONS);
+        setPromotions([]);
       }
     } catch (err: any) {
-      console.warn('Fallback to sample promotions:', err);
-      setPromotions(SAMPLE_PROMOTIONS);
+      console.warn('Failed to load promotions from backend:', err);
+      setPromotions([]);
     } finally {
       setLoading(false);
     }
@@ -345,7 +294,7 @@ export const PromotionsPage: React.FC = () => {
               />
               <input
                 type="text"
-                placeholder="Search promotion name, promo code (FESTIVE20)..."
+                placeholder="Search promotion name, promo code..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-9 pr-3 py-2 bg-[#FAF9F7] text-[13px] border border-[#EBE8E2] rounded-lg focus:outline-none focus:border-[#C4BAAE] focus:bg-white text-[#1C1B18] placeholder-[#8C827A] transition-all"
@@ -394,15 +343,15 @@ export const PromotionsPage: React.FC = () => {
         {loading || isLoadingBackend ? (
           <TableSkeleton rows={6} />
         ) : filteredPromos.length === 0 ? (
-          <div className="py-16 text-center">
-            <div className="w-12 h-12 rounded-full bg-[#E6F1E6] text-[#2E8B57] flex items-center justify-center mx-auto mb-3">
+          <div className="py-16 text-center flex flex-col items-center justify-center">
+            <div className="w-12 h-12 rounded-full bg-[#E6F1E6] text-[#2E8B57] flex items-center justify-center mb-3">
               <Tag size={22} />
             </div>
-            <h3 className="text-[16px] font-semibold text-[#1C1B18]">No Promotions Found</h3>
-            <p className="text-[13px] text-[#8C827A] mt-1 max-w-sm mx-auto">
+            <h3 className="text-[16px] font-semibold text-[#1C1B18] text-center w-full">No Promotions Found</h3>
+            <p className="text-[13px] text-[#8C827A] mt-1.5 max-w-md mx-auto text-center w-full leading-relaxed">
               {searchQuery || typeFilter !== 'All'
                 ? 'Try adjusting your search criteria or discount type filter.'
-                : 'No promotional campaigns created yet. Click "New Promotion" to launch an offer.'}
+                : 'No promotional campaigns created yet.'}
             </p>
           </div>
         ) : (

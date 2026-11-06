@@ -41,13 +41,13 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
   }, []);
 
   return (
-    <header className="h-16 shrink-0 bg-white border-b border-[#EEE6DA] px-4 md:px-6 flex items-center justify-between sticky top-0 z-30">
+    <header className="h-16 shrink-0 bg-white border-b border-x border-[#EEE6DA] rounded-b-2xl sm:rounded-b-3xl px-4 md:px-6 flex items-center justify-between sticky top-0 z-30 shadow-xs">
       {/* Left: Mobile Toggle & Global Search */}
-      <div className="flex items-center gap-3 flex-1 max-w-xl">
+      <div className="flex items-center gap-2.5 sm:gap-3 flex-1 max-w-xl min-w-0 mr-2 md:mr-0">
         <button
           type="button"
           onClick={onOpenMobileMenu}
-          className="lg:hidden p-2 rounded-xl text-[#6B665E] hover:bg-[#FAF6EF] transition-colors cursor-pointer"
+          className="lg:hidden p-2 rounded-xl text-[#6B665E] hover:bg-[#FAF6EF] transition-colors cursor-pointer shrink-0"
           aria-label="Open sidebar"
         >
           <Menu size={20} />
@@ -57,11 +57,11 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
         {isAdmin && (
           <div
             onClick={() => setCommandPaletteOpen(true)}
-            className="w-full max-w-md bg-white border border-[#EEE6DA] hover:border-[#DDD3C4] rounded-xl px-3.5 py-2 flex items-center gap-2.5 text-xs text-[#9A948A] cursor-pointer transition-colors shadow-2xs group"
+            className="w-full max-w-md bg-white border border-[#EEE6DA] hover:border-[#DDD3C4] rounded-xl px-3 sm:px-3.5 py-2 flex items-center gap-2 sm:gap-2.5 text-xs text-[#9A948A] cursor-pointer transition-colors shadow-2xs group min-w-0"
           >
             <Search size={16} className="text-[#9A948A] group-hover:text-[#6B665E] transition-colors shrink-0" />
             <span className="truncate flex-1">Search products, suppliers, orders...</span>
-            <kbd className="hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-medium text-[#9A948A] bg-[#FAF6EF] rounded border border-[#EEE6DA]">
+            <kbd className="hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-medium text-[#9A948A] bg-[#FAF6EF] rounded border border-[#EEE6DA] shrink-0">
               ⌘K
             </kbd>
           </div>
@@ -69,7 +69,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
       </div>
 
       {/* Right Controls */}
-      <div className="flex items-center gap-3 md:gap-4 shrink-0">
+      <div className="flex items-center gap-2 sm:gap-3 md:gap-4 shrink-0">
         {/* Notification Bell */}
         <button
           type="button"
@@ -83,11 +83,11 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
           )}
         </button>
 
-        {/* Vertical Divider */}
-        <div className="h-5 w-px bg-[#EEE6DA]" />
+        {/* Vertical Divider - Hidden on mobile view */}
+        <div className="hidden md:block h-5 w-px bg-[#EEE6DA]" />
 
-        {/* User Chip */}
-        <div className="relative" ref={userMenuRef}>
+        {/* User Chip - Hidden on mobile view (moved to bottom tabs) */}
+        <div className="hidden md:block relative" ref={userMenuRef}>
           <button
             type="button"
             onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}

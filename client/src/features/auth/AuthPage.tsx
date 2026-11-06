@@ -35,7 +35,7 @@ const DEMO_ACCOUNTS: DemoAccount[] = [
   {
     id: 'clothing',
     name: 'Clothing',
-    email: 'rohit@gmail.com',
+    email: 'clothing@gmail.com',
     password: 'Password#123',
     accent: '#8C6D4F',
     icon: Shirt,

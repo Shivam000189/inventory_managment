@@ -1,6 +1,7 @@
 import { Product, ProductImport, StockTransaction, Supplier, Business } from '../models/index.js'
 import crypto from 'node:crypto'
 import { withTransaction } from '../config/db.js'
+import { getPgPool } from '../config/supabase.js'
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs'
 import ExcelJS from 'exceljs'
 import { ApiError } from '../utils/ApiError.js'
@@ -8,32 +9,90 @@ import { toObjectId } from '../validators/assert.js'
 
 const MAX_ROWS = 5000
 const HEADER_ALIASES = {
-  name: ['name', 'product name', 'product', 'item name', 'item', 'description'],
-  parentSku: ['parent sku', 'parentsku', 'style sku', 'product sku', 'parent product code'],
-  sku: ['sku', 'product code', 'item code', 'code'],
-  barcode: ['barcode', 'bar code', 'ean', 'upc'],
-  category: ['category', 'product category'],
-  brand: ['brand', 'make'],
-  size: ['size'], color: ['color', 'colour'], quantity: ['quantity', 'qty', 'stock'], unit: ['unit', 'uom', 'measurement'],
-  description: ['description', 'desc', 'details', 'about'],
-  purchasePrice: ['purchase price', 'purchaseprice', 'cost price', 'costprice', 'cost', 'buy price', 'rate'],
-  sellingPrice: ['selling price', 'sellingprice', 'retail price', 'sale price', 'saleprice'],
-  wholesalePrice: ['wholesale price', 'wholesale rate', 'bulk price'],
-  mrp: ['mrp', 'max retail price', 'maximum retail price'],
-  genericName: ['generic', 'generic name', 'generic molecule', 'salt', 'active ingredient', 'molecule', 'composition'],
-  manufacturer: ['manufacturer', 'mfg', 'pharma company', 'producer'],
-  batchNumber: ['batch', 'batch no', 'batch number', 'lot', 'lot no', 'lot number'],
-  manufacturingDate: ['mfg date', 'manufacturing date', 'mfg dt', 'mfd'],
-  expiryDate: ['expiry', 'expiry date', 'exp date', 'exp dt', 'expiration'],
-  gstRate: ['gst', 'gst %', 'gst rate', 'gstrate', 'tax', 'tax %'],
-  lineTotal: ['line total', 'item total', 'total amount', 'amount'],
-  hsnCode: ['hsn', 'hsn code', 'hsncode'], supplierName: ['supplier', 'supplier name', 'vendor'],
-  supplierPhone: ['supplier phone', 'vendor phone'], supplierEmail: ['supplier email', 'vendor email'],
-  minimumStock: ['minimum stock', 'min stock'], reorderPoint: ['reorder point'], targetStock: ['target stock'], reorderQuantity: ['reorder quantity', 'reorder qty'],
+  name: [
+    'name', 'product name', 'product', 'item name', 'item', 'description',
+    'medicine name', 'medicine', 'drug name',
+    'product garment name', 'garment name', 'style name',
+    'product model name', 'model name',
+    'item product name', 'grocery item',
+    'part component name', 'part name', 'component name',
+    'item design name', 'design name', 'jewelry item',
+    'item tool name', 'tool name', 'hardware item',
+    'product title', 'item title', 'title', 'article name',
+  ],
+  parentSku: ['parent sku', 'parentsku', 'style sku', 'product sku', 'parent product code', 'style code', 'parent style sku'],
+  sku: [
+    'sku', 'product code', 'item code', 'code', 'unique medicine product code', 'article no', 'article number',
+    'part number', 'part no', 'part number sku', 'variant sku', 'model number', 'model no', 'item no', 'catalog no', 'catalog number', 'product id', 'item id',
+  ],
+  barcode: ['barcode', 'bar code', 'ean', 'upc', 'gtin', 'qr code', 'isbn'],
+  category: ['category', 'product category', 'form', 'type', 'product type', 'dept', 'department', 'classification', 'group'],
+  brand: ['brand', 'make', 'brand make', 'brand oem', 'oem', 'producer'],
+  size: ['size', 'garment size'],
+  color: ['color', 'colour', 'shade'],
+  quantity: [
+    'quantity', 'qty', 'stock', 'stock quantity', 'stock count', 'units', 'current stock', 'opening stock', 'qty in stock', 'initial stock', 'on hand', 'units on hand', 'available quantity', 'available stock', 'inventory', 'count',
+  ],
+  unit: ['unit', 'uom', 'measurement', 'pack size', 'pack unit'],
+  description: ['description', 'desc', 'details', 'about', 'storage instructions', 'storage', 'fabric fit', 'specifications', 'specs', 'notes', 'remarks'],
+  purchasePrice: ['purchase price', 'purchaseprice', 'cost price', 'costprice', 'cost', 'buy price', 'rate', 'purchase rate', 'buy rate', 'unit cost', 'purchase cost', 'buying price', 'cost per unit'],
+  sellingPrice: ['selling price', 'sellingprice', 'retail price', 'sale price', 'saleprice', 'price', 'unit price', 'sale rate', 'selling rate', 'price per unit'],
+  wholesalePrice: ['wholesale price', 'wholesale rate', 'bulk price', 'b2b price', 'trade price'],
+  mrp: ['mrp', 'max retail price', 'maximum retail price', 'mrp inr', 'mrp price'],
+  genericName: ['generic', 'generic name', 'generic salt name', 'salt', 'active ingredient', 'molecule', 'composition', 'generic molecule', 'salt name', 'formula'],
+  manufacturer: ['manufacturer', 'mfg', 'pharma company', 'producer', 'company', 'mfg company'],
+  batchNumber: ['batch', 'batch no', 'batch number', 'lot', 'lot no', 'lot number', 'batch lot'],
+  manufacturingDate: ['mfg date', 'manufacturing date', 'mfg dt', 'mfd', 'mfg date yyyy mm dd', 'manufacturing date yyyy mm dd', 'date of mfg'],
+  expiryDate: ['expiry', 'expiry date', 'exp date', 'exp dt', 'expiration', 'expiry date yyyy mm dd', 'expiration date', 'best before'],
+  gstRate: ['gst', 'gst %', 'gst rate', 'gstrate', 'tax', 'tax %', 'tax rate', 'vat', 'vat rate'],
+  lineTotal: ['line total', 'item total', 'total amount', 'amount', 'total'],
+  hsnCode: ['hsn', 'hsn code', 'hsncode', 'sac', 'sac code', 'hsn sac'],
+  rackLocation: ['rack', 'rack location', 'warehouse rack location', 'shelf location', 'rack shelf location', 'shelf', 'aisle', 'bin', 'bin location', 'location', 'aisle bin location'],
+  supplierName: ['supplier', 'supplier name', 'vendor', 'vendor name'],
+  supplierPhone: ['supplier phone', 'vendor phone'],
+  supplierEmail: ['supplier email', 'vendor email'],
+  minimumStock: ['minimum stock', 'min stock', 'alert stock'],
+  reorderPoint: ['reorder point', 'reorder level'],
+  targetStock: ['target stock', 'max stock'],
+  reorderQuantity: ['reorder quantity', 'reorder qty'],
+  weight: ['weight', 'gross weight', 'net weight'],
+  model: ['model', 'model name', 'vehicle compatibility', 'grade'],
+  serialNumber: ['serial', 'serial number', 'serial no', 'imei'],
+  warrantyMonths: ['warranty', 'warranty months', 'warranty period'],
+  material: ['material', 'fabric', 'material fabric', 'purity metal'],
+  dimensions: ['dimensions', 'dimension', 'size dimensions'],
 }
 
-const normalizedHeader = (value) => String(value ?? '').toLowerCase().replace(/[%._()-]/g, ' ').replace(/\s+/g, ' ').trim()
-const fieldFor = (header) => Object.entries(HEADER_ALIASES).find(([, aliases]) => aliases.includes(normalizedHeader(header)))?.[0]
+const normalizedHeader = (value) =>
+  String(value ?? '')
+    .toLowerCase()
+    .replace(/[%._()/-]/g, ' ')
+    .replace(/&/g, ' and ')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+const fieldFor = (header) => {
+  const norm = normalizedHeader(header)
+  if (!norm) return undefined
+
+  // 1. Direct alias match
+  for (const [field, aliases] of Object.entries(HEADER_ALIASES)) {
+    if (aliases.includes(norm)) return field
+  }
+
+  // 2. Word boundary / phrase match for compound headers (only when alias is at least 3 chars)
+  for (const [field, aliases] of Object.entries(HEADER_ALIASES)) {
+    if (aliases.some((a) => {
+      if (a.length < 3) return false
+      const regex = new RegExp(`(^|\\s)${a}(\\s|$)`, 'i')
+      return regex.test(norm)
+    })) {
+      return field
+    }
+  }
+
+  return undefined
+}
 
 function parseCsv(text) {
   const rows = []; let row = []; let cell = ''; let quoted = false
@@ -56,11 +115,27 @@ function tableToObjects(table) {
   let headerIndex = table.findIndex((row) => row.filter((cell) => fieldFor(cell)).length >= 2)
   if (headerIndex < 0) headerIndex = 0
   const fields = table[headerIndex].map(fieldFor)
-  return table.slice(headerIndex + 1).filter((row) => row.some((cell) => String(cell ?? '').trim()) && row.filter((cell) => fieldFor(cell)).length < 2).map((row) => {
-    const result = {}
-    fields.forEach((field, index) => { if (field) result[field] = row[index] ?? '' })
-    return result
-  })
+
+  const isRepeatedHeader = (row) => {
+    let matches = 0
+    for (let i = 0; i < row.length; i++) {
+      if (fields[i] && fieldFor(row[i]) === fields[i]) {
+        matches++
+      }
+    }
+    return matches >= Math.min(4, fields.filter(Boolean).length)
+  }
+
+  return table
+    .slice(headerIndex + 1)
+    .filter((row) => row.some((cell) => String(cell ?? '').trim()) && !isRepeatedHeader(row))
+    .map((row) => {
+      const result = {}
+      fields.forEach((field, index) => {
+        if (field) result[field] = row[index] ?? ''
+      })
+      return result
+    })
 }
 
 async function extractExcel(buffer) {
@@ -190,13 +265,37 @@ const numberValue = (value) => {
 function normalizeRow(raw, index) {
   const purchasePrice = numberValue(raw.purchasePrice)
   const sellingPriceMissing = raw.sellingPrice === '' || raw.sellingPrice === null || raw.sellingPrice === undefined
+  const sellingPrice = sellingPriceMissing ? purchasePrice : numberValue(raw.sellingPrice)
+
+  // Name fallback: check raw.name, raw.item, raw.title, etc.
+  const name = String(raw.name || raw.title || raw.item || raw.product || '').trim()
+
+  // Smart fallback for SKU if not provided: generate unique SKU based on name or index
+  let sku = String(raw.sku ?? '').trim().toUpperCase()
+  if (!sku) {
+    const cleanName = name.toUpperCase().replace(/[^A-Z0-9]+/g, '-').slice(0, 10)
+    sku = cleanName ? `SKU-${cleanName}-${index + 1}` : `SKU-${1000 + index + 1}`
+  }
+
+  // Fallback category if blank
+  const category = String(raw.category ?? '').trim() || 'General'
+
   const row = {
     rowNumber: index + 2,
-    name: String(raw.name ?? '').trim(), parentSku: String(raw.parentSku ?? '').trim().toUpperCase(), sku: String(raw.sku ?? '').trim().toUpperCase(),
-    barcode: String(raw.barcode ?? '').trim(), category: String(raw.category ?? '').trim(),
-    brand: String(raw.brand ?? '').trim(), size: String(raw.size ?? '').trim(), color: String(raw.color ?? '').trim(),
-    quantity: numberValue(raw.quantity), purchasePrice, sellingPrice: sellingPriceMissing ? purchasePrice : numberValue(raw.sellingPrice),
-    wholesalePrice: numberValue(raw.wholesalePrice), gstRate: numberValue(raw.gstRate), hsnCode: String(raw.hsnCode ?? '').trim(),
+    name,
+    parentSku: String(raw.parentSku ?? '').trim().toUpperCase(),
+    sku,
+    barcode: String(raw.barcode ?? '').trim(),
+    category,
+    brand: String(raw.brand ?? '').trim(),
+    size: String(raw.size ?? '').trim(),
+    color: String(raw.color ?? '').trim(),
+    quantity: numberValue(raw.quantity),
+    purchasePrice,
+    sellingPrice,
+    wholesalePrice: numberValue(raw.wholesalePrice),
+    gstRate: numberValue(raw.gstRate),
+    hsnCode: String(raw.hsnCode ?? '').trim(),
     unit: String(raw.unit ?? '').trim() || 'pcs',
     description: String(raw.description ?? '').trim(),
     genericName: String(raw.genericName ?? '').trim(),
@@ -204,9 +303,22 @@ function normalizeRow(raw, index) {
     batchNumber: String(raw.batchNumber ?? '').trim(),
     manufacturingDate: raw.manufacturingDate ? String(raw.manufacturingDate).trim() : null,
     expiryDate: raw.expiryDate ? String(raw.expiryDate).trim() : null,
-    mrp: numberValue(raw.mrp) || numberValue(raw.sellingPrice),
-    supplierName: String(raw.supplierName ?? '').trim(), supplierPhone: String(raw.supplierPhone ?? '').trim(), supplierEmail: String(raw.supplierEmail ?? '').trim().toLowerCase(),
-    minimumStock: numberValue(raw.minimumStock), reorderPoint: numberValue(raw.reorderPoint), targetStock: numberValue(raw.targetStock), reorderQuantity: numberValue(raw.reorderQuantity),
+    mrp: numberValue(raw.mrp) || sellingPrice,
+    supplierName: String(raw.supplierName ?? '').trim(),
+    supplierPhone: String(raw.supplierPhone ?? '').trim(),
+    supplierEmail: String(raw.supplierEmail ?? '').trim().toLowerCase(),
+    minimumStock: numberValue(raw.minimumStock),
+    reorderPoint: numberValue(raw.reorderPoint),
+    targetStock: numberValue(raw.targetStock),
+    reorderQuantity: numberValue(raw.reorderQuantity),
+    weight: String(raw.weight ?? '').trim(),
+    model: String(raw.model ?? '').trim(),
+    serialNumber: String(raw.serialNumber ?? '').trim(),
+    imei: String(raw.imei ?? '').trim(),
+    warrantyMonths: numberValue(raw.warrantyMonths) || 0,
+    material: String(raw.material ?? '').trim(),
+    dimensions: String(raw.dimensions ?? '').trim(),
+    rackLocation: String(raw.rackLocation ?? '').trim(),
     duplicateAction: ['skip', 'update', 'merge'].includes(raw.duplicateAction) ? raw.duplicateAction : 'merge',
   }
   row.errors = []
@@ -220,7 +332,11 @@ function normalizeRow(raw, index) {
   if (!row.name) row.errors.push('Product name is required.')
   if (!row.sku) row.errors.push('SKU / product code is required.')
   if (!row.category) row.errors.push('Category is required.')
-  for (const key of ['quantity', 'purchasePrice', 'sellingPrice', 'wholesalePrice', 'gstRate', 'minimumStock', 'reorderPoint', 'targetStock', 'reorderQuantity']) if (!Number.isFinite(row[key]) || row[key] < 0) row.errors.push(`${key} must be zero or a positive number.`)
+  for (const key of ['quantity', 'purchasePrice', 'sellingPrice', 'wholesalePrice', 'gstRate', 'minimumStock', 'reorderPoint', 'targetStock', 'reorderQuantity']) {
+    if (!Number.isFinite(row[key]) || row[key] < 0) {
+      row.errors.push(`${key} must be zero or a positive number.`)
+    }
+  }
   if (!Number.isInteger(row.quantity)) row.errors.push('Quantity must be a whole number.')
   if (row.gstRate > 100) {
     row.errors.push(`GST must be between 0 and 100. Received ${row.gstRate}. Check that the GST and HSN columns are aligned.`)
@@ -228,24 +344,50 @@ function normalizeRow(raw, index) {
   }
   const lineTotal = numberValue(raw.lineTotal)
   const calculatedLineTotal = row.quantity * row.purchasePrice * (1 + row.gstRate / 100)
-  if (Number.isFinite(lineTotal) && lineTotal > 0 && Math.abs(lineTotal - calculatedLineTotal) > 1) row.warnings.push('Line Total does not match Qty × Rate plus GST. Please review.')
+  if (Number.isFinite(lineTotal) && lineTotal > 0 && Math.abs(lineTotal - calculatedLineTotal) > 1) {
+    row.warnings.push('Line Total does not match Qty × Rate plus GST. Please review.')
+  }
   return row
 }
 
 async function annotateDuplicates(businessId, rows) {
   const business = toObjectId(businessId, 'business')
-  const skus = rows.map((row) => row.sku).filter(Boolean); const barcodes = rows.map((row) => row.barcode).filter(Boolean)
-  const existing = await Product.find({ business, $or: [{ sku: { $in: skus } }, { barcode: { $in: barcodes } }] }).select('_id sku barcode name currentStock').lean()
-  const skuMap = new Map(existing.map((item) => [item.sku, item])); const barcodeMap = new Map(existing.filter((item) => item.barcode).map((item) => [item.barcode, item]))
-  const fileSkus = new Set(); const fileBarcodes = new Set()
+  const skus = rows.map((row) => row.sku).filter(Boolean)
+  const barcodes = rows.map((row) => row.barcode).filter(Boolean)
+  let existing = []
+  try {
+    if (skus.length || barcodes.length) {
+      existing = await Product.find({ business, $or: [{ sku: { $in: skus } }, { barcode: { $in: barcodes } }] }).select('_id sku barcode name currentStock').lean() || []
+    }
+  } catch (err) {
+    console.warn('Duplicate check warning:', err.message)
+  }
+  const skuMap = new Map(existing.map((item) => [item.sku, item]))
+  const barcodeMap = new Map(existing.filter((item) => item.barcode).map((item) => [item.barcode, item]))
+  const fileSkus = new Set()
+  const fileBarcodes = new Set()
   return rows.map((row) => {
-    const skuMatch = skuMap.get(row.sku); const barcodeMatch = row.barcode ? barcodeMap.get(row.barcode) : null
-    if (skuMatch && barcodeMatch && String(skuMatch._id) !== String(barcodeMatch._id)) row.errors.push('SKU and barcode match two different existing products.')
-    if (fileSkus.has(row.sku)) row.errors.push('Duplicate SKU inside uploaded file.')
-    if (row.barcode && fileBarcodes.has(row.barcode)) row.errors.push('Duplicate barcode inside uploaded file.')
-    fileSkus.add(row.sku); if (row.barcode) fileBarcodes.add(row.barcode)
+    const skuMatch = skuMap.get(row.sku)
+    const barcodeMatch = row.barcode ? barcodeMap.get(row.barcode) : null
+    if (skuMatch && barcodeMatch && String(skuMatch._id) !== String(barcodeMatch._id)) {
+      row.errors.push('SKU and barcode match two different existing products.')
+    }
+    if (row.sku && fileSkus.has(row.sku)) {
+      row.warnings.push('Duplicate SKU inside uploaded file.')
+    } else if (row.sku) {
+      fileSkus.add(row.sku)
+    }
+    if (row.barcode && fileBarcodes.has(row.barcode)) {
+      row.warnings.push('Duplicate barcode inside uploaded file.')
+    } else if (row.barcode) {
+      fileBarcodes.add(row.barcode)
+    }
     const match = skuMatch || barcodeMatch
-    return { ...row, duplicate: match ? { productId: String(match._id), name: match.name, sku: match.sku, currentStock: match.currentStock } : null, valid: row.errors.length === 0 }
+    return {
+      ...row,
+      duplicate: match ? { productId: String(match._id), name: match.name, sku: match.sku, currentStock: match.currentStock } : null,
+      valid: row.errors.length === 0,
+    }
   })
 }
 
@@ -361,9 +503,17 @@ export async function confirm(businessId, payload, actor) {
       const existing = row.duplicate
       if (existing && row.duplicateAction === 'skip') { counts.skipped += 1; continue }
       const rowSupplier = await resolveSupplier(row)
-      const productFields = { name: row.name, sku: row.sku, barcode: row.barcode, category: row.category, brand: row.brand, size: row.size, color: row.color, purchasePrice: row.purchasePrice, sellingPrice: row.sellingPrice, wholesalePrice: row.wholesalePrice, gstRate: row.gstRate, hsnCode: row.hsnCode, supplier: rowSupplier?.supplierName || '', supplierId: rowSupplier?._id || null,
+      const productFields = {
+        name: row.name, sku: row.sku, barcode: row.barcode, category: row.category, brand: row.brand, size: row.size, color: row.color,
+        purchasePrice: row.purchasePrice, sellingPrice: row.sellingPrice, wholesalePrice: row.wholesalePrice, gstRate: row.gstRate, hsnCode: row.hsnCode,
+        supplier: rowSupplier?.supplierName || '', supplierId: rowSupplier?._id || null,
         genericName: row.genericName, manufacturer: row.manufacturer, batchNumber: row.batchNumber,
-        manufacturingDate: row.manufacturingDate, expiryDate: row.expiryDate, mrp: row.mrp }
+        manufacturingDate: row.manufacturingDate, expiryDate: row.expiryDate, mrp: row.mrp,
+        unit: row.unit || 'pcs', description: row.description,
+        weight: row.weight, model: row.model, serialNumber: row.serialNumber, imei: row.imei,
+        warrantyMonths: row.warrantyMonths, material: row.material, dimensions: row.dimensions,
+        rackLocation: row.rackLocation,
+      }
       let productId; let previousStock = 0; let newStock = row.quantity
       if (existing) {
         productId = toObjectId(existing.productId, 'product'); previousStock = existing.currentStock
@@ -378,6 +528,51 @@ export async function confirm(businessId, payload, actor) {
     }
     if (operations.length) await Product.bulkWrite(operations, { ordered: false, session })
     if (movements.length) await StockTransaction.insertMany(movements, { session })
+
+    // For pharmacy businesses: auto-register batches in product_batches table
+    try {
+      const biz = await Business.findById(business).select('industry')
+      if (String(biz?.industry || '').toLowerCase() === 'pharmacy') {
+        const pool = getPgPool()
+        for (const row of validRows) {
+          if (row.batchNumber && row.expiryDate) {
+            const prod = await Product.findOne({ business, sku: row.sku }).select('_id').session(session)
+            if (prod) {
+              await pool.query(
+                `INSERT INTO product_batches (
+                  business_id, product_id, batch_number, manufacturing_date, expiry_date,
+                  mrp, purchase_price, selling_price, current_stock, supplier_id, notes
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+                ON CONFLICT (business_id, product_id, batch_number)
+                DO UPDATE SET
+                  current_stock = product_batches.current_stock + EXCLUDED.current_stock,
+                  mrp = EXCLUDED.mrp,
+                  selling_price = EXCLUDED.selling_price,
+                  purchase_price = EXCLUDED.purchase_price,
+                  expiry_date = EXCLUDED.expiry_date,
+                  manufacturing_date = EXCLUDED.manufacturing_date,
+                  updated_at = NOW()`,
+                [
+                  business,
+                  prod._id,
+                  row.batchNumber,
+                  row.manufacturingDate || null,
+                  row.expiryDate,
+                  row.mrp || row.sellingPrice,
+                  row.purchasePrice,
+                  row.sellingPrice,
+                  row.quantity,
+                  supplier?._id || null,
+                  `Imported from ${payload.fileName || 'bulk import'}`,
+                ]
+              )
+            }
+          }
+        }
+      }
+    } catch (batchErr) {
+      console.warn('Batch auto-registration warning:', batchErr.message)
+    }
     const processed = counts.created + counts.updated + counts.merged
     const status = failures.length ? (processed ? 'partial' : 'failed') : 'completed'
     ;[history] = await ProductImport.create([{ business, fileName: String(payload.fileName || 'import').slice(0, 240), fileType: ['pdf', 'csv', 'xlsx'].includes(payload.fileType) ? payload.fileType : 'csv', purchaseReference: String(payload.purchaseReference || ''), supplier: supplier?._id || null, supplierName: supplier?.supplierName || String(payload.supplierName || ''), importedBy, importedByName: actor.name, status, totalRows: rows.length, createdCount: counts.created, updatedCount: counts.updated, mergedCount: counts.merged, skippedCount: counts.skipped, failedCount: failures.length, failures: failures.slice(0, 500) }], { session })

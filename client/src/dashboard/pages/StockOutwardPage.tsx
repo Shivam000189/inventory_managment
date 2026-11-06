@@ -193,8 +193,8 @@ export const StockOutwardPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 4 StatCards matching Stock Ledger style */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      {/* 4 StatCards matching Stock Ledger style (2x2 on Mobile, 4 columns on Desktop) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 md:gap-5">
         <StatCard
           icon={<ArrowUpRight size={18} strokeWidth={2.2} />}
           iconBgColor="bg-[#FDECEC] text-[#D64545]"
@@ -293,25 +293,18 @@ export const StockOutwardPage: React.FC = () => {
         {isLoadingBackend ? (
           <TableSkeleton rows={8} />
         ) : filteredMovements.length === 0 ? (
-          <div className="py-16 text-center">
-            <div className="w-12 h-12 rounded-full bg-[#FDECEC] text-[#D64545] flex items-center justify-center mx-auto mb-3">
+          <div className="py-16 text-center flex flex-col items-center justify-center">
+            <div className="w-12 h-12 rounded-full bg-[#FDECEC] text-[#D64545] flex items-center justify-center mb-3">
               <ArrowUpRight size={22} />
             </div>
-            <h3 className="text-[16px] font-semibold text-[#1C1B18]">
+            <h3 className="text-[16px] font-semibold text-[#1C1B18] text-center w-full">
               No Outward Movements Found
             </h3>
-            <p className="text-[13px] text-[#8C827A] mt-1 max-w-sm mx-auto">
+            <p className="text-[13px] text-[#8C827A] mt-1.5 max-w-md mx-auto text-center w-full leading-relaxed">
               {searchQuery || filterReason !== 'All'
                 ? 'Try adjusting your search criteria or filter pills.'
                 : 'No outbound shipments recorded yet. Click "Record Outward" to log your first dispatch.'}
             </p>
-            <button
-              onClick={handleOpenDrawer}
-              className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-[#381e12] hover:bg-[#2a160d] text-[#ffffff] font-medium text-[13px] rounded-lg transition-colors cursor-pointer"
-            >
-              <Minus size={15} className="text-[#ffffff]" />
-              <span className="text-[#ffffff]">Record First Outward</span>
-            </button>
           </div>
         ) : (
           <div className="overflow-x-auto">

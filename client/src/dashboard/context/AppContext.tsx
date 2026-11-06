@@ -257,6 +257,7 @@ function mapBackendCustomer(c: any): Customer {
     lastPurchase: c.lastPurchase || (totalSpent > 0 ? 'Recently' : 'Never'),
     outstanding,
     creditLimit,
+    createdAt: c.createdAt || c.created_at || '',
   };
 }
 
@@ -550,6 +551,69 @@ interface AppContextType {
     openPOCount: number;
   };
 }
+
+const fallbackContext: AppContextType = ({
+  currentUser: defaultUser,
+  users: [defaultUser],
+  businessProfile: defaultBusinessProfile,
+  products: [],
+  suppliers: [],
+  purchaseOrders: [],
+  bills: [],
+  customers: [],
+  stockMovements: [],
+  notifications: [],
+  isBackendConnected: false,
+  isLoadingBackend: false,
+  loadingStates: {
+    products: false,
+    suppliers: false,
+    customers: false,
+    purchaseOrders: false,
+    salesOrders: false,
+    inventory: false,
+  },
+  refreshBackendData: async () => {},
+  addProduct: () => ({} as any),
+  updateProduct: () => {},
+  deleteProduct: () => {},
+  adjustStock: () => {},
+  addSupplier: () => Promise.resolve({} as any),
+  updateSupplier: () => {},
+  deleteSupplier: () => {},
+  createPurchaseOrder: () => Promise.resolve({} as any),
+  updatePurchaseOrderStatus: () => {},
+  createBill: () => ({} as any),
+  addCustomer: () => ({} as any),
+  updateCustomer: () => {},
+  recordCustomerPayment: () => {},
+  activeRoute: '/',
+  navigate: () => {},
+  posActiveTab: 'new_bill',
+  setPosActiveTab: () => {},
+  customersActiveTab: 'all',
+  setCustomersActiveTab: () => {},
+  isAuthenticated: false,
+  login: () => {},
+  logout: () => Promise.resolve(),
+  switchRole: () => {},
+  addUser: () => Promise.resolve({ user: defaultUser, temporaryPassword: '' }),
+  updateUserStatus: () => {},
+  updateBusinessProfile: () => {},
+  isCommandPaletteOpen: false,
+  setCommandPaletteOpen: () => {},
+  isNotificationDrawerOpen: false,
+  setNotificationDrawerOpen: () => {},
+  markNotificationAsRead: () => {},
+  selectedDateRange: 'Today',
+  setSelectedDateRange: () => {},
+  metrics: {
+    totalStockValue: 0,
+    todaySales: 0,
+    lowStockCount: 0,
+    openPOCount: 0,
+  },
+} as any as AppContextType);
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
@@ -1650,7 +1714,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({
 export const useApp = () => {
   const context = useContext(AppContext);
   if (!context) {
-    throw new Error('useApp must be used within an AppProvider');
+    if (typeof window !== 'undefined') {
+      console.warn('useApp must be used within an AppProvider. Falling back to default state.');
+    }
+    return fallbackContext;
   }
   return context;
 };

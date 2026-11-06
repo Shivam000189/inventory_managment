@@ -14,7 +14,7 @@ interface StatCardProps {
 
 export const StatCard: React.FC<StatCardProps> = ({
   icon,
-  iconBgColor = 'bg-[#E6F1E6] text-[#2E8B57]',
+  iconBgColor = 'bg-[#4F86F7] text-white',
   label,
   value,
   trend,
@@ -37,41 +37,52 @@ export const StatCard: React.FC<StatCardProps> = ({
             }
           : undefined
       }
-      className={`bg-white rounded-[20px] p-5 border border-[#EEE6DA] transition-all duration-150 ${
+      className={`bg-white rounded-2xl sm:rounded-[22px] p-3 sm:p-4 md:p-5 border border-[#EEE6DA] shadow-2xs hover:shadow-xs transition-all duration-150 ${
         onClick
-          ? 'cursor-pointer hover:border-[#DDD3C4] hover:shadow-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7FAE82]'
+          ? 'cursor-pointer hover:border-[#DDD3C4] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7FAE82]'
           : ''
       } ${className}`}
     >
-      <div className="flex items-center gap-3 mb-3">
-        <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${iconBgColor}`}>
+      <div className="flex items-center gap-2.5 sm:gap-3.5">
+        {/* Round circular icon container */}
+        <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center shrink-0 ${iconBgColor}`}>
           {icon}
         </div>
-        <span className="text-[12px] font-medium text-[#6B665E]">{label}</span>
-      </div>
 
-      <div className="text-[26px] font-bold text-[#1C1B18] tracking-tight tabular-nums mb-2 leading-none">
-        {value}
-      </div>
+        {/* Big number on top, label on bottom, badge on its own line on desktop */}
+        <div className="min-w-0 flex-1">
+          <div className="text-[17px] xs:text-[19px] sm:text-[22px] font-bold text-[#1C1B18] tracking-tight tabular-nums leading-tight truncate">
+            {value}
+          </div>
 
-      {trend && (
-        <div>
-          <span
-            className={`inline-flex items-center gap-0.5 text-[11px] font-semibold px-2 py-0.5 rounded-md ${
-              isPositive
-                ? 'bg-[#E8F5EC] text-[#2E8B57]'
-                : 'bg-[#FDECEC] text-[#D64545]'
-            }`}
+          <div
+            className="text-[11px] sm:text-xs font-medium text-[#6B665E] truncate leading-tight mt-0.5"
+            title={label}
           >
-            {isPositive ? (
-              <ArrowUpRight size={13} strokeWidth={2.5} />
-            ) : (
-              <ArrowDownRight size={13} strokeWidth={2.5} />
-            )}
-            {trend}
-          </span>
+            {label}
+          </div>
+
+          {trend && (
+            <div className="hidden md:block mt-1 pt-0.5 min-w-0">
+              <span
+                className={`inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-md truncate max-w-full ${
+                  isPositive
+                    ? 'bg-[#E8F5EC] text-[#2E8B57]'
+                    : 'bg-[#FDECEC] text-[#D64545]'
+                }`}
+                title={trend}
+              >
+                {isPositive ? (
+                  <ArrowUpRight size={11} strokeWidth={2.5} className="shrink-0" />
+                ) : (
+                  <ArrowDownRight size={11} strokeWidth={2.5} className="shrink-0" />
+                )}
+                <span className="truncate">{trend}</span>
+              </span>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 };

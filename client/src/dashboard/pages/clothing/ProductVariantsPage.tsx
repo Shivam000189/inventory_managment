@@ -87,8 +87,8 @@ export const ProductVariantsPage: React.FC = () => {
           color: p.color || 'Black',
           currentStock: p.stock || 0,
           reorderPoint: p.reorderLevel || 10,
-          price: p.price || 0,
-          cost: p.cost || 0,
+          price: p.sellingPrice || (p as any).price || 0,
+          cost: p.purchasePrice || (p as any).cost || 0,
           active: true,
         }));
         setVariants(derived);
@@ -106,8 +106,8 @@ export const ProductVariantsPage: React.FC = () => {
         color: p.color || 'Black',
         currentStock: p.stock || 0,
         reorderPoint: p.reorderLevel || 10,
-        price: p.price || 0,
-        cost: p.cost || 0,
+        price: p.sellingPrice || (p as any).price || 0,
+        cost: p.purchasePrice || (p as any).cost || 0,
         active: true,
       }));
       setVariants(derived);
@@ -333,12 +333,12 @@ export const ProductVariantsPage: React.FC = () => {
         {loading || isLoadingBackend ? (
           <TableSkeleton rows={8} />
         ) : filteredVariants.length === 0 ? (
-          <div className="py-16 text-center">
-            <div className="w-12 h-12 rounded-full bg-[#EBF3FC] text-[#2563EB] flex items-center justify-center mx-auto mb-3">
+          <div className="py-16 text-center flex flex-col items-center justify-center">
+            <div className="w-12 h-12 rounded-full bg-[#EBF3FC] text-[#2563EB] flex items-center justify-center mb-3">
               <Layers size={22} />
             </div>
-            <h3 className="text-[16px] font-semibold text-[#1C1B18]">No Variants Found</h3>
-            <p className="text-[13px] text-[#8C827A] mt-1 max-w-sm mx-auto">
+            <h3 className="text-[16px] font-semibold text-[#1C1B18] text-center w-full">No Variants Found</h3>
+            <p className="text-[13px] text-[#8C827A] mt-1.5 max-w-md mx-auto text-center w-full leading-relaxed">
               {searchQuery || stockStatusFilter !== 'All'
                 ? 'Try adjusting your search criteria or stock level filter.'
                 : 'No clothing variants configured yet.'}

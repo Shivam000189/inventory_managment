@@ -83,7 +83,7 @@ export const ReplenishmentPage: React.FC = () => {
             const reorderPoint = p.reorderLevel || 10;
             const targetStock = reorderPoint * 3;
             const suggested = Math.max(reorderPoint * 2, targetStock - p.stock);
-            const unitCost = p.cost || p.price * 0.6 || 350;
+            const unitCost = p.purchasePrice || p.sellingPrice * 0.6 || 350;
             return {
               id: p.id,
               variantId: p.id,
@@ -98,7 +98,7 @@ export const ReplenishmentPage: React.FC = () => {
               targetStock,
               suggestedQuantity: suggested,
               estimatedCost: suggested * unitCost,
-              preferredSupplier: p.supplier || 'Textile Mills India',
+              preferredSupplier: p.supplierName || 'Textile Mills India',
               status: p.stock === 0 ? 'Critical' : 'Low Stock',
             };
           });
@@ -112,7 +112,7 @@ export const ReplenishmentPage: React.FC = () => {
           const reorderPoint = p.reorderLevel || 10;
           const targetStock = reorderPoint * 3;
           const suggested = Math.max(reorderPoint * 2, targetStock - p.stock);
-          const unitCost = p.cost || p.price * 0.6 || 350;
+          const unitCost = p.purchasePrice || p.sellingPrice * 0.6 || 350;
           return {
             id: p.id,
             variantId: p.id,
@@ -127,7 +127,7 @@ export const ReplenishmentPage: React.FC = () => {
             targetStock,
             suggestedQuantity: suggested,
             estimatedCost: suggested * unitCost,
-            preferredSupplier: p.supplier || 'Textile Mills India',
+            preferredSupplier: p.supplierName || 'Textile Mills India',
             status: p.stock === 0 ? 'Critical' : 'Low Stock',
           };
         });
@@ -377,12 +377,12 @@ export const ReplenishmentPage: React.FC = () => {
         {loading || isLoadingBackend ? (
           <TableSkeleton rows={8} />
         ) : filteredItems.length === 0 ? (
-          <div className="py-16 text-center">
-            <div className="w-12 h-12 rounded-full bg-[#E6F1E6] text-[#2E8B57] flex items-center justify-center mx-auto mb-3">
+          <div className="py-16 text-center flex flex-col items-center justify-center">
+            <div className="w-12 h-12 rounded-full bg-[#E6F1E6] text-[#2E8B57] flex items-center justify-center mb-3">
               <CheckCircle2 size={24} />
             </div>
-            <h3 className="text-[16px] font-semibold text-[#1C1B18]">Stock Levels Healthy</h3>
-            <p className="text-[13px] text-[#8C827A] mt-1 max-w-sm mx-auto">
+            <h3 className="text-[16px] font-semibold text-[#1C1B18] text-center w-full">Stock Levels Healthy</h3>
+            <p className="text-[13px] text-[#8C827A] mt-1.5 max-w-md mx-auto text-center w-full leading-relaxed">
               All styles and variants are currently above their minimum reorder thresholds.
             </p>
           </div>

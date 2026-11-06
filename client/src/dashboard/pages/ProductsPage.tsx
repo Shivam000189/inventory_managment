@@ -589,20 +589,23 @@ export const ProductsPage: React.FC = () => {
           />
         )
       ) : filteredProducts.length === 0 ? (
-        <div className="bg-white rounded-2xl p-12 text-center border border-[#EEE6DA]">
-          <div className="w-12 h-12 rounded-2xl bg-[#FAF6EF] text-[#6B665E] flex items-center justify-center mx-auto mb-3">
+        <div className="bg-white rounded-2xl p-12 text-center border border-[#EEE6DA] flex flex-col items-center justify-center shadow-2xs">
+          <div className="w-12 h-12 rounded-2xl bg-[#FAF6EF] text-[#6B665E] flex items-center justify-center mb-3">
             <Search size={22} />
           </div>
-          <h3 className="text-sm font-semibold text-[#1C1B18]">No products match your search</h3>
-          <p className="text-xs text-[#6B665E] mt-1 max-w-sm mx-auto">
+          <h3 className="text-sm font-semibold text-[#1C1B18] text-center w-full">
+            No products match your search
+          </h3>
+          <p className="text-xs text-[#6B665E] mt-1.5 max-w-md text-center mx-auto leading-relaxed w-full">
             Try adjusting filters or adding a new product to your master inventory catalog.
           </p>
           <button
             type="button"
             onClick={handleOpenAdd}
-            className="mt-4 px-4 py-2 rounded-xl bg-[#7FAE82] text-white text-xs font-semibold cursor-pointer"
+            className="mt-4 px-5 py-2.5 rounded-xl bg-[#72B376] hover:bg-[#63A367] text-black text-[13px] font-extrabold transition-all cursor-pointer shadow-xs inline-flex items-center justify-center gap-1.5 active:scale-95"
           >
-            + Add New {itemNoun}
+            <Plus size={15} strokeWidth={2.5} className="text-black" />
+            <span>Add New {itemNoun}</span>
           </button>
         </div>
       ) : viewMode === 'table' ? (
@@ -1881,7 +1884,7 @@ export const ProductsPage: React.FC = () => {
           </div>
         </Portal>
       )}
-      {/* Bulk Import Modal (CSV & PDF) */}
+      {/* Bulk Import Modal (Excel & PDF) */}
       <BulkImportModal
         isOpen={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}

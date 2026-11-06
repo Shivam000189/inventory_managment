@@ -19,6 +19,7 @@ import { reportController } from '../controllers/reportController.js'
 import { notificationRoutes } from './notificationRoutes.js'
 import { posRoutes } from './posRoutes.js'
 import { productImportRoutes } from './productImportRoutes.js'
+import * as productImportController from '../controllers/productImportController.js'
 import { colorRoutes } from './colorRoutes.js'
 import { clothingRoutes } from './clothingRoutes.js'
 import { platformRoutes } from './platformRoutes.js'
@@ -82,6 +83,9 @@ api.use('/businesses', requireDatabase, businessRoutes)
 // Platform routes: authenticated super-admin only, intentionally cross-tenant (no requireBusiness).
 const platformGuard = [requireDatabase, authenticate, requirePlatformRole('super_admin')]
 api.use('/platform', platformGuard, platformRoutes)
+
+// Public template download endpoint (returns Excel .xlsx or PDF for bulk importing products)
+api.get('/product-imports/template', productImportController.downloadTemplate)
 
 // Business-scoped resources: DB up + authenticated user + completed business workspace.
 const guard = [requireDatabase, authenticate, requireBusiness]

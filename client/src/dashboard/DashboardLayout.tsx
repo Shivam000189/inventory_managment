@@ -32,7 +32,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = () => {
       />
 
       {/* Right Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-white">
+      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-[#FAF8F5]">
         <Header onOpenMobileMenu={() => setIsMobileMenuOpen(true)} />
 
         <main

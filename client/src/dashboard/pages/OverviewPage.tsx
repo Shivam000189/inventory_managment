@@ -29,7 +29,7 @@ import { formatINR } from '../lib/formatters';
 import { isPharmacyBusiness } from '../../shared/industryConfig';
 
 export const OverviewPage: React.FC = () => {
-  const { metrics, loadingStates, isLoadingBackend, navigate, businessProfile, products } = useApp();
+  const { metrics, loadingStates, isLoadingBackend, navigate, businessProfile, products, currentUser } = useApp();
 
   const isPharmacy = isPharmacyBusiness(businessProfile);
 
@@ -96,26 +96,24 @@ export const OverviewPage: React.FC = () => {
 
       {/* Top Header */}
       <div>
-        <h1 className="text-[28px] font-semibold text-[#1C1B18] tracking-tight leading-tight">
-          Dashboard Overview
+        <h1 className="text-[24px] sm:text-[28px] font-semibold text-[#1C1B18] tracking-tight leading-tight flex items-center gap-2">
+          <span>Welcome back</span>
+          <span className="inline-block select-none">👋</span>
         </h1>
-        <p className="text-[13px] text-[#6B665E] mt-0.5">
-          Real-time store telemetry, stock movements, and performance metrics for {businessProfile?.name || 'your store'}.
-        </p>
       </div>
 
       {/* 3D Quick Actions Ribbon */}
       <QuickActionsRibbon isPharmacy={isPharmacy} navigate={navigate} />
 
-      {/* Row 1 — 4 Metric Stat Cards */}
+      {/* Row 1 — 4 Metric Stat Cards in 2x2 Grid on Mobile, 4 columns on Desktop */}
       {isStatsLoading ? (
         <StatGridSkeleton count={4} />
       ) : isPharmacy ? (
         <div className="space-y-5">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 md:gap-5">
             <StatCard
-              icon={<ShoppingCart size={18} strokeWidth={2} />}
-              iconBgColor="bg-[#E6F1E6] text-[#2E8B57]"
+              icon={<ShoppingCart size={19} strokeWidth={2.2} />}
+              iconBgColor="bg-[#4F86F7] text-white shadow-2xs"
               label="Today's Sales"
               value={formatINR(metrics.todaySales)}
               trend="Pharmacy counter"
@@ -124,8 +122,8 @@ export const OverviewPage: React.FC = () => {
             />
 
             <StatCard
-              icon={<Clock size={18} strokeWidth={2} />}
-              iconBgColor="bg-[#FFF4DC] text-[#D98E0B]"
+              icon={<Clock size={19} strokeWidth={2.2} />}
+              iconBgColor="bg-[#EEA43C] text-white shadow-2xs"
               label="Expiring (30–60 Days)"
               value={`${pharmacyMetrics.expiring30to60Count} items`}
               trend="Prioritize FEFO"
@@ -134,8 +132,8 @@ export const OverviewPage: React.FC = () => {
             />
 
             <StatCard
-              icon={<AlertTriangle size={18} strokeWidth={2} />}
-              iconBgColor="bg-[#FDECEC] text-[#D64545]"
+              icon={<AlertTriangle size={19} strokeWidth={2.2} />}
+              iconBgColor="bg-[#E5484D] text-white shadow-2xs"
               label="Expired Stock"
               value={`${pharmacyMetrics.expiredCount} items`}
               trend="Action needed"
@@ -144,8 +142,8 @@ export const OverviewPage: React.FC = () => {
             />
 
             <StatCard
-              icon={<Layers size={18} strokeWidth={2} />}
-              iconBgColor="bg-[#EBF2FA] text-[#2563EB]"
+              icon={<Layers size={19} strokeWidth={2.2} />}
+              iconBgColor="bg-[#639BF8] text-white shadow-2xs"
               label="Batch Alerts"
               value={`${pharmacyMetrics.batchAlerts} lots`}
               trend="Lot ledger review"
@@ -192,10 +190,10 @@ export const OverviewPage: React.FC = () => {
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 md:gap-5">
           <StatCard
-            icon={<Box size={18} strokeWidth={2} />}
-            iconBgColor="bg-[#E6F1E6] text-[#2E8B57]"
+            icon={<Box size={19} strokeWidth={2.2} />}
+            iconBgColor="bg-[#4F86F7] text-white shadow-2xs"
             label="Total Stock Value"
             value={formatINR(metrics.totalStockValue)}
             trend="12%"
@@ -204,8 +202,8 @@ export const OverviewPage: React.FC = () => {
           />
 
           <StatCard
-            icon={<ShoppingCart size={18} strokeWidth={2} />}
-            iconBgColor="bg-[#E6F1E6] text-[#2E8B57]"
+            icon={<ShoppingCart size={19} strokeWidth={2.2} />}
+            iconBgColor="bg-[#4F86F7] text-white shadow-2xs"
             label="Today's Sales"
             value={formatINR(metrics.todaySales)}
             trend="8%"
@@ -214,8 +212,8 @@ export const OverviewPage: React.FC = () => {
           />
 
           <StatCard
-            icon={<AlertTriangle size={18} strokeWidth={2} />}
-            iconBgColor="bg-[#FDEEE3] text-[#E8772E]"
+            icon={<AlertTriangle size={19} strokeWidth={2.2} />}
+            iconBgColor="bg-[#EEA43C] text-white shadow-2xs"
             label="Low Stock Items"
             value={metrics.lowStockCount}
             trend="4%"
@@ -224,8 +222,8 @@ export const OverviewPage: React.FC = () => {
           />
 
           <StatCard
-            icon={<AlertTriangle size={18} strokeWidth={2} />}
-            iconBgColor="bg-[#FFF4DC] text-[#D98E0B]"
+            icon={<FileText size={19} strokeWidth={2.2} />}
+            iconBgColor="bg-[#639BF8] text-white shadow-2xs"
             label="Open Purchase Orders"
             value={metrics.openPOCount}
             trend="25%"

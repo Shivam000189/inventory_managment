@@ -120,20 +120,17 @@ export const QuickActionsRibbon: React.FC<QuickActionsRibbonProps> = ({
 
   return (
     <div className="w-full bg-[#FAF6EF]/60 p-2 sm:p-2.5 rounded-2xl border border-[#EEE6DA] shadow-2xs">
-      {/* Single Frame Row: All actions side-by-side in 1 single row */}
-      <div
-        className="flex md:grid md:grid-cols-8 gap-2 sm:gap-2.5 w-full overflow-x-auto no-scrollbar scroll-smooth"
-        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-      >
+      {/* 4 columns in mobile view (4x2 grid for 8 actions), 8 columns on desktop */}
+      <div className="grid grid-cols-4 md:grid-cols-8 gap-2 sm:gap-2.5 w-full">
         {actions.map((action) => (
           <button
             key={action.id}
             type="button"
             onClick={() => navigate(action.path)}
-            className="group flex-1 min-w-[78px] md:min-w-0 flex flex-col items-center justify-between py-2 sm:py-2.5 px-1.5 rounded-xl sm:rounded-2xl bg-white border border-[#EEE6DA] shadow-2xs hover:shadow-md hover:border-[#DDD3C4] transition-all duration-150 cursor-pointer text-center active:scale-95 hover:-translate-y-0.5 focus:outline-none shrink-0 md:shrink"
+            className="group w-full flex flex-col items-center justify-between py-2 sm:py-2.5 px-1 sm:px-1.5 rounded-xl sm:rounded-2xl bg-white border border-[#EEE6DA] shadow-2xs hover:shadow-md hover:border-[#DDD3C4] transition-all duration-150 cursor-pointer text-center active:scale-95 hover:-translate-y-0.5 focus:outline-none"
           >
             {/* Compact 3D Rendered Illustration */}
-            <div className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center shrink-0 my-0.5">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center shrink-0 my-0.5">
               <img
                 src={action.iconSrc}
                 alt={action.label}
@@ -143,7 +140,7 @@ export const QuickActionsRibbon: React.FC<QuickActionsRibbonProps> = ({
             </div>
 
             {/* Centered label matching reference styling */}
-            <span className="w-full mt-1 text-[11px] sm:text-xs font-semibold text-[#1C1B18] group-hover:text-[#381e12] tracking-tight truncate transition-colors">
+            <span className="w-full mt-1 text-[10.5px] sm:text-xs font-semibold text-[#1C1B18] group-hover:text-[#381e12] tracking-tight truncate transition-colors">
               {action.label}
             </span>
           </button>

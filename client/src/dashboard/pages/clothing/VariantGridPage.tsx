@@ -359,9 +359,9 @@ export const VariantGridPage: React.FC = () => {
         {isLoadingBackend ? (
           <TableSkeleton rows={8} />
         ) : displayedColors.length === 0 ? (
-          <div className="py-16 text-center">
-            <h3 className="text-[16px] font-semibold text-[#1C1B18]">No Matching Rows</h3>
-            <p className="text-[13px] text-[#8C827A] mt-1">
+          <div className="py-16 text-center flex flex-col items-center justify-center">
+            <h3 className="text-[16px] font-semibold text-[#1C1B18] text-center w-full">No Matching Rows</h3>
+            <p className="text-[13px] text-[#8C827A] mt-1.5 max-w-md mx-auto text-center w-full leading-relaxed">
               No colors matched your search term "{searchQuery}".
             </p>
           </div>

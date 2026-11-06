@@ -1,7 +1,7 @@
 /* oxlint-disable react/only-export-components */
 import { lazy, Suspense } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { useApp } from '../dashboard/context/AppContext.tsx';
+import { useApp } from '../dashboard/context/AppContext';
 import { TablePageSkeleton } from '../components/ui/Feedback.tsx';
 
 // Core Dashboard Pages (Active TypeScript Implementations - Lazy Loaded for Fast First Paint)
